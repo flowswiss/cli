@@ -13,7 +13,6 @@ jobs:
       matrix:
         go-version: [1.13.x]
         platform: [ubuntu-latest, macos-latest, windows-latest]
-        artifact: [flow-linux, flow-darwin, flow-windows]
 
     name: Build
     runs-on: ${{ matrix.platform }}
@@ -36,5 +35,5 @@ jobs:
       - name: Upload built artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.artifact }}
+          name: flow-${{ matrix.platform }}
           path: flow
