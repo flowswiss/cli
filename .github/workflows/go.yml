@@ -1,4 +1,4 @@
-name: Go
+name: Build
 
 on:
   push:
@@ -29,7 +29,6 @@ jobs:
       run: go build -v ./...
 
     - name: Upload built artifacts
-      if: github.event == 'push'
       uses: actions/upload-artifact@v2
       with:
         path: flow
