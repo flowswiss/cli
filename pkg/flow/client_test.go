@@ -221,6 +221,34 @@ func TestClient_DoError(t *testing.T) {
 	}
 }
 
+func TestClient_DoContext(t *testing.T) {
+	setupMockServer(t)
+	client := NewClient(serverBase)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	req, err := client.NewRequest(ctx, "GET", "/v3/test", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cancel()
+
+	_, err = client.Do(req, nil)
+	if err == nil {
+		t.Fatal("expected error but got success")
+	}
+
+	urlError, ok := err.(*url.Error)
+	if !ok {
+		t.Fatal("expected error to be url error but got", fmt.Sprintf("%T", err))
+	}
+
+	if urlError.Err != context.Canceled {
+		t.Fatal("expected context canceled error but got", urlError.Err)
+	}
+}
+
 func Test_AddOptions(t *testing.T) {
 	base := "/v3/test?q=test"
 	options := PaginationOptions{
