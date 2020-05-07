@@ -1,7 +1,7 @@
 package main
 
-import "fmt"
+import "github.com/flowswiss/cli/internal/cli"
 
 func main() {
-	fmt.Println("Hello, World!")
+	cli.Do()
 }
