@@ -99,7 +99,6 @@ func init() {
 	handleError(authConfig.BindPFlag("password", root.PersistentFlags().Lookup("password")))
 
 	root.AddCommand(authCommand)
-	root.AddCommand(computeCommand)
 }
 
 func initConfig() {
