@@ -15,13 +15,30 @@ const (
 	VersionMajor = 1
 	VersionMinor = 0
 	VersionPatch = 0
+
+	FlagNoAuthentication = 1
+
+	ErrorMissingCredentials = ClientError("missing credentials provider for authenticated request")
 )
+
+type ClientFlag uint
+type ClientError string
+type ClientRequestCallback func(req *http.Request)
+type ClientResponseCallback func(res *http.Response)
 
 type Client struct {
 	Base      *url.URL
 	UserAgent string
 
 	Client *http.Client
+
+	CredentialsProvider CredentialsProvider
+	TokenStorage        TokenStorage
+
+	OnRequest  ClientRequestCallback
+	OnResponse ClientResponseCallback
+
+	Authentication AuthenticationService
 }
 
 type Response struct {
@@ -35,23 +52,59 @@ type ErrorResponse struct {
 	RequestID string
 }
 
+func (e ClientError) Error() string {
+	return string(e)
+}
+
 func (e *ErrorResponse) Error() string {
 	return fmt.Sprintf("%s %s (request %s) resulted in %s: %s", e.Response.Request.Method, e.Response.Request.URL, e.RequestID, e.Response.Status, e.Message)
 }
 
 func NewClient(base *url.URL) *Client {
-	return &Client{
+	client := &Client{
 		Base:      base,
 		UserAgent: fmt.Sprintf("flow/%d.%d.%d", VersionMajor, VersionMinor, VersionPatch),
 		Client:    &http.Client{},
 	}
+
+	client.Authentication = NewAuthenticationService(client)
+
+	return client
 }
 
 func (c *Client) AddUserAgent(userAgent string) {
 	c.UserAgent = fmt.Sprintf("%s %s", userAgent, c.UserAgent)
 }
 
-func (c *Client) NewRequest(ctx context.Context, method string, path string, body interface{}) (*http.Request, error) {
+func (c *Client) AuthenticationToken(ctx context.Context) (string, error) {
+	if c.TokenStorage != nil && c.TokenStorage.IsValid() {
+		return c.TokenStorage.Token(), nil
+	}
+
+	if c.CredentialsProvider == nil {
+		return "", ErrorMissingCredentials
+	}
+
+	user, _, err := c.Authentication.Login(ctx, c.CredentialsProvider.Username(), c.CredentialsProvider.Password())
+	if err != nil {
+		return "", err
+	}
+
+	if user.TwoFactor {
+		user, _, err = c.Authentication.Verify(ctx, user.Token, c.CredentialsProvider.TwoFactorCode())
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if c.TokenStorage != nil {
+		c.TokenStorage.SetToken(user.Token)
+	}
+
+	return user.Token, nil
+}
+
+func (c *Client) NewRequest(ctx context.Context, method string, path string, body interface{}, flags ClientFlag) (*http.Request, error) {
 	u, err := c.Base.Parse(path)
 	if err != nil {
 		return nil, err
@@ -77,19 +130,36 @@ func (c *Client) NewRequest(ctx context.Context, method string, path string, bod
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("User-Agent", c.UserAgent)
+
+	if flags&FlagNoAuthentication == 0 {
+		token, err := c.AuthenticationToken(ctx)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Add("X-Auth-Token", token)
+	}
+
 	return req, nil
 }
 
 func (c *Client) Do(req *http.Request, val interface{}) (*Response, error) {
+	if c.OnRequest != nil {
+		c.OnRequest(req)
+	}
+
 	res, err := c.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer res.Body.Close()
 
+	if c.OnResponse != nil {
+		c.OnResponse(res)
+	}
+
 	if res.StatusCode >= 400 {
 		apiError := &struct {
-			Error struct{
+			Error struct {
 				Message struct {
 					En string `json:"en"`
 				} `json:"message"`

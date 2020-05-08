@@ -13,10 +13,10 @@ import (
 )
 
 var (
-	server     *httptest.Server
-	serverBase *url.URL
-
+	server   *httptest.Server
 	serveMux *http.ServeMux
+
+	client *Client
 )
 
 func setupMockServer(t *testing.T) {
@@ -25,10 +25,12 @@ func setupMockServer(t *testing.T) {
 	serveMux = http.NewServeMux()
 
 	server = httptest.NewServer(serveMux)
-	serverBase, err = url.Parse(server.URL)
+	base, err := url.Parse(server.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	client = NewClient(base)
 }
 
 func TestNewClient(t *testing.T) {
@@ -71,7 +73,7 @@ func TestClient_NewRequest(t *testing.T) {
 	buf := &bytes.Buffer{}
 	buf.WriteString(body)
 
-	req, err := client.NewRequest(context.Background(), "GET", "/v3/test", buf)
+	req, err := client.NewRequest(context.Background(), "GET", "/v3/test", buf, FlagNoAuthentication)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,9 +136,7 @@ func TestClient_Do(t *testing.T) {
 		}
 	})
 
-	client := NewClient(serverBase)
-
-	req, err := client.NewRequest(context.Background(), "GET", "/v3/test", nil)
+	req, err := client.NewRequest(context.Background(), "GET", "/v3/test", nil, FlagNoAuthentication)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,9 +195,7 @@ func TestClient_DoError(t *testing.T) {
 		}
 	})
 
-	client := NewClient(serverBase)
-
-	req, err := client.NewRequest(context.Background(), "GET", "/v3/test", nil)
+	req, err := client.NewRequest(context.Background(), "GET", "/v3/test", nil, FlagNoAuthentication)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,11 +221,10 @@ func TestClient_DoError(t *testing.T) {
 
 func TestClient_DoContext(t *testing.T) {
 	setupMockServer(t)
-	client := NewClient(serverBase)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	req, err := client.NewRequest(ctx, "GET", "/v3/test", nil)
+	req, err := client.NewRequest(ctx, "GET", "/v3/test", nil, FlagNoAuthentication)
 	if err != nil {
 		t.Fatal(err)
 	}
