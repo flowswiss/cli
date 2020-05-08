@@ -9,7 +9,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
-	"path"
+	"path/filepath"
 )
 
 type CliConfig struct {
@@ -29,6 +29,7 @@ var (
 	config = &CliConfig{}
 
 	configFile string
+	configDir  string
 
 	root = &cobra.Command{
 		Use:     "flow",
@@ -40,32 +41,7 @@ var (
 				return err
 			}
 
-			client = flow.NewClient(base)
-			client.CredentialsProvider = &CommandLineCredentialsProvider{}
-			client.TokenStorage = &flow.MemoryTokenStorage{}
-
-			client.OnRequest = func(req *http.Request) {
-				if config.Verbosity >= 1 {
-					stderr.Printf("Requesting %s %s\n", req.Method, req.URL)
-				}
-
-				if config.Verbosity >= 3 {
-					dump, err := httputil.DumpRequestOut(req, true)
-					if err == nil {
-						stderr.Color(output.AnsiBright+output.AnsiBlack).Printf("%s\n", dump).Reset()
-					}
-				}
-			}
-
-			client.OnResponse = func(res *http.Response) {
-				if config.Verbosity >= 2 {
-					dump, err := httputil.DumpResponse(res, true)
-					if err == nil {
-						stderr.Color(output.AnsiBright+output.AnsiBlack).Printf("%s\n\n", dump).Reset()
-					}
-				}
-			}
-
+			initClient(base)
 			return nil
 		},
 	}
@@ -101,28 +77,62 @@ func init() {
 	root.AddCommand(authCommand)
 }
 
+func configureConfig(name string, conf *viper.Viper) {
+	conf.AddConfigPath(configDir)
+	conf.SetConfigName(name)
+	conf.SetConfigType(configType)
+	conf.SetEnvPrefix("flow")
+	conf.AutomaticEnv()
+}
+
 func initConfig() {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		handleError(err)
+	if configDir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			handleError(err)
+		}
+
+		configDir = filepath.Join(home, ".flow")
 	}
 
-	configDir := path.Join(home, ".flow")
 	_ = os.Mkdir(configDir, 0755)
 
-	if configFile == "" {
-		viper.AddConfigPath(configDir)
-		viper.SetConfigName("config")
-		viper.SetConfigType(configType)
-	} else {
+	configureConfig("config", viper.GetViper())
+
+	if configFile != "" {
 		viper.SetConfigFile(configFile)
 	}
-
-	viper.SetEnvPrefix("flow")
-	viper.AutomaticEnv()
 
 	_ = viper.ReadInConfig()
 	handleError(viper.Unmarshal(config))
 
-	readAuthConfig(configDir)
+	readAuthConfig()
+}
+
+func initClient(base *url.URL) {
+	client = flow.NewClient(base)
+	client.CredentialsProvider = &CommandLineCredentialsProvider{}
+	client.TokenStorage = &flow.MemoryTokenStorage{}
+
+	client.OnRequest = func(req *http.Request) {
+		if config.Verbosity >= 1 {
+			stderr.Printf("Requesting %s %s\n", req.Method, req.URL)
+		}
+
+		if config.Verbosity >= 3 {
+			dump, err := httputil.DumpRequestOut(req, true)
+			if err == nil {
+				stderr.Color(output.AnsiBright+output.AnsiBlack).Printf("%s\n", dump).Reset()
+			}
+		}
+	}
+
+	client.OnResponse = func(res *http.Response) {
+		if config.Verbosity >= 2 {
+			dump, err := httputil.DumpResponse(res, true)
+			if err == nil {
+				stderr.Color(output.AnsiBright+output.AnsiBlack).Printf("%s\n\n", dump).Reset()
+			}
+		}
+	}
 }

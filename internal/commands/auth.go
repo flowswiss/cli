@@ -16,11 +16,11 @@ func init() {
 	authCommand.AddCommand(loginCommand)
 }
 
-func readAuthConfig(dir string) {
-	authConfig.AddConfigPath(dir)
-	authConfig.SetConfigName("credentials")
-	authConfig.SetConfigType(configType)
+func readAuthConfig() {
+	configureConfig("credentials", authConfig)
 	authConfig.SetConfigPermissions(0600)
 
+	authConfig.SetDefault("username", viper.GetString("username"))
+	authConfig.SetDefault("password", viper.GetString("password"))
 	_ = authConfig.ReadInConfig()
 }
