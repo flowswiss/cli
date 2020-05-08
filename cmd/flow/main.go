@@ -1,7 +1,7 @@
 package main
 
-import "github.com/flowswiss/cli/internal/cli"
+import "github.com/flowswiss/cli/internal/commands"
 
 func main() {
-	cli.Do()
+	commands.Do()
 }

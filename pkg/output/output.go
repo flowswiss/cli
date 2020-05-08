@@ -17,7 +17,7 @@ const (
 type AnsiColor int
 
 const (
-	AnsiBlack AnsiColor = iota
+	AnsiBlack AnsiColor = 30
 	AnsiRed
 	AnsiGreen
 	AnsiYellow
@@ -26,8 +26,7 @@ const (
 	AnsiCyan
 	AnsiWhite
 
-	AnsiForeground AnsiColor = 30
-	AnsiBackground AnsiColor = 40
+	AnsiBackground AnsiColor = 10
 	AnsiBright     AnsiColor = 60
 )
 
@@ -59,14 +58,18 @@ func (o *Output) Printf(format string, a ...interface{}) *Output {
 	return o
 }
 
+func (o *Output) Reset() *Output {
+	return o.AnsiSequence(AnsiReset)
+}
+
 func (o *Output) Bold(format string, a ...interface{}) *Output {
 	return o.AnsiSequence(AnsiBold).
 		Printf(format, a...).
-		AnsiSequence(AnsiReset)
+		Reset()
 }
 
 func (o *Output) Errorf(format string, a ...interface{}) *Output {
-	return o.Color(AnsiForeground+AnsiRed).
+	return o.Color(AnsiRed).
 		Printf(format, a...).
-		AnsiSequence(AnsiReset)
+		Reset()
 }
