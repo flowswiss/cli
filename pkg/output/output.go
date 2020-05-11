@@ -58,6 +58,16 @@ func (o *Output) Printf(format string, a ...interface{}) *Output {
 	return o
 }
 
+func (o *Output) Print(a ...interface{}) *Output {
+	_, _ = fmt.Fprint(o.Writer, a...)
+	return o
+}
+
+func (o *Output) Println(a ...interface{}) *Output {
+	_, _ = fmt.Fprintln(o.Writer, a...)
+	return o
+}
+
 func (o *Output) Reset() *Output {
 	return o.AnsiSequence(AnsiReset)
 }
