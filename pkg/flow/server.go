@@ -33,14 +33,14 @@ type ServerNetworkAttachment struct {
 }
 
 type Server struct {
-	Id       Id                        `json:"id"`
-	Name     string                    `json:"name"`
-	Status   ServerStatus              `json:"status"`
-	Image    Image                     `json:"image"`
-	Product  Product                   `json:"product"`
-	Location Location                  `json:"location"`
+	Id       Id                         `json:"id"`
+	Name     string                     `json:"name"`
+	Status   ServerStatus               `json:"status"`
+	Image    Image                      `json:"image"`
+	Product  Product                    `json:"product"`
+	Location Location                   `json:"location"`
 	Networks []*ServerNetworkAttachment `json:"networks"`
-	KeyPair  KeyPair                   `json:"key_pair"`
+	KeyPair  KeyPair                    `json:"key_pair"`
 }
 
 type ServerCreate struct {
@@ -61,7 +61,21 @@ type serverService struct {
 }
 
 func (s *serverService) List(ctx context.Context, options PaginationOptions) ([]*Server, *Response, error) {
-	return nil, nil, nil
+	p := path.Join("/v3/", s.client.OrganizationPath(), "/compute/instances")
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, p, nil, 0)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var val []*Server
+
+	res, err := s.client.Do(req, &val)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return val, res, err
 }
 
 func (s *serverService) Create(ctx context.Context, data *ServerCreate) (*Ordering, *Response, error) {
