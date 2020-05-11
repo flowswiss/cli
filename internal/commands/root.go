@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"github.com/flowswiss/cli/pkg/flow"
 	"github.com/flowswiss/cli/pkg/output"
 	"github.com/spf13/cobra"
@@ -58,6 +59,10 @@ func handleError(err error) {
 	}
 }
 
+func errRequiredFlag(flag string) error {
+	return fmt.Errorf("%s is required", flag)
+}
+
 func init() {
 	cobra.OnInitialize(initConfig)
 
@@ -66,7 +71,7 @@ func init() {
 	root.PersistentFlags().CountP("verbosity", "v", "enable verbose output")
 	root.PersistentFlags().String("endpoint-url", "https://api.flow.swiss/", "base endpoint to use for all api requests")
 	root.PersistentFlags().StringP("username", "u", "", "name of the user to authenticate with")
-	root.PersistentFlags().StringP("password", "p", "", "password of the user to authenticate with")
+	root.PersistentFlags().String("password", "", "password of the user to authenticate with")
 	root.PersistentFlags().StringVar(&config.TwoFactorCode, "two-factor-code", "", "two factor code")
 
 	handleError(viper.BindPFlag("verbosity", root.PersistentFlags().Lookup("verbosity")))
@@ -75,6 +80,7 @@ func init() {
 	handleError(authConfig.BindPFlag("password", root.PersistentFlags().Lookup("password")))
 
 	root.AddCommand(authCommand)
+	root.AddCommand(computeCommand)
 }
 
 func configureConfig(name string, conf *viper.Viper) {
@@ -113,6 +119,7 @@ func initClient(base *url.URL) {
 	client = flow.NewClient(base)
 	client.CredentialsProvider = &CommandLineCredentialsProvider{}
 	client.TokenStorage = &flow.MemoryTokenStorage{}
+	client.Organization = 2
 
 	client.OnRequest = func(req *http.Request) {
 		if config.Verbosity >= 1 {
