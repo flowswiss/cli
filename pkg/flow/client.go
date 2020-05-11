@@ -16,9 +16,10 @@ const (
 	VersionMinor = 0
 	VersionPatch = 0
 
-	FlagNoAuthentication = 1
+	FlagNoAuthentication ClientFlag = 1
 
-	ErrorMissingCredentials = ClientError("missing credentials provider for authenticated request")
+	ErrorMissingCredentials     = ClientError("missing credentials provider for authenticated request")
+	ErrorUnsupportedContentType = ClientError("received unsupported content type")
 )
 
 type ClientFlag uint
@@ -27,8 +28,10 @@ type ClientRequestCallback func(req *http.Request)
 type ClientResponseCallback func(res *http.Response)
 
 type Client struct {
-	Base      *url.URL
-	UserAgent string
+	Base         *url.URL
+	UserAgent    string
+	Organization Id
+	Flags        ClientFlag
 
 	Client *http.Client
 
@@ -39,6 +42,8 @@ type Client struct {
 	OnResponse ClientResponseCallback
 
 	Authentication AuthenticationService
+	Server         ServerService
+	Order          OrderService
 }
 
 type Response struct {
@@ -67,9 +72,15 @@ func NewClient(base *url.URL) *Client {
 		Client:    &http.Client{},
 	}
 
-	client.Authentication = NewAuthenticationService(client)
+	client.Authentication = &authenticationService{client}
+	client.Server = &serverService{client}
+	client.Order = &orderService{client}
 
 	return client
+}
+
+func (c *Client) OrganizationPath() string {
+	return fmt.Sprintf("organizations/%d", c.Organization) // TODO
 }
 
 func (c *Client) AddUserAgent(userAgent string) {
@@ -131,7 +142,7 @@ func (c *Client) NewRequest(ctx context.Context, method string, path string, bod
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("User-Agent", c.UserAgent)
 
-	if flags&FlagNoAuthentication == 0 {
+	if c.Flags&FlagNoAuthentication == 0 && flags&FlagNoAuthentication == 0 {
 		token, err := c.AuthenticationToken(ctx)
 		if err != nil {
 			return nil, err
@@ -155,6 +166,10 @@ func (c *Client) Do(req *http.Request, val interface{}) (*Response, error) {
 
 	if c.OnResponse != nil {
 		c.OnResponse(res)
+	}
+
+	if res.Header.Get("Content-Type") != "application/json" {
+		return nil, ErrorUnsupportedContentType
 	}
 
 	if res.StatusCode >= 400 {

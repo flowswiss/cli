@@ -20,12 +20,6 @@ type AuthenticatedUser struct {
 	User
 }
 
-func NewAuthenticationService(client *Client) AuthenticationService {
-	return &authenticationService{
-		client: client,
-	}
-}
-
 type loginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`

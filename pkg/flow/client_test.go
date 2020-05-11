@@ -31,6 +31,7 @@ func setupMockServer(t *testing.T) {
 	}
 
 	client = NewClient(base)
+	client.Flags |= FlagNoAuthentication
 }
 
 func TestNewClient(t *testing.T) {
@@ -130,7 +131,7 @@ func TestClient_Do(t *testing.T) {
 		res.Header().Add("X-Pagination-Current-Page", "2")
 		res.Header().Add("X-Pagination-Total-Pages", "5")
 
-		_, err := res.Write([]byte("{\"hello\": \"world\"}"))
+		_, err := res.Write([]byte(`{"hello": "world"}`))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -186,8 +187,9 @@ func TestClient_DoError(t *testing.T) {
 	serveMux.HandleFunc("/v3/test", func(res http.ResponseWriter, req *http.Request) {
 		res.Header().Add("X-Request-Id", "0e1a9a390a19ef145717170d381be279bd1afdc83623fd871cb9f020d6a74366")
 
-		body := fmt.Sprintf("{\"error\": {\"message\": {\"en\": \"%s\"}}}", errorMessage)
+		body := fmt.Sprintf(`{"error": {"message": {"en": "%s"}}}`, errorMessage)
 
+		res.Header().Set("Content-Type", "application/json")
 		res.WriteHeader(500)
 		_, err := res.Write([]byte(body))
 		if err != nil {
