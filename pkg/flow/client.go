@@ -41,8 +41,18 @@ type Client struct {
 	OnRequest  ClientRequestCallback
 	OnResponse ClientResponseCallback
 
+	// General entities
+	Product  ProductService
+	Location LocationService
+	Image    ImageService
+
+	// Compute
+	Server  ServerService
+	KeyPair KeyPairService
+	Network NetworkService
+
+	// Other
 	Authentication AuthenticationService
-	Server         ServerService
 	Order          OrderService
 }
 
@@ -72,8 +82,13 @@ func NewClient(base *url.URL) *Client {
 		Client:    &http.Client{},
 	}
 
-	client.Authentication = &authenticationService{client}
+	client.Product = &productService{client}
+	client.Location = &locationService{client}
+	client.Image = &imageService{client}
 	client.Server = &serverService{client}
+	client.KeyPair = &keyPairService{client}
+	client.Network = &networkService{client}
+	client.Authentication = &authenticationService{client}
 	client.Order = &orderService{client}
 
 	return client

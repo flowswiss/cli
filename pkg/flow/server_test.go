@@ -21,7 +21,7 @@ func TestServerService_Create(t *testing.T) {
 		}
 	})
 
-	data := ServerCreate{
+	data := &ServerCreate{
 		Name:             "Test Server",
 		LocationId:       1,
 		ImageId:          3,

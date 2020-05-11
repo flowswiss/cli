@@ -7,8 +7,8 @@ import (
 )
 
 type ServerService interface {
-	List(ctx context.Context, options PaginationOptions) ([]Server, *Response, error)
-	Create(ctx context.Context, data ServerCreate) (*Ordering, *Response, error)
+	List(ctx context.Context, options PaginationOptions) ([]*Server, *Response, error)
+	Create(ctx context.Context, data *ServerCreate) (*Ordering, *Response, error)
 	Update(ctx context.Context) (*Server, *Response, error)
 	Delete(ctx context.Context, server *Server) (*Response, error)
 }
@@ -39,7 +39,7 @@ type Server struct {
 	Image    Image                     `json:"image"`
 	Product  Product                   `json:"product"`
 	Location Location                  `json:"location"`
-	Networks []ServerNetworkAttachment `json:"networks"`
+	Networks []*ServerNetworkAttachment `json:"networks"`
 	KeyPair  KeyPair                   `json:"key_pair"`
 }
 
@@ -60,11 +60,11 @@ type serverService struct {
 	client *Client
 }
 
-func (s *serverService) List(ctx context.Context, options PaginationOptions) ([]Server, *Response, error) {
+func (s *serverService) List(ctx context.Context, options PaginationOptions) ([]*Server, *Response, error) {
 	return nil, nil, nil
 }
 
-func (s *serverService) Create(ctx context.Context, data ServerCreate) (*Ordering, *Response, error) {
+func (s *serverService) Create(ctx context.Context, data *ServerCreate) (*Ordering, *Response, error) {
 	p := path.Join("/v3/", s.client.OrganizationPath(), "/compute/instances")
 
 	req, err := s.client.NewRequest(ctx, http.MethodPost, p, &data, 0)

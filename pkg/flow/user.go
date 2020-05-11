@@ -45,6 +45,6 @@ type User struct {
 	FirstName             string         `json:"firstname"`
 	LastName              string         `json:"lastname"`
 	PhoneNumber           string         `json:"phone_number"`
-	AssignedOrganizations []Organization `json:"assigned_organizations"`
-	DefaultOrganization   Organization   `json:"default_organization"`
+	AssignedOrganizations []*Organization `json:"assigned_organizations"`
+	DefaultOrganization   *Organization   `json:"default_organization"`
 }
