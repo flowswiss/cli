@@ -68,9 +68,9 @@ func init() {
 
 	root.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.flow.json")
 
-	root.PersistentFlags().CountP("verbosity", "v", "enable verbose output")
+	root.PersistentFlags().CountP("verbosity", "v", "enable a more verbose output (repeat up to 3 times to see entire output)")
 	root.PersistentFlags().String("endpoint-url", "https://api.flow.swiss/", "base endpoint to use for all api requests")
-	root.PersistentFlags().StringP("username", "u", "", "name of the user to authenticate with")
+	root.PersistentFlags().String("username", "", "name of the user to authenticate with")
 	root.PersistentFlags().String("password", "", "password of the user to authenticate with")
 	root.PersistentFlags().StringVar(&config.TwoFactorCode, "two-factor-code", "", "two factor code")
 

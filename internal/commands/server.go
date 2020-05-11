@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/flowswiss/cli/internal/commands/dto"
 	"github.com/flowswiss/cli/pkg/flow"
 	"github.com/spf13/cobra"
 	"io/ioutil"
@@ -83,7 +84,17 @@ func init() {
 }
 
 func listVMs(cmd *cobra.Command, args []string) error {
-	return nil
+	server, _, err := client.Server.List(context.Background(), flow.PaginationOptions{NoFilter: 1})
+	if err != nil {
+		return err
+	}
+
+	var displayable []*dto.Server
+	for _, server := range server {
+		displayable = append(displayable, &dto.Server{Server: server})
+	}
+
+	return display(displayable)
 }
 
 func preCreateVM(cmd *cobra.Command, args []string) error {
