@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/flowswiss/cli/internal/commands/dto"
 	"github.com/flowswiss/cli/pkg/flow"
+	"github.com/flowswiss/cli/pkg/output"
 	"github.com/spf13/cobra"
 	"io/ioutil"
 	"strings"
@@ -250,23 +251,17 @@ func createServer(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	done := make(chan string)
-	sync := make(chan struct{})
-	defer func() {
-		<-sync
-	}()
-
-	go stderr.Progress("creating server", done, sync)
+	progress := output.NewProgress("creating server")
 
 	for {
 		order, _, err := client.Order.Get(context.Background(), id)
 		if err != nil || order.Status.Id == 4 {
-			done <- "creation failed"
+			progress.Complete("creation failed")
 			return err
 		}
 
 		if order.Status.Id == 3 {
-			done <- "server created successfully"
+			progress.Complete("server created successfully")
 			break
 		}
 
