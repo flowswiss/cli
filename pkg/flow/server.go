@@ -33,7 +33,7 @@ type ServerStatus struct {
 
 type ServerNetworkAttachment struct {
 	Network
-	Interfaces []NetworkInterface `json:"network_interfaces"`
+	Interfaces []AttachedNetworkInterface `json:"network_interfaces"`
 }
 
 type Server struct {
@@ -127,7 +127,21 @@ func (s *serverService) Update(ctx context.Context, id Id) (*Server, *Response, 
 }
 
 func (s *serverService) Delete(ctx context.Context, id Id) (*Response, error) {
-	return nil, nil
+	p := path.Join("/v3/", s.client.OrganizationPath(), fmt.Sprintf("/compute/instances/%d", id))
+
+	req, err := s.client.NewRequest(ctx, http.MethodDelete, p, nil, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	val := &Server{}
+
+	res, err := s.client.Do(req, val)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (s *serverService) RunAction(ctx context.Context, id Id, command string) (*Server, *Response, error) {

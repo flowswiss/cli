@@ -47,9 +47,10 @@ type Client struct {
 	Image    ImageService
 
 	// Compute
-	Server  ServerService
-	KeyPair KeyPairService
-	Network NetworkService
+	Server           ServerService
+	ServerAttachment ServerAttachmentService
+	KeyPair          KeyPairService
+	Network          NetworkService
 
 	// Other
 	Authentication AuthenticationService
@@ -86,6 +87,7 @@ func NewClient(base *url.URL) *Client {
 	client.Location = &locationService{client}
 	client.Image = &imageService{client}
 	client.Server = &serverService{client}
+	client.ServerAttachment = &serverAttachmentService{client}
 	client.KeyPair = &keyPairService{client}
 	client.Network = &networkService{client}
 	client.Authentication = &authenticationService{client}
