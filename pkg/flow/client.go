@@ -183,6 +183,15 @@ func (c *Client) Do(req *http.Request, val interface{}) (*Response, error) {
 		c.OnResponse(res)
 	}
 
+	response := &Response{
+		Response:   res,
+		Pagination: parsePagination(res),
+	}
+
+	if res.StatusCode == http.StatusNoContent {
+		return response, nil
+	}
+
 	if res.Header.Get("Content-Type") != "application/json" {
 		return nil, ErrorUnsupportedContentType
 	}
@@ -220,10 +229,7 @@ func (c *Client) Do(req *http.Request, val interface{}) (*Response, error) {
 		}
 	}
 
-	return &Response{
-		Response:   res,
-		Pagination: parsePagination(res),
-	}, nil
+	return response, nil
 }
 
 func addOptions(path string, options interface{}) (string, error) {
