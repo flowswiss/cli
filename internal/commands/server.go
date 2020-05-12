@@ -252,6 +252,7 @@ func createServer(cmd *cobra.Command, args []string) error {
 	}
 
 	progress := output.NewProgress("creating server")
+	go progress.Display(stderr)
 
 	for {
 		order, _, err := client.Order.Get(context.Background(), id)
