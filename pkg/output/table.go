@@ -7,73 +7,78 @@ import (
 	"strings"
 )
 
-type column struct {
-	index int
-	name  string
-	width int
+type Displayable interface {
+	Columns() []string
+	Values() map[string]interface{}
 }
 
-func (c *column) format() string {
-	return fmt.Sprintf("%%%ds", -c.width)
+type Column struct {
+	Index int
+	Name  string
+	Width int
 }
 
-type table struct {
-	columns []*column
-	rows    [][]string
+type Table struct {
+	Columns []*Column
+	Rows    [][]string
 }
 
-func (t *table) findColumn(name string) *column {
-	for _, col := range t.columns {
-		if col.name == name {
+func (c *Column) format() string {
+	return fmt.Sprintf("%%%ds", -c.Width)
+}
+
+func (t *Table) FindColumn(name string) *Column {
+	for _, col := range t.Columns {
+		if col.Name == name {
 			return col
 		}
 	}
 	return nil
 }
 
-func (t *table) insertColumns(cols []string) {
+func (t *Table) insertColumns(cols []string) {
 	for idx, col := range cols {
-		t.columns = append(t.columns, &column{
-			index: idx,
-			name:  col,
-			width: len(col),
+		t.Columns = append(t.Columns, &Column{
+			Index: idx,
+			Name:  col,
+			Width: len(col),
 		})
 	}
 }
 
-func (t *table) insertRow(data map[string]interface{}) {
-	row := make([]string, len(t.columns))
+func (t *Table) insertRow(data map[string]interface{}) {
+	row := make([]string, len(t.Columns))
 
 	for key, val := range data {
-		col := t.findColumn(key)
+		col := t.FindColumn(key)
 		if col == nil {
 			continue
 		}
 
 		str := fmt.Sprintf("%+v", val)
-		row[col.index] = str
+		row[col.Index] = str
 
-		if len(str) > col.width {
-			col.width = len(str)
+		if len(str) > col.Width {
+			col.Width = len(str)
 		}
 	}
 
-	t.rows = append(t.rows, row)
+	t.Rows = append(t.Rows, row)
 }
 
-func (t *table) format(writer io.Writer, separator string, pretty bool) error {
+func (t *Table) Format(writer io.Writer, separator string, pretty bool) error {
 	format := "%s"
-	for idx, col := range t.columns {
+	for idx, col := range t.Columns {
 		if pretty {
 			format = col.format()
 		}
 
-		_, err := fmt.Fprintf(writer, format, strings.ToUpper(col.name))
+		_, err := fmt.Fprintf(writer, format, strings.ToUpper(col.Name))
 		if err != nil {
 			return err
 		}
 
-		if (idx + 1) < len(t.columns) {
+		if (idx + 1) < len(t.Columns) {
 			_, err := fmt.Fprintf(writer, separator)
 			if err != nil {
 				return err
@@ -86,10 +91,10 @@ func (t *table) format(writer io.Writer, separator string, pretty bool) error {
 		return err
 	}
 
-	for _, row := range t.rows {
+	for _, row := range t.Rows {
 		for idx, val := range row {
 			if pretty {
-				format = t.columns[idx].format()
+				format = t.Columns[idx].format()
 			}
 
 			if strings.Contains(val, separator) {
@@ -118,8 +123,8 @@ func (t *table) format(writer io.Writer, separator string, pretty bool) error {
 	return nil
 }
 
-func (t *table) insertMap(value reflect.Value) error {
-	if t.columns == nil {
+func (t *Table) insertMap(value reflect.Value) error {
+	if t.Columns == nil {
 		var cols []string
 		for _, key := range value.MapKeys() {
 			cols = append(cols, fmt.Sprintf("%v", key))
@@ -138,12 +143,12 @@ func (t *table) insertMap(value reflect.Value) error {
 	return nil
 }
 
-func (t *table) insertStruct(value reflect.Value) error {
+func (t *Table) insertStruct(value reflect.Value) error {
 	if !value.Type().AssignableTo(reflect.TypeOf((*Displayable)(nil)).Elem()) {
 		return fmt.Errorf("unable to serialize non `Displayable` struct of type %q", value.Type().String())
 	}
 
-	if t.columns == nil {
+	if t.Columns == nil {
 		columnsFunc := value.MethodByName("Columns")
 		columns := columnsFunc.Call([]reflect.Value{})[0]
 
@@ -159,7 +164,7 @@ func (t *table) insertStruct(value reflect.Value) error {
 	return t.insertMap(values)
 }
 
-func (t *table) insertValue(value reflect.Value) error {
+func (t *Table) insertValue(value reflect.Value) error {
 	switch value.Kind() {
 	case reflect.Array:
 		fallthrough
@@ -180,4 +185,8 @@ func (t *table) insertValue(value reflect.Value) error {
 	}
 
 	return fmt.Errorf("unable to serialize value of type %q (%q)", value.Type().String(), value.Kind().String())
+}
+
+func (t *Table) Insert(val interface{}) error {
+	return t.insertValue(reflect.ValueOf(val))
 }
