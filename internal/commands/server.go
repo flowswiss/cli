@@ -23,26 +23,26 @@ var (
 	serverListCommand = &cobra.Command{
 		Use:   "list",
 		Short: "List all server",
-		RunE:  listVMs,
+		RunE:  listServer,
 	}
 
 	serverCreateCommand = &cobra.Command{
 		Use:     "create",
 		Short:   "Create new server",
-		PreRunE: preCreateVM,
-		RunE:    createVM,
+		PreRunE: preCreateServer,
+		RunE:    createServer,
 	}
 
 	serverUpdateCommand = &cobra.Command{
 		Use:   "edit",
 		Short: "Rename server",
-		RunE:  updateVM,
+		RunE:  updateServer,
 	}
 
 	serverDeleteCommand = &cobra.Command{
 		Use:   "delete",
 		Short: "Delete server",
-		RunE:  deleteVM,
+		RunE:  deleteServer,
 	}
 )
 
@@ -71,19 +71,19 @@ func init() {
 	serverCommand.AddCommand(serverUpdateCommand)
 	serverCommand.AddCommand(serverDeleteCommand)
 
-	serverCreateCommand.Flags().StringVarP(&name, "name", "n", "", "Name of the new server")
-	serverCreateCommand.Flags().StringVarP(&locationFilter, "location", "l", "", "Location of the server")
-	serverCreateCommand.Flags().StringVarP(&imageFilter, "image", "i", "", "Name of the new server")
-	serverCreateCommand.Flags().StringVarP(&productFilter, "product", "p", "", "Name of the new server")
-	serverCreateCommand.Flags().StringVar(&networkFilter, "network", "", "Name of the new server")
-	serverCreateCommand.Flags().StringVar(&privateIp, "private-ip", "", "Name of the new server")
-	serverCreateCommand.Flags().StringVar(&keyPairFilter, "key-pair", "", "Name of the new server")
-	serverCreateCommand.Flags().StringVar(&password, "windows-password", "", "Name of the new server")
-	serverCreateCommand.Flags().StringVar(&cloudInitFile, "cloud-init", "", "Name of the new server")
-	serverCreateCommand.Flags().BoolVar(&attachExternalIp, "attach-external-ip", true, "Name of the new server")
+	serverCreateCommand.Flags().StringVarP(&name, "name", "n", "", "name of the new server")
+	serverCreateCommand.Flags().StringVarP(&locationFilter, "location", "l", "", "location of the server")
+	serverCreateCommand.Flags().StringVarP(&imageFilter, "image", "i", "", "operating system image to use for the new server")
+	serverCreateCommand.Flags().StringVarP(&productFilter, "product", "p", "", "product to use for the new server")
+	serverCreateCommand.Flags().StringVar(&networkFilter, "network", "", "network in which the first network interface should be created")
+	serverCreateCommand.Flags().StringVar(&privateIp, "private-ip", "", "ip address of the server in the selected network")
+	serverCreateCommand.Flags().StringVar(&keyPairFilter, "key-pair", "", "ssh key-pair for connecting to the server")
+	serverCreateCommand.Flags().StringVar(&password, "windows-password", "", "password for the windows admin user")
+	serverCreateCommand.Flags().StringVar(&cloudInitFile, "cloud-init", "", "cloud init script to customize creation of the server")
+	serverCreateCommand.Flags().BoolVar(&attachExternalIp, "attach-external-ip", true, "whether to attach an elastic ip to the server")
 }
 
-func listVMs(cmd *cobra.Command, args []string) error {
+func listServer(cmd *cobra.Command, args []string) error {
 	server, _, err := client.Server.List(context.Background(), flow.PaginationOptions{NoFilter: 1})
 	if err != nil {
 		return err
@@ -97,7 +97,7 @@ func listVMs(cmd *cobra.Command, args []string) error {
 	return display(displayable)
 }
 
-func preCreateVM(cmd *cobra.Command, args []string) error {
+func preCreateServer(cmd *cobra.Command, args []string) error {
 	// check required flags
 	if name == "" {
 		return errRequiredFlag("name")
@@ -182,7 +182,7 @@ func preCreateVM(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func createVM(cmd *cobra.Command, args []string) error {
+func createServer(cmd *cobra.Command, args []string) error {
 	if !product.AvailableAt(location) {
 		return fmt.Errorf("product is not available at the selected location")
 	}
@@ -276,10 +276,10 @@ func createVM(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func updateVM(cmd *cobra.Command, args []string) error {
+func updateServer(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func deleteVM(cmd *cobra.Command, args []string) error {
+func deleteServer(cmd *cobra.Command, args []string) error {
 	return nil
 }
