@@ -66,6 +66,10 @@ type serverService struct {
 
 func (s *serverService) List(ctx context.Context, options PaginationOptions) ([]*Server, *Response, error) {
 	p := path.Join("/v3/", s.client.OrganizationPath(), "/compute/instances")
+	p, err := addOptions(p, options)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	req, err := s.client.NewRequest(ctx, http.MethodGet, p, nil, 0)
 	if err != nil {
