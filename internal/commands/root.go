@@ -67,7 +67,7 @@ func errRequiredFlag(flag string) error {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	root.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.flow.json")
+	root.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.flow/config.json")
 
 	root.PersistentFlags().CountVarP(&config.Verbosity, "verbosity", "v", "enable a more verbose output (repeat up to 3 times to see entire output)")
 	root.PersistentFlags().String("endpoint-url", "https://api.flow.swiss/", "base endpoint to use for all api requests")
