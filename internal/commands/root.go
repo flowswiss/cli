@@ -14,10 +14,11 @@ import (
 )
 
 type CliConfig struct {
-	Verbosity int    `mapstructure:"verbosity"`
-	Endpoint  string `mapstructure:"endpoint_url"`
+	Endpoint string `mapstructure:"endpoint_url"`
+	Format string `mapstructure:"format"`
 
 	TwoFactorCode string
+	Verbosity     int
 }
 
 const configType = "json"
@@ -68,13 +69,12 @@ func init() {
 
 	root.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.flow.json")
 
-	root.PersistentFlags().CountP("verbosity", "v", "enable a more verbose output (repeat up to 3 times to see entire output)")
+	root.PersistentFlags().CountVarP(&config.Verbosity, "verbosity", "v", "enable a more verbose output (repeat up to 3 times to see entire output)")
 	root.PersistentFlags().String("endpoint-url", "https://api.flow.swiss/", "base endpoint to use for all api requests")
 	root.PersistentFlags().String("username", "", "name of the user to authenticate with")
 	root.PersistentFlags().String("password", "", "password of the user to authenticate with")
 	root.PersistentFlags().StringVar(&config.TwoFactorCode, "two-factor-code", "", "two factor code")
 
-	handleError(viper.BindPFlag("verbosity", root.PersistentFlags().Lookup("verbosity")))
 	handleError(viper.BindPFlag("endpoint_url", root.PersistentFlags().Lookup("endpoint-url")))
 	handleError(authConfig.BindPFlag("username", root.PersistentFlags().Lookup("username")))
 	handleError(authConfig.BindPFlag("password", root.PersistentFlags().Lookup("password")))
