@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bufio"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"github.com/flowswiss/cli/pkg/output"
 	"github.com/spf13/cobra"
 	"io/ioutil"
+	"os"
 	"strings"
 	"time"
 )
@@ -82,6 +84,9 @@ func init() {
 	serverCreateCommand.Flags().StringVar(&password, "windows-password", "", "password for the windows admin user")
 	serverCreateCommand.Flags().StringVar(&cloudInitFile, "cloud-init", "", "cloud init script to customize creation of the server")
 	serverCreateCommand.Flags().BoolVar(&attachExternalIp, "attach-external-ip", true, "whether to attach an elastic ip to the server")
+
+	serverDeleteCommand.Flags().String("server", "", "identification for the server to delete")
+	serverDeleteCommand.Flags().Bool("force", false, "forces deletion of the server without asking for confirmation")
 }
 
 func listServer(cmd *cobra.Command, args []string) error {
@@ -277,5 +282,45 @@ func updateServer(cmd *cobra.Command, args []string) error {
 }
 
 func deleteServer(cmd *cobra.Command, args []string) error {
+	server, err := findServer(cmd)
+	if err != nil {
+		return err
+	}
+
+	force, err := cmd.Flags().GetBool("force")
+	if err != nil {
+		return err
+	}
+
+	if !force {
+		stderr.Printf("Are you sure you want to delete the server %q (y/N): ", server.Name)
+
+		input, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		if err != nil {
+			return err
+		}
+
+		if strings.ToLower(input) != "y\n" {
+			return nil
+		}
+	}
+
+	elasticIps, _, err := client.ServerAttachment.ListAttachedElasticIps(context.Background(), server.Id, flow.PaginationOptions{NoFilter: 1})
+	if err != nil {
+		return err
+	}
+
+	for _, elasticIp := range elasticIps {
+		_, err := client.ServerAttachment.DetachElasticIp(context.Background(), server.Id, elasticIp.Id)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = client.Server.Delete(context.Background(), server.Id)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
