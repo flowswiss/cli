@@ -2,15 +2,19 @@ package flow
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"path"
 )
 
 type ServerService interface {
 	List(ctx context.Context, options PaginationOptions) ([]*Server, *Response, error)
+	Get(ctx context.Context, id Id) (*Server, *Response, error)
 	Create(ctx context.Context, data *ServerCreate) (*Ordering, *Response, error)
-	Update(ctx context.Context) (*Server, *Response, error)
-	Delete(ctx context.Context, server *Server) (*Response, error)
+	Update(ctx context.Context, id Id) (*Server, *Response, error)
+	Delete(ctx context.Context, id Id) (*Response, error)
+
+	RunAction(ctx context.Context, id Id, command string) (*Server, *Response, error)
 }
 
 type ServerAction struct {
@@ -75,13 +79,31 @@ func (s *serverService) List(ctx context.Context, options PaginationOptions) ([]
 		return nil, nil, err
 	}
 
-	return val, res, err
+	return val, res, nil
+}
+
+func (s *serverService) Get(ctx context.Context, id Id) (*Server, *Response, error) {
+	p := path.Join("/v3/", s.client.OrganizationPath(), fmt.Sprintf("/compute/instances/%d", id))
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, p, nil, 0)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	val := &Server{}
+
+	res, err := s.client.Do(req, val)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return val, res, nil
 }
 
 func (s *serverService) Create(ctx context.Context, data *ServerCreate) (*Ordering, *Response, error) {
 	p := path.Join("/v3/", s.client.OrganizationPath(), "/compute/instances")
 
-	req, err := s.client.NewRequest(ctx, http.MethodPost, p, &data, 0)
+	req, err := s.client.NewRequest(ctx, http.MethodPost, p, data, 0)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -93,13 +115,35 @@ func (s *serverService) Create(ctx context.Context, data *ServerCreate) (*Orderi
 		return nil, nil, err
 	}
 
-	return val, res, err
+	return val, res, nil
 }
 
-func (s *serverService) Update(ctx context.Context) (*Server, *Response, error) {
+func (s *serverService) Update(ctx context.Context, id Id) (*Server, *Response, error) {
 	return nil, nil, nil
 }
 
-func (s *serverService) Delete(ctx context.Context, server *Server) (*Response, error) {
+func (s *serverService) Delete(ctx context.Context, id Id) (*Response, error) {
 	return nil, nil
+}
+
+func (s *serverService) RunAction(ctx context.Context, id Id, command string) (*Server, *Response, error) {
+	p := path.Join("/v3/", s.client.OrganizationPath(), fmt.Sprintf("/compute/instances/%d/action", id))
+
+	data := struct {
+		Action string `json:"action"`
+	}{command}
+
+	req, err := s.client.NewRequest(ctx, http.MethodPost, p, &data, 0)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	val := &Server{}
+
+	res, err := s.client.Do(req, val)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return val, res, nil
 }
