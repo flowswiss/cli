@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 )
 
 type CommandLineCredentialsProvider struct {
@@ -29,5 +30,5 @@ func (t *CommandLineCredentialsProvider) TwoFactorCode() string {
 		handleError(err)
 	}
 
-	return code
+	return strings.TrimSpace(code)
 }
