@@ -2,64 +2,64 @@
 
 ## Global Flags
 ```
-  --endpoint-url string     base url to the api endpoints for the platform. the
+  --endpoint-url string     Base url to the api endpoints for the platform. The
                             default is the Flow Swiss platform, but this flag
-                            can be used to change to any other environment. can
+                            can be used to change to any other environment. Can
                             also be specified through the `FLOW_ENDPOINT_URL`
                             environment variable or the `endpoint_url` item in
                             your configuration file.
 
-                            example: 'https://api.cloudbit.ch/'
+                            Example: 'https://api.cloudbit.ch/'
 
 
-  --username string         the username to authenticate against the Flow Swiss
-                            platform. can also be specified through the
+  --username string         The username to authenticate against the Flow Swiss
+                            platform. Can also be specified through the
                             `FLOW_USERNAME` environment variable or the
                             `username` item in your configuration file.
 
-                            example: 'example@flow.swiss'
+                            Example: 'example@flow.swiss'
 
 
-  --password string         the password for the specified user on the Flow
-                            Swiss platform. can also be specified through the
+  --password string         The password for the specified user on the Flow
+                            Swiss platform. Can also be specified through the
                             `FLOW_PASSWORD` environment variable or the
                             `password` item in your configuration file.
 
-                            example: 'MySuperSecurePassword'
+                            Example: 'MySuperSecurePassword'
 
 
-  --two-factor-code string  the current two factor code for your account. by
+  --two-factor-code string  The current two factor code for your account. By
                             default it will ask for user input during runtime
                             when you have two factor authentication enabled on
                             your account. 
 
-                            example: '123456'
+                            Example: '123456'
 
 
-  --format string           the output format to use for list operations. can be
-                            one of table, csv or json. by default all list
+  --format string           The output format to use for list operations. Can be
+                            one of table, csv or json. By default all list
                             operations will generate a table with the most
-                            important information. if you want to integrate the
+                            important information. If you want to integrate the
                             response into an other system, we suggest using the
-                            json option. can also be specified through the
+                            json option. Can also be specified through the
                             `FLOW_FORMAT` environment variable or the `format`
                             item in your configuration file.
 
-                            example: 'json'
+                            Example: 'json'
 
 
-  --verbosity level         specifies the verbose output level for the current
-                            exectuion. the higher the level, the more output
-                            will be generated. this can idealy be used for
-                            debugging purposes. the verbose output will be
+  --verbosity level         Specifies the verbose output level for the current
+                            exectuion. Hhe higher the level, the more output
+                            will be generated. This can idealy be used for
+                            debugging purposes. The verbose output will be
                             posted to `stderr` to still allow pipes.
 
-                            level 0: default output
-                            level 1: show request paths
-                            level 2: dump responses from the api
-                            level 3: dump requests to the api
+                            Level 0: default output
+                            Level 1: show request paths
+                            Level 2: dump responses from the api
+                            Level 3: dump requests to the api
 
-                            example: '1'
+                            Example: '1'
 ```
 
 ## Commands
@@ -83,92 +83,92 @@ flow compute server list
 flow compute server create
   Creates a new virtual machine for the selected organization
 
-  --name string (required)  the name for the server. this name will also be used
+  --name string (required)  The name for the server. This name will also be used
                             as the hostname of the virtual machine, if you want
                             this to match the name on the portal choose only
                             hostname allowed characters (a-z, 0-9 and hyphen).
 
-                            example: 'My First Virtual Machine'
+                            Example: 'My First Virtual Machine'
 
 
-  --location string (required)  filter for the desired location of the server.
-                            can be an interger if you want to search by id or a
+  --location string (required)  Filter for the desired location of the server.
+                            Can be an interger if you want to search by id or a
                             string if you want to search for any other
-                            identification (e.g. name or city). to get a list of
+                            identification (e.g. name or city). To get a list of
                             available locations see `flow locations --module
                             compute`
 
-                            example: 'alp1'
+                            Example: 'alp1'
 
 
-  --image string (required)  filter for the desired operating system image. can
+  --image string (required)  Filter for the desired operating system image. Can
                             be an integer if you want to search by id or a
                             string if you want to search for any other
                             identification (e.g. name)
 
-                             example: 'ubuntu-20.04'
+                             Example: 'ubuntu-20.04'
 
 
-  --product string (required)  filter for the desired product to use. can be an
+  --product string (required)  Filter for the desired product to use. Can be an
                             interger if you want to search by id or a string if
                             you want to search for any other identification
-                            (e.g. name). to get a list of available products see
+                            (e.g. name). To get a list of available products see
                             `flow products --module compute`
 
-                            example: 'b1.1x1'
+                            Example: 'b1.1x1'
 
 
-  --network string          filter for the desired network for the first network
-                            interface of the virtual machine. by default it will
-                            select your first network automatically. can be an
+  --network string          Filter for the desired network for the first network
+                            interface of the virtual machine. By default it will
+                            select your first network automatically. Can be an
                             integer if you want to search by id or a string if
                             you want to search for any other identification
                             (e.g. name or cidr)
 
-                            example: 'Default Network'
+                            Example: 'Default Network'
 
 
-  --private-ip string       an optional private ip address to assign to the
-                            first network interface. must be inside the cidr of
+  --private-ip string       An optional private ip address to assign to the
+                            first network interface. Must be inside the cidr of
                             the network and must not be assigned to any other
-                            item in the network. by default dhcp will choose an
+                            item in the network. By default dhcp will choose an
                             address automatically.
 
-                            example: '172.31.0.11'
+                            Example: '172.31.0.11'
 
 
   --key-pair string (required if image is linux)
-                            an initial ssh keypair for the virtual machine to
-                            connect to via ssh. can be an integer if you want to
+                            An initial ssh keypair for the virtual machine to
+                            connect to via ssh. Can be an integer if you want to
                             search by id or a string if you want to search for
                             any other identification (e.g. name or md5
-                            fingerprint). if you do not have a key, you can
+                            fingerprint). If you do not have a key, you can
                             generate one by typing `ssh-keygen`.
 
-                            example: '12:ab:9c:de:93:01:6d:7a:b7:2d:27:06:65:90:c9:cf'
+                            Example: '12:ab:9c:de:93:01:6d:7a:b7:2d:27:06:65:90:c9:cf'
 
 
   --windows-password string (required if image is windows)
-                            an initial windows password for the windows machine.
-                            can be anything, but should match the windows
+                            An initial windows password for the windows machine.
+                            Can be anything, but should match the windows
                             password requirements (at least: one uppercase
                             character, one lowercase character, one digit, one
                             special character)
 
-                            exmaple: 'z2.xHfQFi8vM27t,o9Ft' (please choose a
+                            Exmaple: 'z2.xHfQFi8vM27t,o9Ft' (please choose a
                                      different one)
 
 
-  --cloud-init file         a cloud init script for the setup of your virtual
-                            machine. to see how cloud init scripts work, please
+  --cloud-init file         A cloud init script for the setup of your virtual
+                            machine. To see how cloud init scripts work, please
                             visit https://cloudinit.readthedocs.io/en/latest/
 
-                            example: './cloud-init.yaml'
+                            Example: './cloud-init.yaml'
 
 
-  --attach-external-ip bool  whether to attach an elastic ip (public ip) to the
-                            virtual machine or not. by default an elastic ip
-                            will be attached. to disable use `--attach-external-
+  --attach-external-ip bool  Whether to attach an elastic ip (public ip) to the
+                            virtual machine or not. By default an elastic ip
+                            will be attached. To disable use `--attach-external-
                             ip=false`  
 ```
 
@@ -178,13 +178,13 @@ flow compute server [start|stop|reboot] <server>
   Perform an action on the virtual machine. The command will block until the
   server status updates to the expected value.
 
-  <server> string           filter for the server to execute the action on. can
+  <server> string           Filter for the server to execute the action on. Can
                             be an integer if you want to search by id or a
                             string if you want to search for any other
                             identification (e.g. name, public ip, private ip,
                             etc)
 
-                            example: 'My First Virtual Machine'
+                            Example: 'My First Virtual Machine'
                    
 ```
 
@@ -193,22 +193,22 @@ flow compute server delete <server>
   Detaches all elastic ips attached to the selected server and deletes the
   server product itself.
 
-  <server> string           filter for the server to delete. can be an integer
+  <server> string           Filter for the server to delete. Can be an integer
                             if you want to search by id or a string if you want
                             to serarch for any other identification (e.g. name,
                             public ip, private ip, etc)
 
-                            example: 'My First Virtual Machine'
+                            Example: 'My First Virtual Machine'
 
 
-  --force                   if this flag is present, the interaction with the
+  --force                   If this flag is present, the interaction with the
                             user whether he really wants to delete the server
                             will be skipped and the server will be deleted
                             immediately
 
 
-  --detach-only             by default all attached elastic ips will be deleted
-                            once they were detached. this can be prevented
+  --detach-only             By default all attached elastic ips will be deleted
+                            once they were detached. This can be prevented
                             through this flag and all elastic ips will only be
-                            detached. 
+                            detached.
 ```
