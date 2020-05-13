@@ -164,11 +164,11 @@ flow compute server create
 
 
 ```
-flow compute server [start|stop|reboot]
+flow compute server [start|stop|reboot] <server>
   Perform an action on the virtual machine. The command will block until the
   server status updates to the expected value.
 
-  --server string           filter for the server to execute the action on. can
+  <server> string           filter for the server to execute the action on. can
                             be an integer if you want to search by id or a
                             string if you want to search for any other
                             identification (e.g. name, public ip, private ip,
@@ -179,11 +179,11 @@ flow compute server [start|stop|reboot]
 ```
 
 ```
-flow compute server delete
+flow compute server delete <server>
   Detaches all elastic ips attached to the selected server and deletes the
   server product itself.
 
-  --server string           filter for the server to delete. can be an integer
+  <server> string           filter for the server to delete. can be an integer
                             if you want to search by id or a string if you want
                             to serarch for any other identification (e.g. name,
                             public ip, private ip, etc)

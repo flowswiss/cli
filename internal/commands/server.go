@@ -43,8 +43,9 @@ var (
 	}
 
 	serverDeleteCommand = &cobra.Command{
-		Use:   "delete",
+		Use:   "delete <server>",
 		Short: "Delete server",
+		Args:  cobra.ExactArgs(1),
 		RunE:  deleteServer,
 	}
 )
@@ -85,9 +86,22 @@ func init() {
 	serverCreateCommand.Flags().StringVar(&cloudInitFile, "cloud-init", "", "cloud init script to customize creation of the server")
 	serverCreateCommand.Flags().BoolVar(&attachExternalIp, "attach-external-ip", true, "whether to attach an elastic ip to the server")
 
-	serverDeleteCommand.Flags().String("server", "", "identification for the server to delete")
 	serverDeleteCommand.Flags().Bool("force", false, "forces deletion of the server without asking for confirmation")
 	serverDeleteCommand.Flags().Bool("detach-only", false, "specifies whether elastic ips should only be detached without getting deleted")
+}
+
+func findServer(filter string) (*flow.Server, error) {
+	servers, _, err := client.Server.List(context.Background(), flow.PaginationOptions{NoFilter: 1})
+	if err != nil {
+		return nil, err
+	}
+
+	srv, err := findOne(servers, filter, 2)
+	if err != nil {
+		return nil, fmt.Errorf("server: %v", err)
+	}
+
+	return srv.(*flow.Server), nil
 }
 
 func listServer(cmd *cobra.Command, args []string) error {
@@ -283,7 +297,7 @@ func updateServer(cmd *cobra.Command, args []string) error {
 }
 
 func deleteServer(cmd *cobra.Command, args []string) error {
-	server, err := findServer(cmd)
+	server, err := findServer(args[0])
 	if err != nil {
 		return err
 	}
@@ -299,7 +313,7 @@ func deleteServer(cmd *cobra.Command, args []string) error {
 	}
 
 	if !force {
-		stderr.Printf("Are you sure you want to delete the server %q (y/N): ", server.Name)
+		stderr.Printf("Are you sure you want to delete the server \"%v\" (y/N): ", server)
 
 		input, err := bufio.NewReader(os.Stdin).ReadString('\n')
 		if err != nil {

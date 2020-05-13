@@ -17,20 +17,23 @@ const (
 
 var (
 	serverActionStart = &cobra.Command{
-		Use:   "start",
+		Use:   "start <server>",
 		Short: "Start the selected server",
+		Args:  cobra.ExactArgs(1),
 		RunE:  startServer,
 	}
 
 	serverActionStop = &cobra.Command{
-		Use:   "stop",
+		Use:   "stop <server>",
 		Short: "Stop the selected server",
+		Args:  cobra.ExactArgs(1),
 		RunE:  stopServer,
 	}
 
 	serverActionReboot = &cobra.Command{
-		Use:   "reboot",
+		Use:   "reboot <server>",
 		Short: "Reboot the selected server",
+		Args:  cobra.ExactArgs(1),
 		RunE:  rebootServer,
 	}
 )
@@ -39,33 +42,6 @@ func init() {
 	serverCommand.AddCommand(serverActionStart)
 	serverCommand.AddCommand(serverActionStop)
 	serverCommand.AddCommand(serverActionReboot)
-
-	serverActionStart.Flags().String("server", "", "identification for the server to execute this action on")
-	serverActionStop.Flags().String("server", "", "identification for the server to execute this action on")
-	serverActionReboot.Flags().String("server", "", "identification for the server to execute this action on")
-}
-
-func findServer(cmd *cobra.Command) (*flow.Server, error) {
-	serverFilter, err := cmd.Flags().GetString("server")
-	if err != nil {
-		return nil, err
-	}
-
-	if serverFilter == "" {
-		return nil, errRequiredFlag("server")
-	}
-
-	servers, _, err := client.Server.List(context.Background(), flow.PaginationOptions{NoFilter: 1})
-	if err != nil {
-		return nil, err
-	}
-
-	srv, err := findOne(servers, serverFilter, 2)
-	if err != nil {
-		return nil, fmt.Errorf("server: %v", err)
-	}
-
-	return srv.(*flow.Server), nil
 }
 
 func isActionAllowed(command string, server *flow.Server) bool {
@@ -105,7 +81,7 @@ func waitForStatus(id flow.Id, destination flow.Id, allowedStates []flow.Id) err
 }
 
 func startServer(cmd *cobra.Command, args []string) error {
-	server, err := findServer(cmd)
+	server, err := findServer(args[0])
 	if err != nil {
 		return err
 	}
@@ -133,7 +109,7 @@ func startServer(cmd *cobra.Command, args []string) error {
 }
 
 func stopServer(cmd *cobra.Command, args []string) error {
-	server, err := findServer(cmd)
+	server, err := findServer(args[0])
 	if err != nil {
 		return err
 	}
@@ -161,7 +137,7 @@ func stopServer(cmd *cobra.Command, args []string) error {
 }
 
 func rebootServer(cmd *cobra.Command, args []string) error {
-	server, err := findServer(cmd)
+	server, err := findServer(args[0])
 	if err != nil {
 		return err
 	}
