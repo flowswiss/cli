@@ -51,6 +51,7 @@ type Client struct {
 	ServerAttachment ServerAttachmentService
 	KeyPair          KeyPairService
 	Network          NetworkService
+	ElasticIp        ElasticIpService
 
 	// Other
 	Authentication AuthenticationService
@@ -90,6 +91,7 @@ func NewClient(base *url.URL) *Client {
 	client.ServerAttachment = &serverAttachmentService{client}
 	client.KeyPair = &keyPairService{client}
 	client.Network = &networkService{client}
+	client.ElasticIp = &elasticIpService{client}
 	client.Authentication = &authenticationService{client}
 	client.Order = &orderService{client}
 
