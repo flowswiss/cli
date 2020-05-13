@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bytes"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -126,12 +127,20 @@ func findOne(items interface{}, query string, maxDepth int) (interface{}, error)
 	}
 
 	if val.Len() > 1 {
-		var items []string
+		buf := &bytes.Buffer{}
 		for i := 0; i < val.Len() && i < 3; i++ {
-			items = append(items, fmt.Sprintf("%v", val.Index(i).Interface()))
+			buf.WriteString(fmt.Sprintf("%v", val.Index(i).Interface()))
+
+			if i+1 < val.Len() {
+				buf.WriteString(", ")
+			}
 		}
 
-		return nil, fmt.Errorf("more than one matching result were found through query %q: %s", query, strings.Join(items, ", "))
+		if val.Len() > 3 {
+			buf.WriteString("...")
+		}
+
+		return nil, fmt.Errorf("more than one matching result were found through query %q: %s", query, buf.String())
 	}
 
 	return val.Index(0).Interface(), nil
