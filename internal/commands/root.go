@@ -10,28 +10,13 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
-	"path/filepath"
 )
-
-type CliConfig struct {
-	Endpoint string `mapstructure:"endpoint_url"`
-	Format string `mapstructure:"format"`
-
-	TwoFactorCode string
-	Verbosity     int
-}
-
-const configType = "json"
 
 var (
 	stdout = output.NewConsoleOutput(os.Stdout)
 	stderr = output.NewConsoleOutput(os.Stderr)
 
 	client *flow.Client
-	config = &CliConfig{}
-
-	configFile string
-	configDir  string
 
 	root = &cobra.Command{
 		Use:     "flow",
@@ -81,38 +66,6 @@ func init() {
 
 	root.AddCommand(authCommand)
 	root.AddCommand(computeCommand)
-}
-
-func configureConfig(name string, conf *viper.Viper) {
-	conf.AddConfigPath(configDir)
-	conf.SetConfigName(name)
-	conf.SetConfigType(configType)
-	conf.SetEnvPrefix("flow")
-	conf.AutomaticEnv()
-}
-
-func initConfig() {
-	if configDir == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			handleError(err)
-		}
-
-		configDir = filepath.Join(home, ".flow")
-	}
-
-	_ = os.Mkdir(configDir, 0755)
-
-	configureConfig("config", viper.GetViper())
-
-	if configFile != "" {
-		viper.SetConfigFile(configFile)
-	}
-
-	_ = viper.ReadInConfig()
-	handleError(viper.Unmarshal(config))
-
-	readAuthConfig()
 }
 
 func initClient(base *url.URL) {
