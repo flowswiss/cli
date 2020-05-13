@@ -177,3 +177,28 @@ flow compute server [start|stop|reboot]
                             example: 'My First Virtual Machine'
                    
 ```
+
+```
+flow compute server delete
+  Detaches all elastic ips attached to the selected server and deletes the
+  server product itself.
+
+  --server string           filter for the server to delete. can be an integer
+                            if you want to search by id or a string if you want
+                            to serarch for any other identification (e.g. name,
+                            public ip, private ip, etc)
+
+                            example: 'My First Virtual Machine'
+
+
+  --force                   if this flag is present, the interaction with the
+                            user whether he really wants to delete the server
+                            will be skipped and the server will be deleted
+                            immediately
+
+
+  --detach-only             by default all attached elastic ips will be deleted
+                            once they were detached. this can be prevented
+                            through this flag and all elastic ips will only be
+                            detached. 
+```
