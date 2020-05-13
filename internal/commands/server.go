@@ -87,6 +87,7 @@ func init() {
 
 	serverDeleteCommand.Flags().String("server", "", "identification for the server to delete")
 	serverDeleteCommand.Flags().Bool("force", false, "forces deletion of the server without asking for confirmation")
+	serverDeleteCommand.Flags().Bool("detach-only", false, "specifies whether elastic ips should only be detached without getting deleted")
 }
 
 func listServer(cmd *cobra.Command, args []string) error {
@@ -292,6 +293,11 @@ func deleteServer(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	detachOnly, err := cmd.Flags().GetBool("detach-only")
+	if err != nil {
+		return err
+	}
+
 	if !force {
 		stderr.Printf("Are you sure you want to delete the server %q (y/N): ", server.Name)
 
@@ -314,6 +320,13 @@ func deleteServer(cmd *cobra.Command, args []string) error {
 		_, err := client.ServerAttachment.DetachElasticIp(context.Background(), server.Id, elasticIp.Id)
 		if err != nil {
 			return err
+		}
+
+		if !detachOnly {
+			_, err := client.ElasticIp.Delete(context.Background(), elasticIp.Id)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
