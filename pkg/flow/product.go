@@ -68,6 +68,15 @@ func (p *Product) AvailableAt(location *Location) bool {
 	return false
 }
 
+func (p *Product) FindItem(id Id) *ProductItem {
+	for _, item := range p.Items {
+		if item.Id == id {
+			return item
+		}
+	}
+	return nil
+}
+
 type productService struct {
 	client *Client
 }

@@ -17,6 +17,22 @@ import (
 
 const maxFilterDepth = 2
 
+const (
+	flagName             = "name"
+	flagLocation         = "location"
+	flagImage            = "image"
+	flagProduct          = "product"
+	flagNetwork          = "network"
+	flagPrivateIp        = "private-ip"
+	flagKeyPair          = "key-pair"
+	flagWindowsPassword  = "windows-password"
+	flagCloudInit        = "cloud-init"
+	flagAttachExternalIp = "attach-external-ip"
+
+	flagForce      = "force"
+	flagDetachOnly = "detach-only"
+)
+
 var (
 	serverCommand = &cobra.Command{
 		Use:   "server",
@@ -30,10 +46,9 @@ var (
 	}
 
 	serverCreateCommand = &cobra.Command{
-		Use:     "create",
-		Short:   "Create new server",
-		PreRunE: preCreateServer,
-		RunE:    createServer,
+		Use:   "create",
+		Short: "Create new server",
+		RunE:  createServer,
 	}
 
 	serverUpdateCommand = &cobra.Command{
@@ -50,44 +65,25 @@ var (
 	}
 )
 
-var (
-	name             string
-	locationFilter   string
-	imageFilter      string
-	productFilter    string
-	networkFilter    string
-	privateIp        string
-	keyPairFilter    string
-	password         string
-	cloudInitFile    string
-	attachExternalIp bool
-
-	location *flow.Location
-	image    *flow.Image
-	product  *flow.Product
-	network  *flow.Network
-	keyPair  *flow.KeyPair
-)
-
 func init() {
 	serverCommand.AddCommand(serverListCommand)
 	serverCommand.AddCommand(serverCreateCommand)
 	serverCommand.AddCommand(serverUpdateCommand)
 	serverCommand.AddCommand(serverDeleteCommand)
 
-	serverCreateCommand.Flags().StringVarP(&name, "name", "n", "", "name of the new server")
-	serverCreateCommand.Flags().StringVarP(&locationFilter, "location", "l", "", "location of the server")
-	serverCreateCommand.Flags().StringVarP(&imageFilter, "image", "i", "", "operating system image to use for the new server")
-	serverCreateCommand.Flags().StringVarP(&productFilter, "product", "p", "", "product to use for the new server")
-	serverCreateCommand.Flags().StringVar(&networkFilter, "network", "", "network in which the first network interface should be created")
-	serverCreateCommand.Flags().StringVar(&privateIp, "private-ip", "", "ip address of the server in the selected network")
-	serverCreateCommand.Flags().StringVar(&keyPairFilter, "key-pair", "", "ssh key-pair for connecting to the server")
-	serverCreateCommand.Flags().StringVar(&password, "windows-password", "", "password for the windows admin user")
-	serverCreateCommand.Flags().StringVar(&cloudInitFile, "cloud-init", "", "cloud init script to customize creation of the server")
-	serverCreateCommand.Flags().BoolVar(&attachExternalIp, "attach-external-ip", true, "whether to attach an elastic ip to the server")
+	serverCreateCommand.Flags().StringP(flagName, "n", "", "name of the new server")
+	serverCreateCommand.Flags().StringP(flagLocation, "l", "", "location of the server")
+	serverCreateCommand.Flags().StringP(flagImage, "i", "", "operating system image to use for the new server")
+	serverCreateCommand.Flags().StringP(flagProduct, "p", "", "product to use for the new server")
+	serverCreateCommand.Flags().String(flagNetwork, "", "network in which the first network interface should be created")
+	serverCreateCommand.Flags().String(flagPrivateIp, "", "ip address of the server in the selected network")
+	serverCreateCommand.Flags().String(flagKeyPair, "", "ssh key-pair for connecting to the server")
+	serverCreateCommand.Flags().String(flagWindowsPassword, "", "password for the windows admin user")
+	serverCreateCommand.Flags().String(flagCloudInit, "", "cloud init script to customize creation of the server")
+	serverCreateCommand.Flags().Bool(flagAttachExternalIp, true, "whether to attach an elastic ip to the server")
 
-	serverDeleteCommand.Flags().Bool("force", false, "forces deletion of the server without asking for confirmation")
-	serverDeleteCommand.Flags().Bool("detach-only", false, "specifies whether elastic ips should only be detached without getting deleted")
+	serverDeleteCommand.Flags().Bool(flagForce, false, "forces deletion of the server without asking for confirmation")
+	serverDeleteCommand.Flags().Bool(flagDetachOnly, false, "specifies whether elastic ips should only be detached without getting deleted")
 }
 
 func findServer(filter string) (*flow.Server, error) {
@@ -118,147 +114,10 @@ func listServer(cmd *cobra.Command, args []string) error {
 	return display(displayable)
 }
 
-func preCreateServer(cmd *cobra.Command, args []string) error {
-	// check required flags
-	if name == "" {
-		return errRequiredFlag("name")
-	}
-
-	if locationFilter == "" {
-		return errRequiredFlag("location")
-	}
-
-	if imageFilter == "" {
-		return errRequiredFlag("image")
-	}
-
-	if productFilter == "" {
-		return errRequiredFlag("product")
-	}
-
-	// search location
-	locations, _, err := client.Location.List(context.Background(), flow.PaginationOptions{NoFilter: 1})
-	if err != nil {
-		return err
-	}
-
-	loc, err := findOne(locations, locationFilter, maxFilterDepth)
-	if err != nil {
-		return fmt.Errorf("location: %v", err)
-	}
-	location = loc.(*flow.Location)
-
-	// search image
-	images, _, err := client.Image.List(context.Background(), flow.PaginationOptions{NoFilter: 1})
-	if err != nil {
-		return err
-	}
-
-	img, err := findOne(images, imageFilter, maxFilterDepth)
-	if err != nil {
-		return fmt.Errorf("image: %v", err)
-	}
-	image = img.(*flow.Image)
-
-	// search product
-	products, _, err := client.Product.ListByType(context.Background(), flow.PaginationOptions{NoFilter: 1}, "compute-engine-vm")
-	if err != nil {
-		return err
-	}
-
-	prod, err := findOne(products, productFilter, maxFilterDepth)
-	if err != nil {
-		return fmt.Errorf("product: %v", err)
-	}
-	product = prod.(*flow.Product)
-
-	// search network
-	if networkFilter != "" {
-		networks, _, err := client.Network.List(context.Background(), flow.PaginationOptions{NoFilter: 1})
-		if err != nil {
-			return err
-		}
-
-		net, err := findOne(networks, networkFilter, maxFilterDepth)
-		if err != nil {
-			return fmt.Errorf("network: %v", err)
-		}
-		network = net.(*flow.Network)
-	}
-
-	// search key pair
-	if keyPairFilter != "" {
-		keyPairs, _, err := client.KeyPair.List(context.Background(), flow.PaginationOptions{NoFilter: 1})
-		if err != nil {
-			return err
-		}
-
-		key, err := findOne(keyPairs, keyPairFilter, maxFilterDepth)
-		if err != nil {
-			return fmt.Errorf("key-pair: %v", err)
-		}
-		keyPair = key.(*flow.KeyPair)
-	}
-
-	return nil
-}
-
 func createServer(cmd *cobra.Command, args []string) error {
-	if !product.AvailableAt(location) {
-		return fmt.Errorf("product is not available at the selected location")
-	}
-
-	if product.Type.Id != 4 {
-		return fmt.Errorf("product is not a compute vm product")
-	}
-
-	if !image.AvailableAt(location) {
-		return fmt.Errorf("image is not available at the selected location")
-	}
-
-	if strings.ToLower(image.Category) == "windows" && password == "" {
-		return fmt.Errorf("windows images require password")
-	}
-
-	if strings.ToLower(image.Category) == "windows" && cloudInitFile != "" {
-		return fmt.Errorf("windows images are not allowed to take cloud init scripts")
-	}
-
-	if strings.ToLower(image.Category) == "linux" && keyPair == nil {
-		return fmt.Errorf("linux images require key pair")
-	}
-
-	cloudInit := ""
-	if cloudInitFile != "" {
-		data, err := ioutil.ReadFile(cloudInitFile)
-		if err != nil {
-			return err
-		}
-
-		cloudInit = base64.StdEncoding.EncodeToString(data)
-	}
-
-	networkId := flow.Id(0)
-	if network != nil {
-		networkId = network.Id
-	}
-
-	keyPairId := flow.Id(0)
-	if keyPair != nil {
-		keyPairId = keyPair.Id
-	}
-
-	data := &flow.ServerCreate{
-		Name:             name,
-		LocationId:       location.Id,
-		ImageId:          image.Id,
-		ProductId:        product.Id,
-		AttachExternalIp: attachExternalIp,
-		NetworkId:        networkId,
-		PrivateIp:        privateIp,
-		KeyPairId:        keyPairId,
-		Password:         password,
-		CloudInit:        cloudInit,
+	data, err := parseCreateServerData(cmd)
+	if err != nil {
+		return err
 	}
 
 	ordering, _, err := client.Server.Create(context.Background(), data)
@@ -302,12 +161,12 @@ func deleteServer(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	force, err := cmd.Flags().GetBool("force")
+	force, err := cmd.Flags().GetBool(flagForce)
 	if err != nil {
 		return err
 	}
 
-	detachOnly, err := cmd.Flags().GetBool("detach-only")
+	detachOnly, err := cmd.Flags().GetBool(flagDetachOnly)
 	if err != nil {
 		return err
 	}
@@ -350,4 +209,145 @@ func deleteServer(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+func parseCreateServerData(cmd *cobra.Command) (*flow.ServerCreate, error) {
+	var err error
+	result := &flow.ServerCreate{}
+
+	// validate name
+	result.Name, err = findRequiredString(cmd, flagName)
+	if err != nil {
+		return nil, err
+	}
+
+	// validate location
+	locationFilter, err := findRequiredString(cmd, flagLocation)
+	if err != nil {
+		return nil, err
+	}
+
+	location, err := findLocation(locationFilter)
+	if err != nil {
+		return nil, err
+	}
+
+	result.LocationId = location.Id
+
+	// validate image
+	imageFilter, err := findRequiredString(cmd, flagImage)
+	if err != nil {
+		return nil, err
+	}
+
+	image, err := findImage(imageFilter)
+	if err != nil {
+		return nil, err
+	}
+
+	if !image.AvailableAt(location) {
+		return nil, fmt.Errorf("image is not available at the selected location")
+	}
+
+	result.ImageId = image.Id
+
+	// validate product
+	productFilter, err := findRequiredString(cmd, flagProduct)
+	if err != nil {
+		return nil, err
+	}
+
+	product, err := findProduct(productFilter)
+	if err != nil {
+		return nil, err
+	}
+
+	if !product.AvailableAt(location) {
+		return nil, fmt.Errorf("product is not available at the selected location")
+	}
+
+	disk := product.FindItem(3)
+	if product.Type.Id != 4 || disk == nil {
+		return nil, fmt.Errorf("product is not a compute vm product")
+	}
+
+	if image.MinRootDiskSize > disk.Amount {
+		return nil, fmt.Errorf("the %s image requires at least %d GB of storage", image.Key, image.MinRootDiskSize)
+	}
+
+	result.ProductId = product.Id
+
+	// validate cloud init
+	cloudInitFile, err := cmd.Flags().GetString(flagCloudInit)
+	if err != nil {
+		return nil, err
+	}
+
+	if strings.ToLower(image.Category) == "windows" && cloudInitFile != "" {
+		return nil, fmt.Errorf("windows images are not allowed to take cloud init scripts")
+	}
+
+	if cloudInitFile != "" {
+		data, err := ioutil.ReadFile(cloudInitFile)
+		if err != nil {
+			return nil, err
+		}
+
+		result.CloudInit = base64.StdEncoding.EncodeToString(data)
+	}
+
+	// validate network
+	networkFilter, err := cmd.Flags().GetString(flagNetwork)
+	if err != nil {
+		return nil, err
+	}
+
+	if networkFilter != "" {
+		network, err := findNetwork(networkFilter)
+		if err != nil {
+			return nil, err
+		}
+
+		result.NetworkId = network.Id
+	}
+
+	// validate private ip
+	result.PrivateIp, err = cmd.Flags().GetString(flagPrivateIp)
+	if err != nil {
+		return nil, err
+	}
+
+	// validate key pair
+	keyPairFilter, err := cmd.Flags().GetString(flagKeyPair)
+
+	if keyPairFilter != "" {
+		keyPair, err := findKeyPair(keyPairFilter)
+		if err != nil {
+			return nil, err
+		}
+
+		result.KeyPairId = keyPair.Id
+	}
+
+	if strings.ToLower(image.Category) == "linux" && result.KeyPairId == 0 {
+		return nil, fmt.Errorf("linux images require key pair")
+	}
+
+	// validate windows password
+	result.Password, err = cmd.Flags().GetString(flagWindowsPassword)
+	if err != nil {
+		return nil, err
+	}
+
+	if strings.ToLower(image.Category) == "windows" && result.Password == "" {
+		return nil, fmt.Errorf("windows images require password")
+	}
+
+	// validate external ip
+	result.AttachExternalIp, err = cmd.Flags().GetBool(flagAttachExternalIp)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }

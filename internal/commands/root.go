@@ -50,6 +50,19 @@ func errRequiredFlag(flag string) error {
 	return fmt.Errorf("%s is required", flag)
 }
 
+func findRequiredString(cmd *cobra.Command, flag string) (string, error) {
+	val, err := cmd.Flags().GetString(flag)
+	if err != nil {
+		return "", err
+	}
+
+	if val == "" {
+		return "", errRequiredFlag(flag)
+	}
+
+	return val, nil
+}
+
 func init() {
 	cobra.OnInitialize(initConfig)
 
