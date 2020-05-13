@@ -17,7 +17,7 @@ const (
 type AnsiColor int
 
 const (
-	AnsiBlack AnsiColor = 30
+	AnsiBlack AnsiColor = iota + 30
 	AnsiRed
 	AnsiGreen
 	AnsiYellow

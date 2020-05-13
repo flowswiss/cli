@@ -22,6 +22,7 @@ var (
 		Use:     "flow",
 		Short:   "Command line interface for the Flow Platform",
 		Version: "1.0.0",
+		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			base, err := url.Parse(config.Endpoint)
 			if err != nil {
@@ -40,7 +41,7 @@ func Do() {
 
 func handleError(err error) {
 	if err != nil {
-		stderr.Errorf("%s\n", err.Error())
+		stderr.Errorf("%v\n", err)
 		os.Exit(1)
 	}
 }
