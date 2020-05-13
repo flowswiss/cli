@@ -33,6 +33,10 @@ type ElasticIpCreate struct {
 	LocationId Id `json:"location_id"`
 }
 
+func (e *ElasticIp) String() string {
+	return e.PublicIp
+}
+
 type elasticIpService struct {
 	client *Client
 }

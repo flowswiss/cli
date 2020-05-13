@@ -60,6 +60,10 @@ type ServerCreate struct {
 	CloudInit        string `json:"cloud_init,omitempty"`
 }
 
+func (s *Server) String() string {
+	return s.Name
+}
+
 type serverService struct {
 	client *Client
 }
