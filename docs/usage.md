@@ -64,6 +64,16 @@
 
 ## Commands
 
+### Authentication
+
+```
+flow auth login
+  Checks whether your login credentials are valid and stores the username and
+  password in your users home directory under `$HOME/.flow/credentials.json`
+```
+
+### Compute
+
 ```
 flow compute server list
   Lists all server of the selected organization.
