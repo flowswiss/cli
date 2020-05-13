@@ -16,13 +16,14 @@ type Country struct {
 }
 
 type Organization struct {
-	Id                    Id     `json:"id"`
-	Name                  string `json:"name"`
-	Address               string `json:"address"`
-	Zip                   string `json:"zip"`
-	City                  string `json:"city"`
-	PhoneNumber           string `json:"phone_number"`
-	InvoiceDeploymentFees bool   `json:"invoice_deployment_fees"`
+	Id                    Id        `json:"id"`
+	Name                  string    `json:"name"`
+	Address               string    `json:"address"`
+	Zip                   string    `json:"zip"`
+	City                  string    `json:"city"`
+	PhoneNumber           string    `json:"phone_number"`
+	InvoiceDeploymentFees bool      `json:"invoice_deployment_fees"`
+	CreatedAt             time.Time `json:"created_at"`
 
 	Status struct {
 		Id            Id         `json:"id"`
@@ -40,11 +41,11 @@ type Organization struct {
 }
 
 type User struct {
-	Id                    uint           `json:"id"`
-	Username              string         `json:"username"`
-	FirstName             string         `json:"firstname"`
-	LastName              string         `json:"lastname"`
-	PhoneNumber           string         `json:"phone_number"`
+	Id                    uint            `json:"id"`
+	Username              string          `json:"username"`
+	FirstName             string          `json:"firstname"`
+	LastName              string          `json:"lastname"`
+	PhoneNumber           string          `json:"phone_number"`
 	AssignedOrganizations []*Organization `json:"assigned_organizations"`
 	DefaultOrganization   *Organization   `json:"default_organization"`
 }

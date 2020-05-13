@@ -13,6 +13,7 @@ func TestServerService_List(t *testing.T) {
 	options := PaginationOptions{NoFilter: 1}
 
 	serveMux.HandleFunc(path.Join("/v3/", organizationPath, "/compute/instances"), func(res http.ResponseWriter, req *http.Request) {
+		assertMethod(t, req, http.MethodGet)
 		assertPagination(t, req, options)
 
 		res.Header().Set("Content-Type", "application/json")
@@ -33,6 +34,20 @@ func TestServerService_Create(t *testing.T) {
 	setupMockServer(t)
 
 	serveMux.HandleFunc(path.Join("/v3/", organizationPath, "/compute/instances"), func(res http.ResponseWriter, req *http.Request) {
+		assertMethod(t, req, http.MethodPost)
+		assertPayload(t, req, &ServerCreate{
+			Name:             "Test Server",
+			LocationId:       1,
+			ImageId:          3,
+			ProductId:        40,
+			AttachExternalIp: true,
+			NetworkId:        1,
+			PrivateIp:        "",
+			KeyPairId:        1,
+			Password:         "",
+			CloudInit:        "",
+		})
+
 		response := `{"ref": "https://api.flow.swiss/v3/organizations/1/orders/1"}`
 
 		res.Header().Set("Content-Type", "application/json")

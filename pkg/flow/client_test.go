@@ -6,57 +6,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"regexp"
-	"strconv"
 	"testing"
 )
-
-var (
-	server   *httptest.Server
-	serveMux *http.ServeMux
-
-	client           *Client
-	organizationPath string
-)
-
-func setupMockServer(t *testing.T) {
-	var err error
-
-	serveMux = http.NewServeMux()
-
-	server = httptest.NewServer(serveMux)
-	base, err := url.Parse(server.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	client = NewClient(base)
-	client.Flags |= FlagNoAuthentication
-	client.Organization = 1
-
-	organizationPath = fmt.Sprintf("organizations/%d", client.Organization)
-}
-
-func assertPagination(t *testing.T, req *http.Request, expectation PaginationOptions) {
-	values := req.URL.Query()
-
-	page, _ := strconv.ParseInt(values.Get("page"), 10, 32)
-	if int(page) != expectation.Page {
-		t.Error(fmt.Sprintf("expected page to be %d, got %d", expectation.Page, page))
-	}
-
-	perPage, _ := strconv.ParseInt(values.Get("per_page"), 10, 32)
-	if int(perPage) != expectation.PerPage {
-		t.Error(fmt.Sprintf("expected per_page to be %d, got %d", expectation.PerPage, perPage))
-	}
-
-	noFilter, _ := strconv.ParseInt(values.Get("no_filter"), 10, 32)
-	if int(noFilter) != expectation.NoFilter {
-		t.Error(fmt.Sprintf("expected no_filter to be %d, got %d", expectation.NoFilter, noFilter))
-	}
-}
 
 func TestNewClient(t *testing.T) {
 	base, err := url.Parse("https://api.flow.swiss/")
