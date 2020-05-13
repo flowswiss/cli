@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"regexp"
+	"strconv"
 	"testing"
 )
 
@@ -32,6 +33,25 @@ func setupMockServer(t *testing.T) {
 
 	client = NewClient(base)
 	client.Flags |= FlagNoAuthentication
+}
+
+func assertPagination(t *testing.T, req *http.Request, expectation PaginationOptions) {
+	values := req.URL.Query()
+
+	page, _ := strconv.ParseInt(values.Get("page"), 10, 32)
+	if int(page) != expectation.Page {
+		t.Error(fmt.Sprintf("expected page to be %d, got %d", expectation.Page, page))
+	}
+
+	perPage, _ := strconv.ParseInt(values.Get("per_page"), 10, 32)
+	if int(perPage) != expectation.PerPage {
+		t.Error(fmt.Sprintf("expected per_page to be %d, got %d", expectation.PerPage, perPage))
+	}
+
+	noFilter, _ := strconv.ParseInt(values.Get("no_filter"), 10, 32)
+	if int(noFilter) != expectation.NoFilter {
+		t.Error(fmt.Sprintf("expected no_filter to be %d, got %d", expectation.NoFilter, noFilter))
+	}
 }
 
 func TestNewClient(t *testing.T) {

@@ -9,7 +9,11 @@ import (
 func TestImageService_List(t *testing.T) {
 	setupMockServer(t)
 
+	options := PaginationOptions{Page: 1, PerPage: 3}
+
 	serveMux.HandleFunc("/v3/entities/images", func(res http.ResponseWriter, req *http.Request) {
+		assertPagination(t, req, options)
+
 		response := `[{"id":1,"os":"Ubuntu","version":"18.04 LTS","key":"linux-ubuntu-18.04-lts","category":"Linux","type":"distribution","min_root_disk_size":10,"sorting":2,"required_licenses":[],"available_locations":[1,2]},{"id":2,"os":"Ubuntu","version":"16.04 LTS","key":"linux-ubuntu-16.04-lts","category":"Linux","type":"distribution","min_root_disk_size":10,"sorting":3,"required_licenses":[],"available_locations":[1,2]},{"id":9,"os":"Windows Server","version":"2019 Standard","key":"microsoft-windows-server-2019","category":"Windows","type":"distribution","min_root_disk_size":40,"sorting":9,"required_licenses":[{"id":10,"product_name":"Windows Server","type":{"id":2,"name":"License","key":"license"},"visibility":"public","usage_cycle":{"id":3,"name":"Monthly","duration":730},"items":[{"id":10,"name":"Windows Server 2016 Standard","description":"Windows Server 2016 Standard License","amount":1}],"price":10,"availability":[{"location":{"id":1,"name":"ALP1"},"available":-1},{"location":{"id":2,"name":"ZRH1"},"available":-1}],"category":null,"deployment_fees":[]}],"available_locations":[1,2]}]`
 
 		res.Header().Set("Content-Type", "application/json")
@@ -20,7 +24,7 @@ func TestImageService_List(t *testing.T) {
 		}
 	})
 
-	images, _, err := client.Image.List(context.Background(), PaginationOptions{})
+	images, _, err := client.Image.List(context.Background(), options)
 	if err != nil {
 		t.Fatal(err)
 	}

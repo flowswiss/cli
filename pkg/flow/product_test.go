@@ -9,7 +9,11 @@ import (
 func TestProductService_List(t *testing.T) {
 	setupMockServer(t)
 
+	options := PaginationOptions{Page: 1, PerPage: 3}
+
 	serveMux.HandleFunc("/v3/products", func(res http.ResponseWriter, req *http.Request) {
+		assertPagination(t, req, options)
+
 		response := `[{"id":1,"product_name":"Elastic IP Free","type":{"id":5,"name":"Elastic IP","key":"compute-engine-elastic-ip"},"visibility":"public","usage_cycle":{"id":2,"name":"Hour","duration":1},"items":[{"id":4,"name":"IPv4 Adresse","description":"IPv4 Adresse","amount":1}],"price":0,"availability":[{"location":{"id":1,"name":"ALP1"},"available":-1},{"location":{"id":2,"name":"ZRH1"},"available":-1}],"category":null,"deployment_fees":[]},{"id":8,"product_name":"Elastic IP","type":{"id":5,"name":"Elastic IP","key":"compute-engine-elastic-ip"},"visibility":"public","usage_cycle":{"id":2,"name":"Hour","duration":1},"items":[{"id":4,"name":"IPv4 Adresse","description":"IPv4 Adresse","amount":1}],"price":5.037,"availability":[{"location":{"id":1,"name":"ALP1"},"available":-1},{"location":{"id":2,"name":"ZRH1"},"available":-1}],"category":null,"deployment_fees":[]},{"id":10,"product_name":"Windows Server","type":{"id":2,"name":"License","key":"license"},"visibility":"public","usage_cycle":{"id":3,"name":"Monthly","duration":730},"items":[{"id":10,"name":"Windows Server 2016 Standard","description":"Windows Server 2016 Standard License","amount":1}],"price":10,"availability":[{"location":{"id":1,"name":"ALP1"},"available":-1},{"location":{"id":2,"name":"ZRH1"},"available":-1}],"category":null,"deployment_fees":[]}]`
 
 		res.Header().Set("Content-Type", "application/json")
@@ -20,7 +24,7 @@ func TestProductService_List(t *testing.T) {
 		}
 	})
 
-	products, _, err := client.Product.List(context.Background(), PaginationOptions{PerPage: 3})
+	products, _, err := client.Product.List(context.Background(), options)
 	if err != nil {
 		t.Fatal(err)
 	}

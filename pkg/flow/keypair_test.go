@@ -10,7 +10,11 @@ import (
 func TestKeyPairService_List(t *testing.T) {
 	setupMockServer(t)
 
+	options := PaginationOptions{NoFilter: 1}
+
 	serveMux.HandleFunc(path.Join("/v3/", client.OrganizationPath(), "/compute/key-pairs"), func(res http.ResponseWriter, req *http.Request) {
+		assertPagination(t, req, options)
+
 		response := `[{"id":1,"name":"Sample Key Pair","fingerprint":"3a:8c:ff:f8:db:c2:ab:7e:a4:1a:bc:fb:31:ec:21:5b"}]`
 
 		res.Header().Set("Content-Type", "application/json")
@@ -21,7 +25,7 @@ func TestKeyPairService_List(t *testing.T) {
 		}
 	})
 
-	keyPairs, _, err := client.KeyPair.List(context.Background(), PaginationOptions{})
+	keyPairs, _, err := client.KeyPair.List(context.Background(), options)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -10,7 +10,11 @@ import (
 func TestNetworkService_List(t *testing.T) {
 	setupMockServer(t)
 
+	options := PaginationOptions{NoFilter: 1}
+
 	serveMux.HandleFunc(path.Join("/v3/", client.OrganizationPath(), "/compute/networks"), func(res http.ResponseWriter, req *http.Request) {
+		assertPagination(t, req, options)
+
 		response := `[{"id":1,"name":"Default Network","cidr":"172.31.0.0/20","location":{"id":1,"name":"ALP1"},"used_ips":6,"total_ips":3995}]`
 
 		res.Header().Set("Content-Type", "application/json")
@@ -21,7 +25,7 @@ func TestNetworkService_List(t *testing.T) {
 		}
 	})
 
-	networks, _, err := client.Network.List(context.Background(), PaginationOptions{})
+	networks, _, err := client.Network.List(context.Background(), options)
 	if err != nil {
 		t.Fatal(err)
 	}
