@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"path"
 )
 
 type NetworkService interface {
@@ -37,7 +36,7 @@ type networkService struct {
 }
 
 func (s *networkService) List(ctx context.Context, options PaginationOptions) ([]*Network, *Response, error) {
-	p := path.Join("/v3/", s.client.OrganizationPath(), "compute/networks")
+	p := "/v3/organizations/{organization}/compute/networks"
 	p, err := addOptions(p, options)
 	if err != nil {
 		return nil, nil, err
@@ -59,7 +58,7 @@ func (s *networkService) List(ctx context.Context, options PaginationOptions) ([
 }
 
 func (s *networkService) Get(ctx context.Context, id Id) (*Network, *Response, error) {
-	p := path.Join("/v3/", s.client.OrganizationPath(), fmt.Sprintf("compute/networks/%d", id))
+	p := fmt.Sprintf("/v3/organizations/{organization}/compute/networks/%d", id)
 
 	req, err := s.client.NewRequest(ctx, http.MethodGet, p, nil, 0)
 	if err != nil {

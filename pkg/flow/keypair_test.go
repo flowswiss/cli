@@ -12,7 +12,7 @@ func TestKeyPairService_List(t *testing.T) {
 
 	options := PaginationOptions{NoFilter: 1}
 
-	serveMux.HandleFunc(path.Join("/v3/", client.OrganizationPath(), "/compute/key-pairs"), func(res http.ResponseWriter, req *http.Request) {
+	serveMux.HandleFunc(path.Join("/v3/", organizationPath, "/compute/key-pairs"), func(res http.ResponseWriter, req *http.Request) {
 		assertPagination(t, req, options)
 
 		response := `[{"id":1,"name":"Sample Key Pair","fingerprint":"3a:8c:ff:f8:db:c2:ab:7e:a4:1a:bc:fb:31:ec:21:5b"}]`
@@ -44,7 +44,7 @@ func TestKeyPairService_List(t *testing.T) {
 func TestKeyPairService_Create(t *testing.T) {
 	setupMockServer(t)
 
-	serveMux.HandleFunc(path.Join("/v3/", client.OrganizationPath(), "/compute/key-pairs"), func(res http.ResponseWriter, req *http.Request) {
+	serveMux.HandleFunc(path.Join("/v3/", organizationPath, "/compute/key-pairs"), func(res http.ResponseWriter, req *http.Request) {
 		response := `{"id":1,"name":"Sample Key Pair","fingerprint":"3a:8c:ff:f8:db:c2:ab:7e:a4:1a:bc:fb:31:ec:21:5b"}`
 
 		res.Header().Set("Content-Type", "application/json")
@@ -73,7 +73,7 @@ func TestKeyPairService_Create(t *testing.T) {
 func TestKeyPairService_Delete(t *testing.T) {
 	setupMockServer(t)
 
-	serveMux.HandleFunc(path.Join("/v3/", client.OrganizationPath(), "/compute/key-pairs/1"), func(res http.ResponseWriter, req *http.Request) {
+	serveMux.HandleFunc(path.Join("/v3/", organizationPath, "/compute/key-pairs/1"), func(res http.ResponseWriter, req *http.Request) {
 		res.Header().Set("Content-Type", "application/json")
 		res.WriteHeader(204)
 		_, err := res.Write([]byte{})

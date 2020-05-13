@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"path"
 )
 
 type ServerAttachmentService interface {
@@ -23,7 +22,7 @@ type serverAttachmentService struct {
 }
 
 func (s *serverAttachmentService) ListAttachedElasticIps(ctx context.Context, server Id, options PaginationOptions) ([]*ElasticIp, *Response, error) {
-	p := path.Join("/v3/", s.client.OrganizationPath(), fmt.Sprintf("/compute/instances/%d/elastic-ips", server))
+	p := fmt.Sprintf("/v3/organizations/{organization}/compute/instances/%d/elastic-ips", server)
 	p, err := addOptions(p, options)
 	if err != nil {
 		return nil, nil, err
@@ -45,7 +44,7 @@ func (s *serverAttachmentService) ListAttachedElasticIps(ctx context.Context, se
 }
 
 func (s *serverAttachmentService) AttachElasticIp(ctx context.Context, server Id, data *AttachElasticIp) (*ElasticIp, *Response, error) {
-	p := path.Join("/v3/", s.client.OrganizationPath(), fmt.Sprintf("/compute/instances/%d/elastic-ips", server))
+	p := fmt.Sprintf("/v3/organizations/{organization}/compute/instances/%d/elastic-ips", server)
 
 	req, err := s.client.NewRequest(ctx, http.MethodPost, p, data, 0)
 	if err != nil {
@@ -63,7 +62,7 @@ func (s *serverAttachmentService) AttachElasticIp(ctx context.Context, server Id
 }
 
 func (s *serverAttachmentService) DetachElasticIp(ctx context.Context, server Id, elasticIp Id) (*Response, error) {
-	p := path.Join("/v3/", s.client.OrganizationPath(), fmt.Sprintf("/compute/instances/%d/elastic-ips/%d", server, elasticIp))
+	p := fmt.Sprintf("/v3/organizations/{organization}/compute/instances/%d/elastic-ips/%d", server, elasticIp)
 
 	req, err := s.client.NewRequest(ctx, http.MethodDelete, p, nil, 0)
 	if err != nil {

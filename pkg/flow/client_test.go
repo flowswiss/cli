@@ -17,7 +17,8 @@ var (
 	server   *httptest.Server
 	serveMux *http.ServeMux
 
-	client *Client
+	client           *Client
+	organizationPath string
 )
 
 func setupMockServer(t *testing.T) {
@@ -33,6 +34,9 @@ func setupMockServer(t *testing.T) {
 
 	client = NewClient(base)
 	client.Flags |= FlagNoAuthentication
+	client.Organization = 1
+
+	organizationPath = fmt.Sprintf("organizations/%d", client.Organization)
 }
 
 func assertPagination(t *testing.T, req *http.Request, expectation PaginationOptions) {

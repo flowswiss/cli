@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"path"
 )
 
 type KeyPairService interface {
@@ -33,7 +32,7 @@ type keyPairService struct {
 }
 
 func (s *keyPairService) List(ctx context.Context, options PaginationOptions) ([]*KeyPair, *Response, error) {
-	p := path.Join("/v3/", s.client.OrganizationPath(), "compute/key-pairs")
+	p := "/v3/organizations/{organization}/compute/key-pairs"
 	p, err := addOptions(p, options)
 	if err != nil {
 		return nil, nil, err
@@ -55,7 +54,7 @@ func (s *keyPairService) List(ctx context.Context, options PaginationOptions) ([
 }
 
 func (s *keyPairService) Create(ctx context.Context, data *KeyPairCreate) (*KeyPair, *Response, error) {
-	p := path.Join("/v3/", s.client.OrganizationPath(), "compute/key-pairs")
+	p := "/v3/organizations/{organization}/compute/key-pairs"
 
 	req, err := s.client.NewRequest(ctx, http.MethodPost, p, data, 0)
 	if err != nil {
@@ -73,7 +72,7 @@ func (s *keyPairService) Create(ctx context.Context, data *KeyPairCreate) (*KeyP
 }
 
 func (s *keyPairService) Delete(ctx context.Context, id Id) (*Response, error) {
-	p := path.Join("/v3/", s.client.OrganizationPath(), fmt.Sprintf("compute/key-pairs/%d", id))
+	p := fmt.Sprintf("/v3/organizations/{organization}/compute/key-pairs/%d", id)
 
 	req, err := s.client.NewRequest(ctx, http.MethodDelete, p, nil, 0)
 	if err != nil {

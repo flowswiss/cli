@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"path"
 )
 
 type ElasticIpService interface {
@@ -42,7 +41,7 @@ type elasticIpService struct {
 }
 
 func (s *elasticIpService) List(ctx context.Context, options PaginationOptions) ([]*ElasticIp, *Response, error) {
-	p := path.Join("/v3/", s.client.OrganizationPath(), "/compute/elastic-ips")
+	p := "/v3/organizations/{organization}/compute/elastic-ips"
 	p, err := addOptions(p, options)
 	if err != nil {
 		return nil, nil, err
@@ -64,7 +63,7 @@ func (s *elasticIpService) List(ctx context.Context, options PaginationOptions) 
 }
 
 func (s *elasticIpService) Create(ctx context.Context, data *ElasticIpCreate) (*ElasticIp, *Response, error) {
-	p := path.Join("/v3/", s.client.OrganizationPath(), "/compute/elastic-ips")
+	p := "/v3/organizations/{organization}/compute/elastic-ips"
 
 	req, err := s.client.NewRequest(ctx, http.MethodPost, p, data, 0)
 	if err != nil {
@@ -82,7 +81,7 @@ func (s *elasticIpService) Create(ctx context.Context, data *ElasticIpCreate) (*
 }
 
 func (s *elasticIpService) Delete(ctx context.Context, id Id) (*Response, error) {
-	p := path.Join("/v3/", s.client.OrganizationPath(), fmt.Sprintf("/compute/elastic-ips/%d", id))
+	p := fmt.Sprintf("/v3/organizations/{organization}/compute/elastic-ips/%d", id)
 
 	req, err := s.client.NewRequest(ctx, http.MethodDelete, p, nil, 0)
 	if err != nil {

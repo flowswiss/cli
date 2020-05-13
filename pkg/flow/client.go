@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 )
 
 const (
@@ -98,10 +99,6 @@ func NewClient(base *url.URL) *Client {
 	return client
 }
 
-func (c *Client) OrganizationPath() string {
-	return fmt.Sprintf("organizations/%d", c.Organization) // TODO
-}
-
 func (c *Client) AddUserAgent(userAgent string) {
 	c.UserAgent = fmt.Sprintf("%s %s", userAgent, c.UserAgent)
 }
@@ -131,6 +128,10 @@ func (c *Client) AuthenticationToken(ctx context.Context) (string, error) {
 		c.TokenStorage.SetToken(user.Token)
 	}
 
+	if c.Organization == 0 {
+		c.Organization = user.DefaultOrganization.Id
+	}
+
 	return user.Token, nil
 }
 
@@ -152,6 +153,17 @@ func (c *Client) NewRequest(ctx context.Context, method string, path string, bod
 		reader = buf
 	}
 
+	token := ""
+	if c.Flags&FlagNoAuthentication == 0 && flags&FlagNoAuthentication == 0 {
+		token, err = c.AuthenticationToken(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	orgRegex := regexp.MustCompile("{organization}")
+	u.Path = orgRegex.ReplaceAllString(u.Path, fmt.Sprintf("%d", c.Organization))
+
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), reader)
 	if err != nil {
 		return nil, err
@@ -161,11 +173,7 @@ func (c *Client) NewRequest(ctx context.Context, method string, path string, bod
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("User-Agent", c.UserAgent)
 
-	if c.Flags&FlagNoAuthentication == 0 && flags&FlagNoAuthentication == 0 {
-		token, err := c.AuthenticationToken(ctx)
-		if err != nil {
-			return nil, err
-		}
+	if token != "" {
 		req.Header.Add("X-Auth-Token", token)
 	}
 

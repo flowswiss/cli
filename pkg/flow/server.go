@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"path"
 )
 
 type ServerService interface {
@@ -69,7 +68,7 @@ type serverService struct {
 }
 
 func (s *serverService) List(ctx context.Context, options PaginationOptions) ([]*Server, *Response, error) {
-	p := path.Join("/v3/", s.client.OrganizationPath(), "/compute/instances")
+	p := "/v3/organizations/{organization}/compute/instances"
 	p, err := addOptions(p, options)
 	if err != nil {
 		return nil, nil, err
@@ -91,7 +90,7 @@ func (s *serverService) List(ctx context.Context, options PaginationOptions) ([]
 }
 
 func (s *serverService) Get(ctx context.Context, id Id) (*Server, *Response, error) {
-	p := path.Join("/v3/", s.client.OrganizationPath(), fmt.Sprintf("/compute/instances/%d", id))
+	p := fmt.Sprintf("/v3/organizations/{organization}/compute/instances/%d", id)
 
 	req, err := s.client.NewRequest(ctx, http.MethodGet, p, nil, 0)
 	if err != nil {
@@ -109,7 +108,7 @@ func (s *serverService) Get(ctx context.Context, id Id) (*Server, *Response, err
 }
 
 func (s *serverService) Create(ctx context.Context, data *ServerCreate) (*Ordering, *Response, error) {
-	p := path.Join("/v3/", s.client.OrganizationPath(), "/compute/instances")
+	p := "/v3/organizations/{organization}/compute/instances"
 
 	req, err := s.client.NewRequest(ctx, http.MethodPost, p, data, 0)
 	if err != nil {
@@ -131,7 +130,7 @@ func (s *serverService) Update(ctx context.Context, id Id) (*Server, *Response, 
 }
 
 func (s *serverService) Delete(ctx context.Context, id Id) (*Response, error) {
-	p := path.Join("/v3/", s.client.OrganizationPath(), fmt.Sprintf("/compute/instances/%d", id))
+	p := fmt.Sprintf("/v3/organizations/{organization}/compute/instances/%d", id)
 
 	req, err := s.client.NewRequest(ctx, http.MethodDelete, p, nil, 0)
 	if err != nil {
@@ -149,7 +148,7 @@ func (s *serverService) Delete(ctx context.Context, id Id) (*Response, error) {
 }
 
 func (s *serverService) RunAction(ctx context.Context, id Id, command string) (*Server, *Response, error) {
-	p := path.Join("/v3/", s.client.OrganizationPath(), fmt.Sprintf("/compute/instances/%d/action", id))
+	p := fmt.Sprintf("/v3/organizations/{organization}/compute/instances/%d/action", id)
 
 	data := struct {
 		Action string `json:"action"`

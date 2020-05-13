@@ -73,7 +73,6 @@ func initClient(base *url.URL) {
 	client = flow.NewClient(base)
 	client.CredentialsProvider = &CommandLineCredentialsProvider{}
 	client.TokenStorage = &flow.MemoryTokenStorage{}
-	client.Organization = 2
 
 	client.OnRequest = func(req *http.Request) {
 		if config.Verbosity >= 1 {

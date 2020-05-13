@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"path"
 	"regexp"
 	"strconv"
 )
@@ -48,7 +47,7 @@ type orderService struct {
 }
 
 func (s *orderService) Get(ctx context.Context, id Id) (*Order, *Response, error) {
-	p := path.Join("/v3/", s.client.OrganizationPath(), fmt.Sprintf("/orders/%d", id))
+	p := fmt.Sprintf("/v3/organizations/{organization}/orders/%d", id)
 
 	req, err := s.client.NewRequest(ctx, http.MethodGet, p, nil, 0)
 	if err != nil {
