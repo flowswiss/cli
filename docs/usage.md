@@ -212,3 +212,21 @@ flow compute server delete <server>
                             through this flag and all elastic ips will only be
                             detached.
 ```
+
+```
+flow compute key-pair list
+  Lists all key pairs of the selected organization
+```
+
+```
+flow compute key-pair upload <file>
+  Uploads the selected public key if it does not already exist.
+
+  <file> string             Path to the public key file which should be
+                            uploaded. The selected file must be in the openssh
+                            authorized keys format as generated through
+                            `ssh-keygen`
+
+  --name string             The name for the new key pair. By default the
+                            optional public key comment is chosen if it exists.
+```
