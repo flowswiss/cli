@@ -35,6 +35,16 @@
 
                             Example: '123456'
 
+  --organization string     Filter for the organization to run all API Requests
+                            in. Can be an interger if you want to search by id
+                            or a string if you want to search for any other
+                            identification (e.g. name). Can also be specified
+                            through the `FLOW_ORGANIZATION` environment variable
+                            or the `organization` item in your configuration
+                            file.
+
+                            Example: 'Flow Swiss AG'
+
 
   --format string           The output format to use for list operations. Can be
                             one of table, csv or json. By default all list
