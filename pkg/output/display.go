@@ -17,5 +17,6 @@ func (o *Output) DisplayTable(object interface{}, separator string, pretty bool)
 		return err
 	}
 
-	return tbl.Format(o.Writer, separator, pretty)
+	tbl.Format(o, separator, pretty)
+	return nil
 }

@@ -2,7 +2,6 @@ package output
 
 import (
 	"fmt"
-	"io"
 	"reflect"
 	"strings"
 )
@@ -66,30 +65,21 @@ func (t *Table) insertRow(data map[string]interface{}) {
 	t.Rows = append(t.Rows, row)
 }
 
-func (t *Table) Format(writer io.Writer, separator string, pretty bool) error {
+func (t *Table) Format(out *Output, separator string, pretty bool) {
 	format := "%s"
 	for idx, col := range t.Columns {
 		if pretty {
 			format = col.format()
 		}
 
-		_, err := fmt.Fprintf(writer, format, strings.ToUpper(col.Name))
-		if err != nil {
-			return err
-		}
+		out.Bold(format, strings.ToUpper(col.Name))
 
 		if (idx + 1) < len(t.Columns) {
-			_, err := fmt.Fprintf(writer, separator)
-			if err != nil {
-				return err
-			}
+			out.Print(separator)
 		}
 	}
 
-	_, err := fmt.Fprintln(writer)
-	if err != nil {
-		return err
-	}
+	out.Println()
 
 	for _, row := range t.Rows {
 		for idx, val := range row {
@@ -101,26 +91,15 @@ func (t *Table) Format(writer io.Writer, separator string, pretty bool) error {
 				val = fmt.Sprintf("%q", val)
 			}
 
-			_, err := fmt.Fprintf(writer, format, val)
-			if err != nil {
-				return err
-			}
+			out.Printf(format, val)
 
 			if (idx + 1) < len(row) {
-				_, err := fmt.Fprint(writer, separator)
-				if err != nil {
-					return err
-				}
+				out.Print(separator)
 			}
 		}
 
-		_, err := fmt.Fprintln(writer)
-		if err != nil {
-			return err
-		}
+		out.Println()
 	}
-
-	return nil
 }
 
 func (t *Table) insertMap(value reflect.Value) error {

@@ -31,10 +31,7 @@ func display(val interface{}) error {
 		return err
 	}
 
-	err = table.Format(stdout.Writer, separator, pretty)
-	if err != nil {
-		return err
-	}
+	table.Format(stdout, separator, pretty)
 
 	stderr.Printf("Found a total of %d items\n", len(table.Rows))
 	return nil
