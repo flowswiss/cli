@@ -6,5 +6,5 @@ import (
 
 func setupTests() {
 	configDir = os.TempDir()
-	initClient(nil)
+	_ = initClient(nil)
 }

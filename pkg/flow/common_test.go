@@ -32,9 +32,9 @@ func setupMockServer(t *testing.T) {
 
 	client = NewClient(base)
 	client.Flags |= FlagNoAuthentication
-	client.Organization = 1
+	client.SelectedOrganization = 1
 
-	organizationPath = fmt.Sprintf("organizations/%d", client.Organization)
+	organizationPath = fmt.Sprintf("organizations/%d", client.SelectedOrganization)
 }
 
 func assertPagination(t *testing.T, req *http.Request, expectation PaginationOptions) {

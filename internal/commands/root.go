@@ -19,9 +19,9 @@ var (
 	client *flow.Client
 
 	root = &cobra.Command{
-		Use:     "flow",
-		Short:   "Command line interface for the Flow Platform",
-		Version: "1.0.0",
+		Use:           "flow",
+		Short:         "Command line interface for the Flow Platform",
+		Version:       "1.0.0",
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			base, err := url.Parse(config.Endpoint)
@@ -29,8 +29,7 @@ var (
 				return err
 			}
 
-			initClient(base)
-			return nil
+			return initClient(base)
 		},
 	}
 )
@@ -70,11 +69,13 @@ func init() {
 
 	root.PersistentFlags().CountVarP(&config.Verbosity, "verbosity", "v", "enable a more verbose output (repeat up to 3 times to see entire output)")
 	root.PersistentFlags().String("endpoint-url", "https://api.flow.swiss/", "base endpoint to use for all api requests")
+	root.PersistentFlags().String("organization", "", "the organization context to use for every request")
 	root.PersistentFlags().String("username", "", "name of the user to authenticate with")
 	root.PersistentFlags().String("password", "", "password of the user to authenticate with")
 	root.PersistentFlags().StringVar(&config.TwoFactorCode, "two-factor-code", "", "two factor code")
 
 	handleError(viper.BindPFlag("endpoint_url", root.PersistentFlags().Lookup("endpoint-url")))
+	handleError(viper.BindPFlag("organization", root.PersistentFlags().Lookup("organization")))
 	handleError(authConfig.BindPFlag("username", root.PersistentFlags().Lookup("username")))
 	handleError(authConfig.BindPFlag("password", root.PersistentFlags().Lookup("password")))
 
@@ -82,7 +83,7 @@ func init() {
 	root.AddCommand(computeCommand)
 }
 
-func initClient(base *url.URL) {
+func initClient(base *url.URL) error {
 	client = flow.NewClient(base)
 	client.CredentialsProvider = &CommandLineCredentialsProvider{}
 	client.TokenStorage = &flow.MemoryTokenStorage{}
@@ -108,4 +109,16 @@ func initClient(base *url.URL) {
 			}
 		}
 	}
+
+	organizationFilter := viper.GetString("organization")
+	if organizationFilter != "" {
+		organization, err := findOrganization(organizationFilter)
+		if err != nil {
+			return err
+		}
+
+		client.SelectedOrganization = organization.Id
+	}
+
+	return nil
 }

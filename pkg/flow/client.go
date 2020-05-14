@@ -23,16 +23,18 @@ const (
 	ErrorUnsupportedContentType = ClientError("received unsupported content type")
 )
 
+type Id uint
+
 type ClientFlag uint
 type ClientError string
 type ClientRequestCallback func(req *http.Request)
 type ClientResponseCallback func(res *http.Response)
 
 type Client struct {
-	Base         *url.URL
-	UserAgent    string
-	Organization Id
-	Flags        ClientFlag
+	Base                 *url.URL
+	UserAgent            string
+	SelectedOrganization Id
+	Flags                ClientFlag
 
 	Client *http.Client
 
@@ -43,9 +45,10 @@ type Client struct {
 	OnResponse ClientResponseCallback
 
 	// General entities
-	Product  ProductService
-	Location LocationService
-	Image    ImageService
+	Organization OrganizationService
+	Product      ProductService
+	Location     LocationService
+	Image        ImageService
 
 	// Compute
 	Server           ServerService
@@ -85,6 +88,7 @@ func NewClient(base *url.URL) *Client {
 		Client:    &http.Client{},
 	}
 
+	client.Organization = &organizationService{client}
 	client.Product = &productService{client}
 	client.Location = &locationService{client}
 	client.Image = &imageService{client}
@@ -128,8 +132,8 @@ func (c *Client) AuthenticationToken(ctx context.Context) (string, error) {
 		c.TokenStorage.SetToken(user.Token)
 	}
 
-	if c.Organization == 0 {
-		c.Organization = user.DefaultOrganization.Id
+	if c.SelectedOrganization == 0 {
+		c.SelectedOrganization = user.DefaultOrganization.Id
 	}
 
 	return user.Token, nil
@@ -162,7 +166,7 @@ func (c *Client) NewRequest(ctx context.Context, method string, path string, bod
 	}
 
 	orgRegex := regexp.MustCompile("{organization}")
-	u.Path = orgRegex.ReplaceAllString(u.Path, fmt.Sprintf("%d", c.Organization))
+	u.Path = orgRegex.ReplaceAllString(u.Path, fmt.Sprintf("%d", c.SelectedOrganization))
 
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), reader)
 	if err != nil {
