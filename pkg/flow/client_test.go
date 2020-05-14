@@ -225,6 +225,32 @@ func TestClient_DoContext(t *testing.T) {
 	}
 }
 
+func TestClient_Organization(t *testing.T) {
+	setupMockServer(t)
+
+	req, err := client.NewRequest(context.Background(),  http.MethodGet, "/v3/organizations/{organization}", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectation := "/v3/organizations/1"
+	if req.URL.Path != expectation {
+		t.Errorf("expected path to be %q, got %q", expectation, req.URL.Path)
+	}
+
+	client.SelectedOrganization = 2
+
+	req, err = client.NewRequest(context.Background(),  http.MethodGet, "/v3/organizations/{organization}", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectation = "/v3/organizations/2"
+	if req.URL.Path != expectation {
+		t.Errorf("expected path to be %q, got %q", expectation, req.URL.Path)
+	}
+}
+
 func Test_AddOptions(t *testing.T) {
 	base := "/v3/test?q=test"
 	options := PaginationOptions{
