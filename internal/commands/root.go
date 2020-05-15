@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"fmt"
 	"github.com/flowswiss/cli/pkg/flow"
 	"github.com/flowswiss/cli/pkg/output"
 	"github.com/spf13/cobra"
@@ -45,39 +44,8 @@ func handleError(err error) {
 	}
 }
 
-func errRequiredFlag(flag string) error {
-	return fmt.Errorf("%s is required", flag)
-}
-
-func findRequiredString(cmd *cobra.Command, flag string) (string, error) {
-	val, err := cmd.Flags().GetString(flag)
-	if err != nil {
-		return "", err
-	}
-
-	if val == "" {
-		return "", errRequiredFlag(flag)
-	}
-
-	return val, nil
-}
-
 func init() {
 	cobra.OnInitialize(initConfig)
-
-	root.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.flow/config.json")
-
-	root.PersistentFlags().CountVarP(&config.Verbosity, "verbosity", "v", "enable a more verbose output (repeat up to 3 times to see entire output)")
-	root.PersistentFlags().String("endpoint-url", "https://api.flow.swiss/", "base endpoint to use for all api requests")
-	root.PersistentFlags().String("organization", "", "the organization context to use for every request")
-	root.PersistentFlags().String("username", "", "name of the user to authenticate with")
-	root.PersistentFlags().String("password", "", "password of the user to authenticate with")
-	root.PersistentFlags().StringVar(&config.TwoFactorCode, "two-factor-code", "", "two factor code")
-
-	handleError(viper.BindPFlag("endpoint_url", root.PersistentFlags().Lookup("endpoint-url")))
-	handleError(viper.BindPFlag("organization", root.PersistentFlags().Lookup("organization")))
-	handleError(authConfig.BindPFlag("username", root.PersistentFlags().Lookup("username")))
-	handleError(authConfig.BindPFlag("password", root.PersistentFlags().Lookup("password")))
 
 	root.AddCommand(authCommand)
 	root.AddCommand(computeCommand)

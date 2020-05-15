@@ -6,9 +6,11 @@ import (
 	"github.com/spf13/viper"
 )
 
+const flagFormat = "format"
+
 func init() {
-	root.PersistentFlags().String("format", "table", "Format to output the data in. Allowed values are table, csv or json")
-	handleError(viper.BindPFlag("format", root.PersistentFlags().Lookup("format")))
+	root.PersistentFlags().String(flagFormat, "table", "Format to output the data in. Allowed values are table, csv or json")
+	handleError(viper.BindPFlag("format", root.PersistentFlags().Lookup(flagFormat)))
 }
 
 func display(val interface{}) error {

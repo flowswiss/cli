@@ -71,16 +71,21 @@ func init() {
 	serverCommand.AddCommand(serverUpdateCommand)
 	serverCommand.AddCommand(serverDeleteCommand)
 
-	serverCreateCommand.Flags().StringP(flagName, "n", "", "name of the new server")
-	serverCreateCommand.Flags().StringP(flagLocation, "l", "", "location of the server")
-	serverCreateCommand.Flags().StringP(flagImage, "i", "", "operating system image to use for the new server")
-	serverCreateCommand.Flags().StringP(flagProduct, "p", "", "product to use for the new server")
+	serverCreateCommand.Flags().StringP(flagName, "n", "", "name of the new server (required)")
+	serverCreateCommand.Flags().StringP(flagLocation, "l", "", "location of the server (required)")
+	serverCreateCommand.Flags().StringP(flagImage, "i", "", "operating system image to use for the new server (required)")
+	serverCreateCommand.Flags().StringP(flagProduct, "p", "", "product to use for the new server (required)")
 	serverCreateCommand.Flags().String(flagNetwork, "", "network in which the first network interface should be created")
 	serverCreateCommand.Flags().String(flagPrivateIp, "", "ip address of the server in the selected network")
-	serverCreateCommand.Flags().String(flagKeyPair, "", "ssh key-pair for connecting to the server")
-	serverCreateCommand.Flags().String(flagWindowsPassword, "", "password for the windows admin user")
+	serverCreateCommand.Flags().String(flagKeyPair, "", "ssh key-pair for connecting to the server (required if image is linux)")
+	serverCreateCommand.Flags().String(flagWindowsPassword, "", "password for the windows admin user  (required if image is windows)")
 	serverCreateCommand.Flags().String(flagCloudInit, "", "cloud init script to customize creation of the server")
 	serverCreateCommand.Flags().Bool(flagAttachExternalIp, true, "whether to attach an elastic ip to the server")
+
+	handleError(serverCreateCommand.MarkFlagRequired(flagName))
+	handleError(serverCreateCommand.MarkFlagRequired(flagLocation))
+	handleError(serverCreateCommand.MarkFlagRequired(flagImage))
+	handleError(serverCreateCommand.MarkFlagRequired(flagProduct))
 
 	serverDeleteCommand.Flags().Bool(flagForce, false, "forces deletion of the server without asking for confirmation")
 	serverDeleteCommand.Flags().Bool(flagDetachOnly, false, "specifies whether elastic ips should only be detached without getting deleted")
@@ -216,13 +221,13 @@ func parseCreateServerData(cmd *cobra.Command) (*flow.ServerCreate, error) {
 	result := &flow.ServerCreate{}
 
 	// validate name
-	result.Name, err = findRequiredString(cmd, flagName)
+	result.Name, err = cmd.Flags().GetString(flagName)
 	if err != nil {
 		return nil, err
 	}
 
 	// validate location
-	locationFilter, err := findRequiredString(cmd, flagLocation)
+	locationFilter, err := cmd.Flags().GetString(flagLocation)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +240,7 @@ func parseCreateServerData(cmd *cobra.Command) (*flow.ServerCreate, error) {
 	result.LocationId = location.Id
 
 	// validate image
-	imageFilter, err := findRequiredString(cmd, flagImage)
+	imageFilter, err := cmd.Flags().GetString(flagImage)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +257,7 @@ func parseCreateServerData(cmd *cobra.Command) (*flow.ServerCreate, error) {
 	result.ImageId = image.Id
 
 	// validate product
-	productFilter, err := findRequiredString(cmd, flagProduct)
+	productFilter, err := cmd.Flags().GetString(flagProduct)
 	if err != nil {
 		return nil, err
 	}

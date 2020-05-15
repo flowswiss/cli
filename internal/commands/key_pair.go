@@ -116,7 +116,7 @@ func uploadKeyPair(cmd *cobra.Command, args []string) error {
 	}
 
 	if name == "" {
-		return errRequiredFlag(flagName)
+		return fmt.Errorf("please provide a name for your key pair")
 	}
 
 	keyPair, _, err = client.KeyPair.Create(context.Background(), &flow.KeyPairCreate{
