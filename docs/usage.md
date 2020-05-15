@@ -123,7 +123,7 @@ flow compute server create
                             interger if you want to search by id or a string if
                             you want to search for any other identification
                             (e.g. name). To get a list of available products see
-                            `flow products --module compute`
+                            `flow products compute`
 
                             Example: 'b1.1x1'
 
@@ -225,7 +225,7 @@ flow compute server delete <server>
 
 ```
 flow compute key-pair list
-  Lists all key pairs of the selected organization
+  Lists all key pairs of the selected organization.
 ```
 
 ```
@@ -239,4 +239,23 @@ flow compute key-pair upload <file>
 
   --name string             The name for the new key pair. By default the
                             optional public key comment is chosen if it exists.
+```
+
+```
+flow compute network list
+  Lists all networks of the selected organization.
+```
+
+### Products
+
+```
+flow products compute
+  Lists all compute virtual machine products.
+
+  --location string         Filter for the location desired where the product
+                            should be available. Can be an integer if you want
+                            to search by id or a string if you want to serarch
+                            for any other identification (e.g. name or city)
+
+                            Example: 'ALP1'
 ```
