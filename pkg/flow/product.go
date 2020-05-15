@@ -62,7 +62,7 @@ func (p *Product) String() string {
 func (p *Product) AvailableAt(location *Location) bool {
 	for _, availability := range p.Availability {
 		if availability.Location.Id == location.Id {
-			return availability.Available == -1 || availability.Available > 1
+			return availability.Available == -1 || availability.Available > 0
 		}
 	}
 	return false
