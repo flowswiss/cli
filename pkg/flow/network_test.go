@@ -4,8 +4,33 @@ import (
 	"context"
 	"net/http"
 	"path"
+	"reflect"
 	"testing"
 )
+
+var networkAlp1 = &Network{
+	Id:   1,
+	Name: "Default Network",
+	Cidr: "172.31.0.0/20",
+	Location: Location{
+		Id:   1,
+		Name: "ALP1",
+	},
+	UsedIps:  5,
+	TotalIps: 3995,
+}
+
+var networkZrh1 = &Network{
+	Id:   2,
+	Name: "Default Network",
+	Cidr: "172.31.16.0/20",
+	Location: Location{
+		Id:   2,
+		Name: "ZRH1",
+	},
+	UsedIps:  3,
+	TotalIps: 3995,
+}
 
 func TestNetworkService_List(t *testing.T) {
 	setupMockServer(t)
@@ -16,7 +41,7 @@ func TestNetworkService_List(t *testing.T) {
 		assertMethod(t, req, http.MethodGet)
 		assertPagination(t, req, options)
 
-		response := `[{"id":1,"name":"Default Network","cidr":"172.31.0.0/20","location":{"id":1,"name":"ALP1"},"used_ips":6,"total_ips":3995}]`
+		response := `[{"id":1,"name":"Default Network","cidr":"172.31.0.0/20","location":{"id":1,"name":"ALP1"},"used_ips":5,"total_ips":3995},{"id":2,"name":"Default Network","cidr":"172.31.16.0/20","location":{"id":2,"name":"ZRH1"},"used_ips":3,"total_ips":3995}]`
 
 		res.Header().Set("Content-Type", "application/json")
 		res.WriteHeader(200)
@@ -31,18 +56,16 @@ func TestNetworkService_List(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(networks) != 1 {
-		t.Fatal("expected amount of key pairs to be 1, got", len(networks))
+	if len(networks) != 2 {
+		t.Fatal("expected amount of key pairs to be 2, got", len(networks))
 	}
 
-	network := networks[0]
-
-	if network.Id != 1 || network.Name != "Default Network" || network.Cidr != "172.31.0.0/20" {
-		t.Error("error while parsing network")
+	if !reflect.DeepEqual(networkAlp1, networks[0]) {
+		t.Errorf("expected %v, got %v", networkAlp1, networks[0])
 	}
 
-	if network.Location.Id != 1 || network.Location.Name != "ALP1" {
-		t.Error("error while parsing location")
+	if !reflect.DeepEqual(networkZrh1, networks[1]) {
+		t.Errorf("expected %v, got %v", networkZrh1, networks[1])
 	}
 }
 
