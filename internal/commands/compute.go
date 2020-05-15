@@ -12,6 +12,7 @@ var computeCommand = &cobra.Command{
 func init() {
 	computeCommand.AddCommand(serverCommand)
 	computeCommand.AddCommand(keyPairCommand)
+	computeCommand.AddCommand(networkCommand)
 }
 
 
