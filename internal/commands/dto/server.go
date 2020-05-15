@@ -43,14 +43,12 @@ func (s *Server) Values() map[string]interface{} {
 		publicIp = publicIp[:len(publicIp)-2]
 	}
 
-	pricePerHour := s.Product.Price / float64(730)
-
 	return map[string]interface{}{
 		"id":               s.Id,
 		"name":             s.Name,
 		"status":           s.Status.Name,
 		"location":         s.Location.Name,
-		"product":          fmt.Sprintf("%s (%.2f CHF/h)", s.Product.Name, pricePerHour),
+		"product":          fmt.Sprintf("%s (%s)", s.Product.Name, getPricePerHour(s.Product.Price)),
 		"operating system": fmt.Sprintf("%s %s", s.Image.OperatingSystem, s.Image.Version),
 		"public ip":        publicIp,
 		"network":          networkBuffer.String(),
