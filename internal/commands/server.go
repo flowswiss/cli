@@ -10,6 +10,7 @@ import (
 	"github.com/flowswiss/cli/pkg/output"
 	"github.com/spf13/cobra"
 	"io/ioutil"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -307,19 +308,40 @@ func parseCreateServerData(cmd *cobra.Command) (*flow.ServerCreate, error) {
 		return nil, err
 	}
 
+	var cidr *net.IPNet
 	if networkFilter != "" {
 		network, err := findNetwork(networkFilter)
 		if err != nil {
 			return nil, err
 		}
 
+		if network.Location.Id != location.Id {
+			return nil, fmt.Errorf("network is not at the selected location")
+		}
+
 		result.NetworkId = network.Id
+
+		_, cidr, err = net.ParseCIDR(network.Cidr)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// validate private ip
 	result.PrivateIp, err = cmd.Flags().GetString(flagPrivateIp)
 	if err != nil {
 		return nil, err
+	}
+
+	if result.PrivateIp != "" {
+		ip := net.ParseIP(result.PrivateIp)
+		if ip == nil {
+			return nil, fmt.Errorf("%q is not a valid ip address", result.PrivateIp)
+		}
+
+		if cidr != nil && !cidr.Contains(ip) {
+			return nil, fmt.Errorf("%v is not inside in cidr %v of the selected network", ip, cidr)
+		}
 	}
 
 	// validate key pair
