@@ -87,8 +87,8 @@ func (t *Table) Format(out *Output, separator string, pretty bool) {
 				format = t.Columns[idx].format()
 			}
 
-			if strings.Contains(val, separator) {
-				val = fmt.Sprintf("%q", val)
+			if !pretty && strings.Contains(val, separator) {
+				val = fmt.Sprintf("\"%s\"", strings.ReplaceAll(val, "\"", "\"\""))
 			}
 
 			out.Printf(format, val)
