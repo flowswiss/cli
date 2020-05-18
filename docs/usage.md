@@ -246,6 +246,18 @@ flow compute network list
   Lists all networks of the selected organization.
 ```
 
+```
+flow compute image list
+  Lists all images of the selected organization.
+
+  --location string         Filter for the location where the image must be
+                            available. Can be an integer if you want to search
+                            by id or a string if you want to search for any
+                            other identification (e.g. name or city)
+
+                            Example: 'ALP1'
+```
+
 ### Products
 
 ```
