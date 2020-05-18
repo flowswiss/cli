@@ -13,6 +13,7 @@ func init() {
 	computeCommand.AddCommand(serverCommand)
 	computeCommand.AddCommand(keyPairCommand)
 	computeCommand.AddCommand(networkCommand)
+	computeCommand.AddCommand(imageCommand)
 }
 
 
