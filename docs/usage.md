@@ -105,8 +105,7 @@ flow compute server create
                             Can be an interger if you want to search by id or a
                             string if you want to search for any other
                             identification (e.g. name or city). To get a list of
-                            available locations see `flow locations --module
-                            compute`
+                            available locations see `flow locations --module 2`.
 
                             Example: 'alp1'
 
@@ -114,7 +113,8 @@ flow compute server create
   --image string (required)  Filter for the desired operating system image. Can
                             be an integer if you want to search by id or a
                             string if you want to search for any other
-                            identification (e.g. name)
+                            identification (e.g. name). To get a list of
+                            available images see `flow compute image list`.
 
                              Example: 'ubuntu-20.04'
 
@@ -123,7 +123,7 @@ flow compute server create
                             interger if you want to search by id or a string if
                             you want to search for any other identification
                             (e.g. name). To get a list of available products see
-                            `flow products compute`
+                            `flow products compute`.
 
                             Example: 'b1.1x1'
 
@@ -133,7 +133,7 @@ flow compute server create
                             select your first network automatically. Can be an
                             integer if you want to search by id or a string if
                             you want to search for any other identification
-                            (e.g. name or cidr)
+                            (e.g. name or cidr).
 
                             Example: 'Default Network'
 
@@ -163,7 +163,7 @@ flow compute server create
                             Can be anything, but should match the windows
                             password requirements (at least: one uppercase
                             character, one lowercase character, one digit, one
-                            special character)
+                            special character).
 
                             Exmaple: 'z2.xHfQFi8vM27t,o9Ft' (please choose a
                                      different one)
@@ -171,7 +171,7 @@ flow compute server create
 
   --cloud-init file         A cloud init script for the setup of your virtual
                             machine. To see how cloud init scripts work, please
-                            visit https://cloudinit.readthedocs.io/en/latest/
+                            visit https://cloudinit.readthedocs.io/en/latest/.
 
                             Example: './cloud-init.yaml'
 
@@ -179,7 +179,7 @@ flow compute server create
   --attach-external-ip bool  Whether to attach an elastic ip (public ip) to the
                             virtual machine or not. By default an elastic ip
                             will be attached. To disable use `--attach-external-
-                            ip=false`  
+                            ip=false`.
 ```
 
 
@@ -192,7 +192,7 @@ flow compute server [start|stop|reboot] <server>
                             be an integer if you want to search by id or a
                             string if you want to search for any other
                             identification (e.g. name, public ip, private ip,
-                            etc)
+                            etc).
 
                             Example: 'My First Virtual Machine'
                    
@@ -206,7 +206,7 @@ flow compute server delete <server>
   <server> string           Filter for the server to delete. Can be an integer
                             if you want to search by id or a string if you want
                             to serarch for any other identification (e.g. name,
-                            public ip, private ip, etc)
+                            public ip, private ip, etc).
 
                             Example: 'My First Virtual Machine'
 
@@ -214,7 +214,7 @@ flow compute server delete <server>
   --force                   If this flag is present, the interaction with the
                             user whether he really wants to delete the server
                             will be skipped and the server will be deleted
-                            immediately
+                            immediately.
 
 
   --detach-only             By default all attached elastic ips will be deleted
@@ -235,7 +235,7 @@ flow compute key-pair upload <file>
   <file> string             Path to the public key file which should be
                             uploaded. The selected file must be in the openssh
                             authorized keys format as generated through
-                            `ssh-keygen`
+                            `ssh-keygen`.
 
   --name string             The name for the new key pair. By default the
                             optional public key comment is chosen if it exists.
@@ -253,7 +253,7 @@ flow compute image list
   --location string         Filter for the location where the image must be
                             available. Can be an integer if you want to search
                             by id or a string if you want to search for any
-                            other identification (e.g. name or city)
+                            other identification (e.g. name or city).
 
                             Example: 'ALP1'
 ```
@@ -267,7 +267,36 @@ flow products compute
   --location string         Filter for the location desired where the product
                             should be available. Can be an integer if you want
                             to search by id or a string if you want to serarch
-                            for any other identification (e.g. name or city)
+                            for any other identification (e.g. name or city).
+
+                            Example: 'ALP1'
+```
+
+### Locations and Modules
+
+```
+flow locations
+  Lists all locations.
+
+  --module string           Filter for the module that should be available at
+                            the location. Can be an integer if you want to
+                            search by id or a string if you want to search for
+                            any other identification (e.g. name).
+
+                            Example: 'Compute'
+```
+
+```
+flow modules
+  Lists all modules you have access to.
+
+  --all                     If this flag is present, all modules, even those you
+                            don't have access to, will be listed.
+
+  --location                Filter for the location where the modules should be
+                            available. Can be an integer if you want to search
+                            by id or a string if you want to search for any
+                            other identification (e.g. name).
 
                             Example: 'ALP1'
 ```
