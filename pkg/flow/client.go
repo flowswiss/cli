@@ -48,6 +48,7 @@ type Client struct {
 	Organization OrganizationService
 	Product      ProductService
 	Location     LocationService
+	Module       ModuleService
 	Image        ImageService
 
 	// Compute
@@ -91,6 +92,7 @@ func NewClient(base *url.URL) *Client {
 	client.Organization = &organizationService{client}
 	client.Product = &productService{client}
 	client.Location = &locationService{client}
+	client.Module = &moduleService{client}
 	client.Image = &imageService{client}
 	client.Server = &serverService{client}
 	client.ServerAttachment = &serverAttachmentService{client}

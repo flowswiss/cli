@@ -50,6 +50,7 @@ func init() {
 	root.AddCommand(authCommand)
 	root.AddCommand(computeCommand)
 	root.AddCommand(productsCommand)
+	root.AddCommand(modulesCommand)
 }
 
 func initClient(base *url.URL) error {

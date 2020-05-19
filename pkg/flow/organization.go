@@ -2,12 +2,15 @@ package flow
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 )
 
 type OrganizationService interface {
 	List(ctx context.Context, options PaginationOptions) ([]*Organization, *Response, error)
+	Get(ctx context.Context, id Id) (*Organization, *Response, error)
+	GetCurrent(ctx context.Context) (*Organization, *Response, error)
 }
 
 type Country struct {
@@ -34,7 +37,7 @@ type Organization struct {
 		RetentionTime *time.Time `json:"retention_time"`
 	} `json:"status"`
 
-	RegisteredModules []Module `json:"registered_modules"`
+	RegisteredModules []*Module `json:"registered_modules"`
 
 	Contacts struct {
 		Primary   *User  `json:"primary"`
@@ -61,6 +64,42 @@ func (s *organizationService) List(ctx context.Context, options PaginationOption
 	var val []*Organization
 
 	res, err := s.client.Do(req, &val)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return val, res, err
+}
+
+func (s *organizationService) Get(ctx context.Context, id Id) (*Organization, *Response, error) {
+	p := fmt.Sprintf("/v3/organizations/%d", id)
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, p, nil, 0)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	val := &Organization{}
+
+	res, err := s.client.Do(req, val)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return val, res, err
+}
+
+func (s *organizationService) GetCurrent(ctx context.Context) (*Organization, *Response, error) {
+	p := "/v3/organizations/{organization}"
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, p, nil, 0)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	val := &Organization{}
+
+	res, err := s.client.Do(req, val)
 	if err != nil {
 		return nil, nil, err
 	}
