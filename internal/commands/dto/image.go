@@ -39,7 +39,7 @@ func (i *Image) Values() map[string]interface{} {
 		}
 
 		if found && idx+1 < len(i.AvailableLocations) {
-			licenseBuf.WriteString(", ")
+			availabilityBuf.WriteString(", ")
 		}
 	}
 
