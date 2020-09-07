@@ -27,7 +27,7 @@ type Ordering struct {
 }
 
 func (o *Ordering) Id() (Id, error) {
-	regex, err := regexp.Compile("/organizations/\\d+/orders/(\\d+)$")
+	regex, err := regexp.Compile("/orders/(\\d+)$")
 	if err != nil {
 		return 0, err
 	}

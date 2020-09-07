@@ -273,7 +273,7 @@ func parseCreateServerData(cmd *cobra.Command) (*flow.ServerCreate, error) {
 	}
 
 	disk := product.FindItem(3)
-	if product.Type.Id != 4 || disk == nil {
+	if product.Type.Key != "compute-engine-vm" || disk == nil {
 		return nil, fmt.Errorf("product is not a compute vm product")
 	}
 
