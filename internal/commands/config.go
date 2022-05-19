@@ -1,82 +1,139 @@
 package commands
 
 import (
-	"github.com/spf13/viper"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/flowswiss/goclient"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+
+	"github.com/flowswiss/cli/pkg/console"
 )
 
 const (
-	configType = "json"
+	FlagEndpoint = "endpoint"
+	FlagToken    = "token"
+	FlagFormat   = "format"
+)
 
-	flagConfig        = "config"
-	flagVerbosity     = "verbosity"
-	flagEndpointUrl   = "endpoint-url"
-	flagUsername      = "username"
-	flagPassword      = "password"
-	flagOrganization  = "organization"
-	flagTwoFactorCode = "two-factor-code"
+const (
+	FormatJSON  = "json"
+	FormatTable = "table"
+	FormatCSV   = "csv"
 )
 
 var (
-	config = &CliConfig{}
-
 	configFile string
 	configDir  string
+
+	baseFlagSet *pflag.FlagSet
 )
 
-type CliConfig struct {
-	Endpoint string `mapstructure:"endpoint_url"`
-	Format   string `mapstructure:"format"`
-
-	TwoFactorCode string
-	Verbosity     int
+type Config struct {
+	Client goclient.Client
 }
 
-func init() {
-	root.PersistentFlags().StringVar(&configFile, flagConfig, "", "config file (default is $HOME/.flow/config.json")
+func Format(val interface{}) error {
+	format := viper.GetString(FlagFormat)
+	if format == FormatJSON {
+		return json.NewEncoder(Stdout.Writer).Encode(val)
+	}
 
-	root.PersistentFlags().CountVarP(&config.Verbosity, flagVerbosity, "v", "enable a more verbose output (repeat up to 3 times to see entire output)")
-	root.PersistentFlags().String(flagEndpointUrl, "https://api.flow.swiss/", "base endpoint to use for all api requests")
-	root.PersistentFlags().String(flagOrganization, "", "the organization context to use for every request")
-	root.PersistentFlags().String(flagUsername, "", "name of the user to authenticate with")
-	root.PersistentFlags().String(flagPassword, "", "password of the user to authenticate with")
-	root.PersistentFlags().StringVar(&config.TwoFactorCode, flagTwoFactorCode, "", "two factor code")
+	separator := "   "
+	pretty := true
 
-	handleError(viper.BindPFlag("endpoint_url", root.PersistentFlags().Lookup(flagEndpointUrl)))
-	handleError(viper.BindPFlag("organization", root.PersistentFlags().Lookup(flagOrganization)))
-	handleError(authConfig.BindPFlag("username", root.PersistentFlags().Lookup(flagUsername)))
-	handleError(authConfig.BindPFlag("password", root.PersistentFlags().Lookup(flagPassword)))
+	if format == FormatCSV {
+		separator = ","
+		pretty = false
+	}
+
+	table := console.Table{}
+
+	err := table.Insert(val)
+	if err != nil {
+		return err
+	}
+
+	table.Format(Stdout, separator, pretty)
+
+	Stderr.Printf("Found a total of %d items\n", len(table.Rows))
+	return nil
 }
 
-func configureConfig(name string, conf *viper.Viper) {
-	conf.AddConfigPath(configDir)
-	conf.SetConfigName(name)
-	conf.SetConfigType(configType)
-	conf.SetEnvPrefix("flow")
-	conf.AutomaticEnv()
+func loadConfig() (Config, error) {
+	if err := initViper(); err != nil {
+		return Config{}, err
+	}
+
+	endpoint := viper.GetString(FlagEndpoint)
+	token := viper.GetString(FlagToken)
+
+	if len(token) == 0 {
+		return Config{}, fmt.Errorf("missing authentication token")
+	}
+
+	return Config{
+		Client: goclient.NewClient(
+			goclient.WithBase(endpoint),
+			goclient.WithToken(token),
+			goclient.WithUserAgent(fmt.Sprintf("%s/%s", Name, Version)),
+		),
+	}, nil
 }
 
-func initConfig() {
+func initViper() error {
 	if configDir == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			handleError(err)
+			return err
 		}
 
 		configDir = filepath.Join(home, ".flow")
 	}
 
-	_ = os.Mkdir(configDir, 0755)
+	if err := os.Mkdir(configDir, 0755); err != nil && !errors.Is(err, os.ErrExist) {
+		return err
+	}
 
-	configureConfig("config", viper.GetViper())
+	viper.SetConfigPermissions(0600)
 
-	if configFile != "" {
+	viper.AddConfigPath(configDir)
+	viper.SetConfigName("config")
+	viper.SetConfigType("json")
+
+	if len(configFile) != 0 {
 		viper.SetConfigFile(configFile)
 	}
 
-	_ = viper.ReadInConfig()
-	handleError(viper.Unmarshal(config))
+	viper.SetEnvPrefix("flow")
+	viper.AutomaticEnv()
 
-	readAuthConfig()
+	if err := viper.BindPFlags(baseFlagSet); err != nil {
+		return err
+	}
+
+	if err := viper.ReadInConfig(); err != nil {
+		// ignore config not found error if not manually specified
+		if len(configFile) != 0 || !errors.As(err, &viper.ConfigFileNotFoundError{}) {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func init() {
+	baseFlagSet = pflag.NewFlagSet("base", pflag.ContinueOnError)
+	baseFlagSet.String(FlagEndpoint, DefaultEndpoint, "base endpoint to use for all api requests")
+	baseFlagSet.String(FlagToken, "", "authentication token to use for all api requests")
+	baseFlagSet.StringP(FlagFormat, "o", "table", fmt.Sprintf("output format to use. allowed values: %s, %s or %s", FormatTable, FormatCSV, FormatJSON))
+
+	_ = baseFlagSet.MarkHidden(FlagToken)
+
+	Root.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.flow/config.json")
+	Root.PersistentFlags().AddFlagSet(baseFlagSet)
 }

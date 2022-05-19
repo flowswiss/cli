@@ -1,4 +1,4 @@
-package output
+package console
 
 import (
 	"fmt"
@@ -65,7 +65,7 @@ func (t *Table) insertRow(data map[string]interface{}) {
 	t.Rows = append(t.Rows, row)
 }
 
-func (t *Table) Format(out *Output, separator string, pretty bool) {
+func (t *Table) Format(out *Console, separator string, pretty bool) {
 	format := "%s"
 	for idx, col := range t.Columns {
 		if pretty {
@@ -127,13 +127,12 @@ func (t *Table) insertStruct(value reflect.Value) error {
 		return fmt.Errorf("unable to serialize non `Displayable` struct of type %q", value.Type().String())
 	}
 
-	if t.Columns == nil {
-		columnsFunc := value.MethodByName("Columns")
-		columns := columnsFunc.Call([]reflect.Value{})[0]
+	displayable := value.Interface().(Displayable)
 
+	if t.Columns == nil {
 		var cols []string
-		for i := 0; i < columns.Len(); i++ {
-			cols = append(cols, columns.Index(i).String())
+		for _, col := range displayable.Columns() {
+			cols = append(cols, col)
 		}
 		t.insertColumns(cols)
 	}

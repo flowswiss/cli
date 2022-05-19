@@ -1,6 +1,8 @@
-package output
+package console
 
 import "time"
+
+// TODO refactor
 
 type Progress struct {
 	Message string
@@ -21,7 +23,7 @@ func (p *Progress) Complete(message string) {
 	<-p.Sync
 }
 
-func (p *Progress) displayAnsi(output *Output) {
+func (p *Progress) displayAnsi(output *Console) {
 	chars := []rune{'|', '/', '-', '\\'}
 	idx := 0
 
@@ -42,7 +44,7 @@ func (p *Progress) displayAnsi(output *Output) {
 	}
 }
 
-func (p *Progress) Display(output *Output) {
+func (p *Progress) Display(output *Console) {
 	if output.EnableColors {
 		p.displayAnsi(output)
 	} else {

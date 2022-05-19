@@ -1,7 +1,11 @@
 package main
 
-import "github.com/flowswiss/cli/internal/commands"
+import (
+	"github.com/flowswiss/cli/internal/commands"
+
+	_ "github.com/flowswiss/cli/internal/commands/common"
+)
 
 func main() {
-	commands.Do()
+	commands.Run()
 }
