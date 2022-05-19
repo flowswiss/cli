@@ -35,7 +35,7 @@ func (l *locationListCommand) Run(ctx context.Context, config commands.Config, a
 		items = filter.Find(items, l.filter)
 	}
 
-	return commands.Format(items)
+	return commands.PrintStdout(items)
 }
 
 func (l *locationListCommand) Desc() *cobra.Command {

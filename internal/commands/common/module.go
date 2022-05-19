@@ -35,7 +35,7 @@ func (m *moduleListCommand) Run(ctx context.Context, config commands.Config, arg
 		items = filter.Find(items, m.filter)
 	}
 
-	return commands.Format(items)
+	return commands.PrintStdout(items)
 }
 
 func (m *moduleListCommand) Desc() *cobra.Command {

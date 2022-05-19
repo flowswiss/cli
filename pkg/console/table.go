@@ -65,14 +65,14 @@ func (t *Table) insertRow(data map[string]interface{}) {
 	t.Rows = append(t.Rows, row)
 }
 
-func (t *Table) Format(out *Console, separator string, pretty bool) {
+func (t *Table) Format(out Writer, separator string, pretty bool) {
 	format := "%s"
 	for idx, col := range t.Columns {
 		if pretty {
 			format = col.format()
 		}
 
-		out.Bold(format, strings.ToUpper(col.Name))
+		out.Bold().Printf(format, strings.ToUpper(col.Name)).Reset()
 
 		if (idx + 1) < len(t.Columns) {
 			out.Print(separator)

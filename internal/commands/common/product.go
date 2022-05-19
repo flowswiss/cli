@@ -53,7 +53,7 @@ func (p *productListCommand) Run(ctx context.Context, config commands.Config, ar
 		items = filter.Find(items, p.filter)
 	}
 
-	return commands.Format(items)
+	return commands.PrintStdout(items)
 }
 
 func (p *productListCommand) Desc() *cobra.Command {
@@ -84,7 +84,7 @@ func (p *productCategoryListCommand) Run(ctx context.Context, config commands.Co
 		items = filter.Find(items, p.filter)
 	}
 
-	return commands.Format(items)
+	return commands.PrintStdout(items)
 }
 
 func (p *productCategoryListCommand) Desc() *cobra.Command {

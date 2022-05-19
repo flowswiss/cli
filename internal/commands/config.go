@@ -37,10 +37,10 @@ type Config struct {
 	Client goclient.Client
 }
 
-func Format(val interface{}) error {
+func Print(out console.Writer, val interface{}) error {
 	format := viper.GetString(FlagFormat)
 	if format == FormatJSON {
-		return json.NewEncoder(Stdout.Writer).Encode(val)
+		return json.NewEncoder(out).Encode(val)
 	}
 
 	separator := "   "
@@ -58,10 +58,14 @@ func Format(val interface{}) error {
 		return err
 	}
 
-	table.Format(Stdout, separator, pretty)
+	table.Format(out, separator, pretty)
 
 	Stderr.Printf("Found a total of %d items\n", len(table.Rows))
 	return nil
+}
+
+func PrintStdout(val interface{}) error {
+	return Print(Stdout, val)
 }
 
 func loadConfig() (Config, error) {

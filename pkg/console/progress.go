@@ -23,20 +23,20 @@ func (p *Progress) Complete(message string) {
 	<-p.Sync
 }
 
-func (p *Progress) displayAnsi(output *Console) {
+func (p *Progress) displayAnsi(out Writer) {
 	chars := []rune{'|', '/', '-', '\\'}
 	idx := 0
 
-	output.Print("\u001B[s") // save current cursor position
+	out.Print("\u001B[s") // save current cursor position
 	for {
-		output.Print("\u001B[u\u001B[0K") // restore cursor position and clear line
+		out.Print("\u001B[u\u001B[0K") // restore cursor position and clear line
 
 		select {
 		case message := <-p.Done:
-			output.Println(message)
+			out.Println(message)
 			return
 		default:
-			output.Printf("[%s] %s ", string(chars[idx]), p.Message)
+			out.Printf("[%s] %s ", string(chars[idx]), p.Message)
 			idx = (idx + 1) % len(chars)
 
 			time.Sleep(200 * time.Millisecond)
@@ -44,12 +44,12 @@ func (p *Progress) displayAnsi(output *Console) {
 	}
 }
 
-func (p *Progress) Display(output *Console) {
-	if output.EnableColors {
-		p.displayAnsi(output)
+func (p *Progress) Display(out Writer) {
+	if _, ok := out.(*ansiWriter); ok {
+		p.displayAnsi(out)
 	} else {
-		output.Printf("%s\n", p.Message)
-		output.Printf("%s\n", <-p.Done)
+		out.Printf("%s\n", p.Message)
+		out.Printf("%s\n", <-p.Done)
 	}
 
 	close(p.Sync)

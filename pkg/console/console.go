@@ -9,78 +9,112 @@ import (
 )
 
 const (
-	AnsiReset     = "\033[0m"
-	AnsiBold      = "\u001B[1m"
-	AnsiItalic    = "\u001B[3m"
-	AnsiUnderline = "\u001B[4m"
+	Reset     = "\033[0m"
+	Bold      = "\u001B[1m"
+	Italic    = "\u001B[3m"
+	Underline = "\u001B[4m"
 )
 
-type AnsiColor int
+type Color int
 
 const (
-	AnsiBlack AnsiColor = iota + 30
-	AnsiRed
-	AnsiGreen
-	AnsiYellow
-	AnsiBlue
-	AnsiMagenta
-	AnsiCyan
-	AnsiWhite
+	Black Color = iota + 30
+	Red
+	Green
+	Yellow
+	Blue
+	Magenta
+	Cyan
+	White
 
-	AnsiBackground AnsiColor = 10
-	AnsiBright     AnsiColor = 60
+	Background Color = 10
+	Bright     Color = 60
 )
 
-type Console struct {
-	Writer       io.Writer
-	EnableColors bool
+type Writer interface {
+	io.Writer
+
+	Color(color Color) Writer
+	Bold() Writer
+	Reset() Writer
+
+	Printf(format string, a ...interface{}) Writer
+	Print(a ...interface{}) Writer
+	Println(a ...interface{}) Writer
+
+	Errorf(format string, a ...interface{}) Writer
 }
 
-func NewConsoleOutput(writer *os.File) *Console {
-	return &Console{
-		Writer:       writer,
-		EnableColors: terminal.IsTerminal(int(writer.Fd())),
+func NewConsoleOutput(writer *os.File) Writer {
+	if terminal.IsTerminal(int(writer.Fd())) {
+		return ansiWriter{Writer: writer}
 	}
+
+	return plainWriter{Writer: writer}
 }
 
-func (c *Console) AnsiSequence(sequence string) *Console {
-	if c.EnableColors {
-		_, _ = fmt.Fprintf(c.Writer, sequence)
-	}
-	return c
+type plainWriter struct {
+	io.Writer
 }
 
-func (c *Console) Color(color AnsiColor) *Console {
-	return c.AnsiSequence(fmt.Sprintf("\033[%dm", color))
+func NewPlainWriter(writer io.Writer) Writer {
+	return plainWriter{Writer: writer}
 }
 
-func (c *Console) Printf(format string, a ...interface{}) *Console {
-	_, _ = fmt.Fprintf(c.Writer, format, a...)
-	return c
+func (w plainWriter) Color(Color) Writer { return w }
+func (w plainWriter) Bold() Writer       { return w }
+func (w plainWriter) Reset() Writer      { return w }
+
+func (w plainWriter) Printf(format string, a ...interface{}) Writer {
+	_, _ = fmt.Fprintf(w.Writer, format, a...)
+	return w
 }
 
-func (c *Console) Print(a ...interface{}) *Console {
-	_, _ = fmt.Fprint(c.Writer, a...)
-	return c
+func (w plainWriter) Print(a ...interface{}) Writer {
+	_, _ = fmt.Fprint(w.Writer, a...)
+	return w
 }
 
-func (c *Console) Println(a ...interface{}) *Console {
-	_, _ = fmt.Fprintln(c.Writer, a...)
-	return c
+func (w plainWriter) Println(a ...interface{}) Writer {
+	_, _ = fmt.Fprintln(w.Writer, a...)
+	return w
 }
 
-func (c *Console) Reset() *Console {
-	return c.AnsiSequence(AnsiReset)
+func (w plainWriter) Errorf(format string, a ...interface{}) Writer { return w.Printf(format, a...) }
+
+type ansiWriter struct {
+	io.Writer
 }
 
-func (c *Console) Bold(format string, a ...interface{}) *Console {
-	return c.AnsiSequence(AnsiBold).
-		Printf(format, a...).
-		Reset()
+func (w ansiWriter) Color(color Color) Writer {
+	return w.Printf("\033[%dm", color)
 }
 
-func (c *Console) Errorf(format string, a ...interface{}) *Console {
-	return c.Color(AnsiRed).
+func (w ansiWriter) Bold() Writer {
+	return w.Print(Bold)
+}
+
+func (w ansiWriter) Reset() Writer {
+	return w.Print(Reset)
+}
+
+func (w ansiWriter) Printf(format string, a ...interface{}) Writer {
+	_, _ = fmt.Fprintf(w.Writer, format, a...)
+	return w
+}
+
+func (w ansiWriter) Print(a ...interface{}) Writer {
+	_, _ = fmt.Fprint(w.Writer, a...)
+	return w
+}
+
+func (w ansiWriter) Println(a ...interface{}) Writer {
+	_, _ = fmt.Fprintln(w.Writer, a...)
+	return w
+}
+
+func (w ansiWriter) Errorf(format string, a ...interface{}) Writer {
+	return w.Color(Red).
 		Printf(format, a...).
 		Reset()
 }
