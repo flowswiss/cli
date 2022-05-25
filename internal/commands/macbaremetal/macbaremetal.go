@@ -15,6 +15,7 @@ func AddCommands(parent *cobra.Command) {
 	cmd.AddCommand(
 		NetworkCommand(),
 		RouterCommand(),
+		ElasticIPCommand(),
 	)
 
 	parent.AddCommand(cmd)
