@@ -31,7 +31,7 @@ type networkListCommand struct {
 func (n *networkListCommand) Run(ctx context.Context, config commands.Config, args []string) error {
 	items, err := macbaremetal.NewNetworkService(config.Client).List(ctx)
 	if err != nil {
-		return fmt.Errorf("fetch locations: %w", err)
+		return fmt.Errorf("fetch networks: %w", err)
 	}
 
 	if len(n.filter) != 0 {

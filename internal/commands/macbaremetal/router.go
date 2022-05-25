@@ -30,7 +30,7 @@ type routerListCommand struct {
 func (r *routerListCommand) Run(ctx context.Context, config commands.Config, args []string) error {
 	items, err := macbaremetal.NewRouterService(config.Client).List(ctx)
 	if err != nil {
-		return fmt.Errorf("fetch locations: %w", err)
+		return fmt.Errorf("fetch routers: %w", err)
 	}
 
 	if len(r.filter) != 0 {
