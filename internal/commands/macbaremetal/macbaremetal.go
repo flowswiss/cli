@@ -14,6 +14,7 @@ func AddCommands(parent *cobra.Command) {
 
 	cmd.AddCommand(
 		NetworkCommand(),
+		RouterCommand(),
 	)
 
 	parent.AddCommand(cmd)
