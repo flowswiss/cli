@@ -26,12 +26,11 @@ func SecurityGroupRuleCommand() *cobra.Command {
 }
 
 type securityGroupRuleListCommand struct {
-	securityGroup string
-	filter        string
+	filter string
 }
 
 func (s *securityGroupRuleListCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	securityGroup, err := findSecurityGroup(ctx, config, s.securityGroup)
+	securityGroup, err := findSecurityGroup(ctx, config, args[0])
 	if err != nil {
 		return err
 	}
@@ -52,33 +51,30 @@ func (s *securityGroupRuleListCommand) Run(ctx context.Context, config commands.
 
 func (s *securityGroupRuleListCommand) Desc() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list",
+		Use:     "list SECURITY-GROUP",
 		Short:   "List security group rules",
 		Long:    "Lists all mac bare metal security group rules.",
+		Args:    cobra.ExactArgs(1),
 		Example: "", // TODO
 	}
 
-	cmd.Flags().StringVar(&s.securityGroup, "security-group", "", "security group to list rules for")
 	cmd.Flags().StringVar(&s.filter, "filter", "", "custom term to filter the results")
-
-	_ = cmd.MarkFlagRequired("security-group")
 
 	return cmd
 }
 
 type securityGroupRuleCreateCommand struct {
-	securityGroup string
-	direction     string
-	protocol      string
-	fromPort      int
-	toPort        int
-	icmpType      int
-	icmpCode      int
-	ipRange       net.IPNet
+	direction string
+	protocol  string
+	fromPort  int
+	toPort    int
+	icmpType  int
+	icmpCode  int
+	ipRange   net.IPNet
 }
 
 func (s *securityGroupRuleCreateCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	securityGroup, err := findSecurityGroup(ctx, config, s.securityGroup)
+	securityGroup, err := findSecurityGroup(ctx, config, args[0])
 	if err != nil {
 		return err
 	}
@@ -110,13 +106,13 @@ func (s *securityGroupRuleCreateCommand) Run(ctx context.Context, config command
 
 func (s *securityGroupRuleCreateCommand) Desc() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "create",
+		Use:     "create SECURITY-GROUP",
 		Short:   "Create new security group",
 		Long:    "Creates a new mac bare metal security group.",
+		Args:    cobra.ExactArgs(1),
 		Example: "", // TODO
 	}
 
-	cmd.Flags().StringVar(&s.securityGroup, "security-group", "", "security group to create rule for")
 	cmd.Flags().StringVar(&s.direction, "direction", "", "direction of the rule")
 	cmd.Flags().StringVar(&s.protocol, "protocol", "", "protocol of the rule")
 	cmd.Flags().IntVar(&s.fromPort, "from-port", 0, "from port of the rule (only for TCP and UDP)")
@@ -125,7 +121,6 @@ func (s *securityGroupRuleCreateCommand) Desc() *cobra.Command {
 	cmd.Flags().IntVar(&s.icmpCode, "icmp-code", 0, "icmp code of the rule (only for ICMP)")
 	cmd.Flags().IPNetVar(&s.ipRange, "ip-range", macbaremetal.IPRangeAny, "ip range of the rule")
 
-	_ = cmd.MarkFlagRequired("security-group")
 	_ = cmd.MarkFlagRequired("direction")
 	_ = cmd.MarkFlagRequired("protocol")
 
@@ -133,19 +128,17 @@ func (s *securityGroupRuleCreateCommand) Desc() *cobra.Command {
 }
 
 type securityGroupRuleUpdateCommand struct {
-	securityGroup string
-	rule          string
-	direction     string
-	protocol      string
-	fromPort      int
-	toPort        int
-	icmpType      int
-	icmpCode      int
-	ipRange       net.IPNet
+	direction string
+	protocol  string
+	fromPort  int
+	toPort    int
+	icmpType  int
+	icmpCode  int
+	ipRange   net.IPNet
 }
 
 func (s *securityGroupRuleUpdateCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	securityGroup, err := findSecurityGroup(ctx, config, s.securityGroup)
+	securityGroup, err := findSecurityGroup(ctx, config, args[0])
 	if err != nil {
 		return err
 	}
@@ -157,7 +150,7 @@ func (s *securityGroupRuleUpdateCommand) Run(ctx context.Context, config command
 		return fmt.Errorf("fetch security group rules: %w", err)
 	}
 
-	rule, err := filter.FindOne(rules, s.rule)
+	rule, err := filter.FindOne(rules, args[1])
 	if err != nil {
 		return fmt.Errorf("find security group rule: %w", err)
 	}
@@ -187,14 +180,13 @@ func (s *securityGroupRuleUpdateCommand) Run(ctx context.Context, config command
 
 func (s *securityGroupRuleUpdateCommand) Desc() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "update",
+		Use:     "update SECURITY-GROUP RULE",
 		Short:   "Update security group rule",
 		Long:    "Updates a mac bare metal security group rule.",
+		Args:    cobra.ExactArgs(2),
 		Example: "", // TODO
 	}
 
-	cmd.Flags().StringVar(&s.securityGroup, "security-group", "", "security group to update rule for")
-	cmd.Flags().StringVar(&s.rule, "rule", "", "rule to update")
 	cmd.Flags().StringVar(&s.direction, "direction", "", "direction of the rule")
 	cmd.Flags().StringVar(&s.protocol, "protocol", "", "protocol of the rule")
 	cmd.Flags().IntVar(&s.fromPort, "from-port", 0, "from port of the rule (only for TCP and UDP)")
@@ -203,7 +195,6 @@ func (s *securityGroupRuleUpdateCommand) Desc() *cobra.Command {
 	cmd.Flags().IntVar(&s.icmpCode, "icmp-code", 0, "icmp code of the rule (only for ICMP)")
 	cmd.Flags().IPNetVar(&s.ipRange, "ip-range", macbaremetal.IPRangeAny, "ip range of the rule")
 
-	_ = cmd.MarkFlagRequired("security-group")
 	_ = cmd.MarkFlagRequired("direction")
 	_ = cmd.MarkFlagRequired("protocol")
 
@@ -211,13 +202,11 @@ func (s *securityGroupRuleUpdateCommand) Desc() *cobra.Command {
 }
 
 type securityGroupRuleDeleteCommand struct {
-	securityGroup     string
-	securityGroupRule string
-	force             bool
+	force bool
 }
 
 func (s *securityGroupRuleDeleteCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	securityGroup, err := findSecurityGroup(ctx, config, s.securityGroup)
+	securityGroup, err := findSecurityGroup(ctx, config, args[0])
 	if err != nil {
 		return err
 	}
@@ -229,7 +218,7 @@ func (s *securityGroupRuleDeleteCommand) Run(ctx context.Context, config command
 		return fmt.Errorf("fetch security group rules: %w", err)
 	}
 
-	rule, err := filter.FindOne(rules, s.securityGroupRule)
+	rule, err := filter.FindOne(rules, args[1])
 	if err != nil {
 		return fmt.Errorf("find security group rule: %w", err)
 	}
@@ -246,17 +235,12 @@ func (s *securityGroupRuleDeleteCommand) Run(ctx context.Context, config command
 
 func (s *securityGroupRuleDeleteCommand) Desc() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "delete",
+		Use:     "delete SECURITY-GROUP RULE",
 		Short:   "Delete security group rule",
 		Long:    "Deletes a mac bare metal security group rule.",
+		Args:    cobra.ExactArgs(2),
 		Example: "", // TODO
 	}
-
-	cmd.Flags().StringVar(&s.securityGroup, "security-group", "", "security group of the rule to be deleted")
-	cmd.Flags().StringVar(&s.securityGroupRule, "rule", "", "security group rule to be deleted")
-
-	_ = cmd.MarkFlagRequired("security-group")
-	_ = cmd.MarkFlagRequired("rule")
 
 	return cmd
 }

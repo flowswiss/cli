@@ -138,8 +138,7 @@ func (d *deviceCreateCommand) Desc() *cobra.Command {
 }
 
 type deviceUpdateCommand struct {
-	device string
-	name   string
+	name string
 }
 
 func (d *deviceUpdateCommand) Run(ctx context.Context, config commands.Config, args []string) error {
@@ -150,7 +149,7 @@ func (d *deviceUpdateCommand) Run(ctx context.Context, config commands.Config, a
 		return fmt.Errorf("fetch devices: %w", err)
 	}
 
-	device, err := filter.FindOne(devices, d.device)
+	device, err := filter.FindOne(devices, args[0])
 	if err != nil {
 		return fmt.Errorf("find device: %w", err)
 	}
@@ -169,13 +168,13 @@ func (d *deviceUpdateCommand) Run(ctx context.Context, config commands.Config, a
 
 func (d *deviceUpdateCommand) Desc() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "update",
+		Use:     "update DEVICE",
 		Short:   "Update device",
 		Long:    "Updates a mac bare metal device.",
+		Args:    cobra.ExactArgs(1),
 		Example: "", // TODO
 	}
 
-	cmd.Flags().StringVar(&d.device, "device", "", "device to be updated")
 	cmd.Flags().StringVar(&d.name, "name", "", "name to be applied to the device")
 
 	_ = cmd.MarkFlagRequired("device")
@@ -184,8 +183,7 @@ func (d *deviceUpdateCommand) Desc() *cobra.Command {
 }
 
 type deviceDeleteCommand struct {
-	device string
-	force  bool
+	force bool
 }
 
 func (d *deviceDeleteCommand) Run(ctx context.Context, config commands.Config, args []string) error {
@@ -196,7 +194,7 @@ func (d *deviceDeleteCommand) Run(ctx context.Context, config commands.Config, a
 		return fmt.Errorf("fetch devices: %w", err)
 	}
 
-	device, err := filter.FindOne(devices, d.device)
+	device, err := filter.FindOne(devices, args[0])
 	if err != nil {
 		return fmt.Errorf("find device: %w", err)
 	}
@@ -213,14 +211,12 @@ func (d *deviceDeleteCommand) Run(ctx context.Context, config commands.Config, a
 
 func (d *deviceDeleteCommand) Desc() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "delete",
+		Use:     "delete DEVICE",
 		Short:   "Delete device",
 		Long:    "Deletes a mac bare metal device.",
+		Args:    cobra.ExactArgs(1),
 		Example: "", // TODO
 	}
-
-	cmd.Flags().StringVar(&d.device, "device", "", "device to be deleted")
-	_ = cmd.MarkFlagRequired("device")
 
 	return cmd
 }

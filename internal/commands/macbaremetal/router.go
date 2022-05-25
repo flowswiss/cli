@@ -54,7 +54,6 @@ func (r *routerListCommand) Desc() *cobra.Command {
 }
 
 type routerUpdateCommand struct {
-	router      string
 	name        string
 	description string
 }
@@ -67,7 +66,7 @@ func (r *routerUpdateCommand) Run(ctx context.Context, config commands.Config, a
 		return fmt.Errorf("fetch routers: %w", err)
 	}
 
-	router, err := filter.FindOne(routers, r.router)
+	router, err := filter.FindOne(routers, args[0])
 	if err != nil {
 		return fmt.Errorf("find router: %w", err)
 	}
@@ -87,17 +86,15 @@ func (r *routerUpdateCommand) Run(ctx context.Context, config commands.Config, a
 
 func (r *routerUpdateCommand) Desc() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "update",
+		Use:     "update ROUTER",
 		Short:   "Update router",
 		Long:    "Updates a mac bare metal router.",
+		Args:    cobra.ExactArgs(1),
 		Example: "", // TODO
 	}
 
-	cmd.Flags().StringVar(&r.router, "router", "", "router to be updated")
 	cmd.Flags().StringVar(&r.name, "name", "", "name to be applied to the router")
 	cmd.Flags().StringVar(&r.description, "description", "", "description to be applied to the router")
-
-	_ = cmd.MarkFlagRequired("router")
 
 	return cmd
 }

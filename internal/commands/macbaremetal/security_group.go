@@ -104,9 +104,8 @@ func (s *securityGroupCreateCommand) Desc() *cobra.Command {
 }
 
 type securityGroupUpdateCommand struct {
-	securityGroup string
-	name          string
-	description   string
+	name        string
+	description string
 }
 
 func (s *securityGroupUpdateCommand) Run(ctx context.Context, config commands.Config, args []string) error {
@@ -117,7 +116,7 @@ func (s *securityGroupUpdateCommand) Run(ctx context.Context, config commands.Co
 		return fmt.Errorf("fetch security groups: %w", err)
 	}
 
-	securityGroup, err := filter.FindOne(securityGroups, s.securityGroup)
+	securityGroup, err := filter.FindOne(securityGroups, args[0])
 	if err != nil {
 		return fmt.Errorf("find security group: %w", err)
 	}
@@ -137,24 +136,21 @@ func (s *securityGroupUpdateCommand) Run(ctx context.Context, config commands.Co
 
 func (s *securityGroupUpdateCommand) Desc() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "update",
+		Use:     "update SECURITY-GROUP",
 		Short:   "Update security group",
 		Long:    "Updates a mac bare metal security group.",
+		Args:    cobra.ExactArgs(1),
 		Example: "", // TODO
 	}
 
-	cmd.Flags().StringVar(&s.securityGroup, "security-group", "", "security group to be updated")
 	cmd.Flags().StringVar(&s.name, "name", "", "name to be applied to the security group")
 	cmd.Flags().StringVar(&s.description, "description", "", "description to be applied to the security group")
-
-	_ = cmd.MarkFlagRequired("security-group")
 
 	return cmd
 }
 
 type securityGroupDeleteCommand struct {
-	securityGroup string
-	force         bool
+	force bool
 }
 
 func (s *securityGroupDeleteCommand) Run(ctx context.Context, config commands.Config, args []string) error {
@@ -165,7 +161,7 @@ func (s *securityGroupDeleteCommand) Run(ctx context.Context, config commands.Co
 		return fmt.Errorf("fetch security groups: %w", err)
 	}
 
-	securityGroup, err := filter.FindOne(securityGroups, s.securityGroup)
+	securityGroup, err := filter.FindOne(securityGroups, args[0])
 	if err != nil {
 		return fmt.Errorf("find security group: %w", err)
 	}
@@ -182,14 +178,12 @@ func (s *securityGroupDeleteCommand) Run(ctx context.Context, config commands.Co
 
 func (s *securityGroupDeleteCommand) Desc() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "delete",
+		Use:     "delete SECURITY-GROUP",
 		Short:   "Delete security group",
 		Long:    "Deletes a mac bare metal security group.",
+		Args:    cobra.ExactArgs(1),
 		Example: "", // TODO
 	}
-
-	cmd.Flags().StringVar(&s.securityGroup, "security-group", "", "security group to be deleted")
-	_ = cmd.MarkFlagRequired("security-group")
 
 	return cmd
 }

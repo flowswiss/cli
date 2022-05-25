@@ -96,8 +96,7 @@ func (e *elasticIPCreateCommand) Desc() *cobra.Command {
 }
 
 type elasticIPDeleteCommand struct {
-	elasticIP string
-	force     bool
+	force bool
 }
 
 func (e *elasticIPDeleteCommand) Run(ctx context.Context, config commands.Config, args []string) error {
@@ -108,7 +107,7 @@ func (e *elasticIPDeleteCommand) Run(ctx context.Context, config commands.Config
 		return fmt.Errorf("fetch elastic ips: %w", err)
 	}
 
-	elasticIP, err := filter.FindOne(elasticIPs, e.elasticIP)
+	elasticIP, err := filter.FindOne(elasticIPs, args[0])
 	if err != nil {
 		return fmt.Errorf("find elastic ip: %w", err)
 	}
@@ -125,14 +124,12 @@ func (e *elasticIPDeleteCommand) Run(ctx context.Context, config commands.Config
 
 func (e *elasticIPDeleteCommand) Desc() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "delete",
+		Use:     "delete ELASTIC-IP",
 		Short:   "Delete elastic ip",
 		Long:    "Deletes a mac bare metal elastic ip.",
+		Args:    cobra.ExactArgs(1),
 		Example: "", // TODO
 	}
-
-	cmd.Flags().StringVar(&e.elasticIP, "elastic-ip", "", "elastic ip to be deleted")
-	_ = cmd.MarkFlagRequired("elastic-ip")
 
 	return cmd
 }

@@ -104,7 +104,6 @@ func (n *networkCreateCommand) Desc() *cobra.Command {
 }
 
 type networkUpdateCommand struct {
-	network          string
 	name             string
 	description      string
 	domainName       string
@@ -119,7 +118,7 @@ func (n *networkUpdateCommand) Run(ctx context.Context, config commands.Config, 
 		return fmt.Errorf("fetch networks: %w", err)
 	}
 
-	network, err := filter.FindOne(networks, n.network)
+	network, err := filter.FindOne(networks, args[0])
 	if err != nil {
 		return fmt.Errorf("find network: %w", err)
 	}
@@ -141,26 +140,22 @@ func (n *networkUpdateCommand) Run(ctx context.Context, config commands.Config, 
 
 func (n *networkUpdateCommand) Desc() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "update",
+		Use:     "update NETWORK",
 		Short:   "Update network",
 		Long:    "Updates a mac bare metal network.",
 		Example: "", // TODO
 	}
 
-	cmd.Flags().StringVar(&n.network, "network", "", "network to be updated")
 	cmd.Flags().StringVar(&n.name, "name", "", "name to be applied to the network")
 	cmd.Flags().StringVar(&n.description, "description", "", "description to be applied to the network")
 	cmd.Flags().StringVar(&n.domainName, "domain-name", "", "domain name to be applied to the network")
 	cmd.Flags().StringSliceVar(&n.domainNameServer, "domain-name-server", nil, "domain name server to be applied to the network")
 
-	_ = cmd.MarkFlagRequired("network")
-
 	return cmd
 }
 
 type networkDeleteCommand struct {
-	network string
-	force   bool
+	force bool
 }
 
 func (n *networkDeleteCommand) Run(ctx context.Context, config commands.Config, args []string) error {
@@ -171,7 +166,7 @@ func (n *networkDeleteCommand) Run(ctx context.Context, config commands.Config, 
 		return fmt.Errorf("fetch networks: %w", err)
 	}
 
-	network, err := filter.FindOne(networks, n.network)
+	network, err := filter.FindOne(networks, args[0])
 	if err != nil {
 		return fmt.Errorf("find network: %w", err)
 	}
@@ -188,14 +183,12 @@ func (n *networkDeleteCommand) Run(ctx context.Context, config commands.Config, 
 
 func (n *networkDeleteCommand) Desc() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "delete",
+		Use:     "delete NETWORK",
 		Short:   "Delete network",
 		Long:    "Deletes a mac bare metal network.",
+		Args:    cobra.ExactArgs(1),
 		Example: "", // TODO
 	}
-
-	cmd.Flags().StringVar(&n.network, "network", "", "network to be deleted")
-	_ = cmd.MarkFlagRequired("network")
 
 	return cmd
 }
