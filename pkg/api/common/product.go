@@ -14,6 +14,10 @@ import (
 
 const HoursPerMonth = 730
 
+const (
+	ProductTypeMacBareMetal = "bare-metal-device"
+)
+
 var (
 	_ filter.Filterable   = (*Product)(nil)
 	_ console.Displayable = (*Product)(nil)
@@ -64,6 +68,10 @@ func (p Product) Values() map[string]interface{} {
 		"price":         p.PricePerHour(),
 		"availability":  availabilityBuf.String(),
 	}
+}
+
+func (p Product) String() string {
+	return fmt.Sprintf("%s (%s)", p.Name, p.PricePerHour())
 }
 
 func Products(ctx context.Context, client goclient.Client) ([]Product, error) {

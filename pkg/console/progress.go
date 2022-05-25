@@ -45,7 +45,7 @@ func (p *Progress) displayAnsi(out Writer) {
 }
 
 func (p *Progress) Display(out Writer) {
-	if _, ok := out.(*ansiWriter); ok {
+	if _, ok := out.(ansiWriter); ok {
 		p.displayAnsi(out)
 	} else {
 		out.Printf("%s\n", p.Message)
