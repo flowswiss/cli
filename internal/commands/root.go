@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/flowswiss/cli/pkg/console"
+	"github.com/flowswiss/cli/v2/pkg/console"
 )
 
 var (

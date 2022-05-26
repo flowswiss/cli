@@ -5,9 +5,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/flowswiss/cli/internal/commands"
-	"github.com/flowswiss/cli/pkg/api/common"
-	"github.com/flowswiss/cli/pkg/filter"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/common"
+	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
 func ProductCommand() *cobra.Command {

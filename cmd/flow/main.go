@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/flowswiss/cli/internal/commands"
+	"github.com/flowswiss/cli/v2/internal/commands"
 
-	_ "github.com/flowswiss/cli/internal/commands/common"
-	_ "github.com/flowswiss/cli/internal/commands/macbaremetal"
+	_ "github.com/flowswiss/cli/v2/internal/commands/common"
+	_ "github.com/flowswiss/cli/v2/internal/commands/macbaremetal"
 )
 
 func main() {

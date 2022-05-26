@@ -6,11 +6,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/flowswiss/cli/internal/commands"
-	"github.com/flowswiss/cli/pkg/api/common"
-	"github.com/flowswiss/cli/pkg/api/macbaremetal"
-	"github.com/flowswiss/cli/pkg/console"
-	"github.com/flowswiss/cli/pkg/filter"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/common"
+	"github.com/flowswiss/cli/v2/pkg/api/macbaremetal"
+	"github.com/flowswiss/cli/v2/pkg/console"
+	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
 func DeviceCommand() *cobra.Command {

@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
-	"github.com/flowswiss/cli/pkg/console"
+	"github.com/flowswiss/cli/v2/pkg/console"
 )
 
 const (

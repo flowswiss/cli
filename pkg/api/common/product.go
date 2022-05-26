@@ -8,8 +8,8 @@ import (
 	"github.com/flowswiss/goclient"
 	"github.com/flowswiss/goclient/common"
 
-	"github.com/flowswiss/cli/pkg/console"
-	"github.com/flowswiss/cli/pkg/filter"
+	"github.com/flowswiss/cli/v2/pkg/console"
+	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
 const HoursPerMonth = 730

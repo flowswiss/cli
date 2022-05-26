@@ -8,7 +8,7 @@ import (
 	"github.com/flowswiss/goclient"
 	"github.com/flowswiss/goclient/macbaremetal"
 
-	"github.com/flowswiss/cli/pkg/api/common"
+	"github.com/flowswiss/cli/v2/pkg/api/common"
 )
 
 type Device macbaremetal.Device
