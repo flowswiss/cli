@@ -19,7 +19,7 @@ func ElasticIPCommand() *cobra.Command {
 		Example: "", // TODO
 	}
 
-	commands.Add(cmd, &elasticIPListCommand{}, &elasticIPCreateCommand{}, &elasticIPDeleteCommand{})
+	commands.Add(cmd, &elasticIPListCommand{}, &elasticIPCreateCommand{}, &elasticIPDeleteCommand{}, &elasticIPAttachCommand{}, &elasticIPDetachCommand{})
 
 	return cmd
 }
@@ -132,4 +132,125 @@ func (e *elasticIPDeleteCommand) Desc() *cobra.Command {
 	}
 
 	return cmd
+}
+
+type elasticIPAttachCommand struct {
+}
+
+func (e *elasticIPAttachCommand) Run(ctx context.Context, config commands.Config, args []string) error {
+	elasticIP, err := findElasticIP(ctx, config, args[0])
+	if err != nil {
+		return err
+	}
+
+	if elasticIP.Attachment.ID != 0 {
+		return fmt.Errorf("elastic ip is already attached to a device")
+	}
+
+	device, err := findDevice(ctx, config, args[1])
+	if err != nil {
+		return err
+	}
+
+	networkInterfaceID := 0
+	for _, networkInterface := range device.NetworkInterfaces {
+		if networkInterface.PublicIP == "" {
+			networkInterfaceID = networkInterface.ID
+			break
+		}
+	}
+
+	if networkInterfaceID == 0 {
+		return fmt.Errorf("device has no free network interface to attach the elastic ip to")
+	}
+
+	body := macbaremetal.ElasticIPAttach{
+		ElasticIPID:        elasticIP.ID,
+		NetworkInterfaceID: networkInterfaceID,
+	}
+
+	_, err = macbaremetal.NewElasticIPService(config.Client).Attach(ctx, device.ID, body)
+	if err != nil {
+		return fmt.Errorf("attach elastic ip: %w", err)
+	}
+
+	return nil
+}
+
+func (e *elasticIPAttachCommand) Desc() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "attach ELASTIC-IP DEVICE",
+		Short:   "Attach elastic ip to device",
+		Long:    "Attaches a mac bare metal elastic ip to a device.",
+		Args:    cobra.ExactArgs(2),
+		Example: "", // TODO
+	}
+
+	return cmd
+}
+
+type elasticIPDetachCommand struct {
+}
+
+func (e *elasticIPDetachCommand) Run(ctx context.Context, config commands.Config, args []string) error {
+	elasticIP, err := findElasticIP(ctx, config, args[0])
+	if err != nil {
+		return err
+	}
+
+	device, err := findDevice(ctx, config, args[1])
+	if err != nil {
+		return err
+	}
+
+	if elasticIP.Attachment.ID != device.ID {
+		return fmt.Errorf("elastic ip not attached to the selected device")
+	}
+
+	err = macbaremetal.NewElasticIPService(config.Client).Detach(ctx, device.ID, elasticIP.ID)
+	if err != nil {
+		return fmt.Errorf("detach elastic ip: %w", err)
+	}
+
+	return nil
+}
+
+func (e *elasticIPDetachCommand) Desc() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "detach ELASTIC-IP DEVICE",
+		Short:   "Detach elastic ip from device",
+		Long:    "Detaches a mac bare metal elastic ip from a device.",
+		Args:    cobra.ExactArgs(2),
+		Example: "", // TODO
+	}
+
+	return cmd
+}
+
+func findDevice(ctx context.Context, config commands.Config, term string) (macbaremetal.Device, error) {
+	elasticIPs, err := macbaremetal.NewDeviceService(config.Client).List(ctx)
+	if err != nil {
+		return macbaremetal.Device{}, fmt.Errorf("fetch devices: %w", err)
+	}
+
+	elasticIP, err := filter.FindOne(elasticIPs, term)
+	if err != nil {
+		return macbaremetal.Device{}, fmt.Errorf("find device: %w", err)
+	}
+
+	return elasticIP, nil
+}
+
+func findElasticIP(ctx context.Context, config commands.Config, term string) (macbaremetal.ElasticIP, error) {
+	elasticIPs, err := macbaremetal.NewElasticIPService(config.Client).List(ctx)
+	if err != nil {
+		return macbaremetal.ElasticIP{}, fmt.Errorf("fetch elastic ips: %w", err)
+	}
+
+	elasticIP, err := filter.FindOne(elasticIPs, term)
+	if err != nil {
+		return macbaremetal.ElasticIP{}, fmt.Errorf("find elastic ip: %w", err)
+	}
+
+	return elasticIP, nil
 }

@@ -33,11 +33,13 @@ func (e ElasticIP) Values() map[string]interface{} {
 }
 
 type ElasticIPService struct {
+	client   goclient.Client
 	delegate macbaremetal.ElasticIPService
 }
 
 func NewElasticIPService(client goclient.Client) ElasticIPService {
 	return ElasticIPService{
+		client:   client,
 		delegate: macbaremetal.NewElasticIPService(client),
 	}
 }
@@ -65,6 +67,21 @@ func (e ElasticIPService) Create(ctx context.Context, data ElasticIPCreate) (Ela
 	}
 
 	return ElasticIP(res), nil
+}
+
+type ElasticIPAttach = macbaremetal.ElasticIPAttach
+
+func (e ElasticIPService) Attach(ctx context.Context, deviceID int, data ElasticIPAttach) (ElasticIP, error) {
+	elasticIP, err := macbaremetal.NewAttachedElasticIPService(e.client, deviceID).Attach(ctx, data)
+	if err != nil {
+		return ElasticIP{}, err
+	}
+
+	return ElasticIP(elasticIP), nil
+}
+
+func (e ElasticIPService) Detach(ctx context.Context, deviceID, elasticIPID int) error {
+	return macbaremetal.NewAttachedElasticIPService(e.client, deviceID).Detach(ctx, elasticIPID)
 }
 
 func (e ElasticIPService) Delete(ctx context.Context, id int) error {

@@ -27,14 +27,14 @@ func Find[T Filterable](items []T, term string) []T {
 }
 
 func FindOne[T Filterable](items []T, term string) (res T, err error) {
-	var filtered []T = Find[T](items, term)
+	var filtered = Find[T](items, term)
 
 	if len(filtered) == 0 {
-		return res, fmt.Errorf("not found: no item found searching for the term %q", term)
+		return res, fmt.Errorf("no item found searching for the term %q", term)
 	}
 
 	if len(filtered) > 1 {
-		return res, fmt.Errorf("unamiguous search: term %q resulted in multiple results", term)
+		return res, fmt.Errorf("term %q resulted in multiple results", term)
 	}
 
 	return filtered[0], nil
