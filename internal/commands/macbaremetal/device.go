@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
@@ -20,7 +21,7 @@ func DeviceCommand() *cobra.Command {
 		Example: "", // TODO
 	}
 
-	commands.Add(cmd, &deviceListCommand{}, &deviceCreateCommand{}, &deviceUpdateCommand{}, &deviceDeleteCommand{})
+	commands.Add(cmd, &deviceListCommand{}, &deviceCreateCommand{}, &deviceUpdateCommand{}, &deviceDeleteCommand{}, &deviceVNCCommand{})
 	cmd.AddCommand(DeviceActionCommand(), DeviceWorkflowCommand())
 
 	commands.Add(cmd,
@@ -59,6 +60,46 @@ func (d *deviceListCommand) Desc() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&d.filter, "filter", "", "custom term to filter the results")
+
+	return cmd
+}
+
+type deviceVNCCommand struct {
+	open bool
+}
+
+func (d *deviceVNCCommand) Run(ctx context.Context, config commands.Config, args []string) error {
+	device, err := findDevice(ctx, config, args[0])
+	if err != nil {
+		return err
+	}
+
+	vnc, err := macbaremetal.NewDeviceService(config.Client).GetVNC(ctx, device.ID)
+	if err != nil {
+		return fmt.Errorf("fetch vnc connection: %w", err)
+	}
+
+	if d.open {
+		if err = browser.OpenURL(vnc.Ref); err != nil {
+			return fmt.Errorf("open vnc connection: %w", err)
+		}
+	} else {
+		commands.Stdout.Println(vnc.Ref)
+	}
+
+	return nil
+}
+
+func (d *deviceVNCCommand) Desc() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "vnc DEVICE",
+		Short:   "Get VNC of device",
+		Long:    "Returns the VNC url of the device.",
+		Args:    cobra.ExactArgs(1),
+		Example: "", // TODO
+	}
+
+	cmd.Flags().BoolVar(&d.open, "open", false, "open the VNC url in the browser")
 
 	return cmd
 }

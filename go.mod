@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/flowswiss/goclient v0.1.0
+	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.11.0
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e

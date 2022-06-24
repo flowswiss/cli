@@ -81,6 +81,12 @@ func (d DeviceService) List(ctx context.Context) ([]Device, error) {
 	return items, nil
 }
 
+type DeviceVNCConnection = macbaremetal.DeviceVNCConnection
+
+func (d DeviceService) GetVNC(ctx context.Context, id int) (DeviceVNCConnection, error) {
+	return d.delegate.GetVNC(ctx, id)
+}
+
 type DeviceCreate = macbaremetal.DeviceCreate
 
 func (d DeviceService) Create(ctx context.Context, data DeviceCreate) (common.Ordering, error) {
