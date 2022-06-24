@@ -22,7 +22,7 @@ func DeviceCommand() *cobra.Command {
 	}
 
 	commands.Add(cmd, &deviceListCommand{}, &deviceCreateCommand{}, &deviceUpdateCommand{}, &deviceDeleteCommand{}, &deviceVNCCommand{})
-	cmd.AddCommand(DeviceActionCommand(), DeviceWorkflowCommand())
+	cmd.AddCommand(DeviceActionCommand(), DeviceWorkflowCommand(), NetworkInterfaceCommands())
 
 	commands.Add(cmd,
 		deviceActionRunCommandPreset("power-off"),
