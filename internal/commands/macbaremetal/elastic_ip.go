@@ -227,20 +227,6 @@ func (e *elasticIPDetachCommand) Desc() *cobra.Command {
 	return cmd
 }
 
-func findDevice(ctx context.Context, config commands.Config, term string) (macbaremetal.Device, error) {
-	elasticIPs, err := macbaremetal.NewDeviceService(config.Client).List(ctx)
-	if err != nil {
-		return macbaremetal.Device{}, fmt.Errorf("fetch devices: %w", err)
-	}
-
-	elasticIP, err := filter.FindOne(elasticIPs, term)
-	if err != nil {
-		return macbaremetal.Device{}, fmt.Errorf("find device: %w", err)
-	}
-
-	return elasticIP, nil
-}
-
 func findElasticIP(ctx context.Context, config commands.Config, term string) (macbaremetal.ElasticIP, error) {
 	elasticIPs, err := macbaremetal.NewElasticIPService(config.Client).List(ctx)
 	if err != nil {

@@ -21,6 +21,14 @@ func DeviceCommand() *cobra.Command {
 	}
 
 	commands.Add(cmd, &deviceListCommand{}, &deviceCreateCommand{}, &deviceUpdateCommand{}, &deviceDeleteCommand{})
+	cmd.AddCommand(DeviceActionCommand(), DeviceWorkflowCommand())
+
+	commands.Add(cmd,
+		deviceActionRunCommandPreset("power-off"),
+		deviceActionRunCommandPreset("power-on"),
+		deviceActionRunCommandPreset("power-cord-un-plug"),
+		deviceActionRunCommandPreset("power-cord-plug-in"),
+	)
 
 	return cmd
 }
@@ -219,4 +227,18 @@ func (d *deviceDeleteCommand) Desc() *cobra.Command {
 	}
 
 	return cmd
+}
+
+func findDevice(ctx context.Context, config commands.Config, term string) (macbaremetal.Device, error) {
+	elasticIPs, err := macbaremetal.NewDeviceService(config.Client).List(ctx)
+	if err != nil {
+		return macbaremetal.Device{}, fmt.Errorf("fetch devices: %w", err)
+	}
+
+	elasticIP, err := filter.FindOne(elasticIPs, term)
+	if err != nil {
+		return macbaremetal.Device{}, fmt.Errorf("find device: %w", err)
+	}
+
+	return elasticIP, nil
 }
