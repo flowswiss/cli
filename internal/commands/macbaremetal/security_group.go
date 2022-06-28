@@ -1,21 +1,21 @@
 package compute
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/macbaremetal"
+	"github.com/flowswiss/cli/v2/pkg/console"
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
 func SecurityGroupCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "security-group",
+		Aliases: []string{"security-groups", "securitygroup", "securitygroups"},
 		Short:   "Manage mac bare metal security groups",
-		Example: "", // TODO
 	}
 
 	commands.Add(cmd, &securityGroupListCommand{}, &securityGroupCreateCommand{}, &securityGroupUpdateCommand{}, &securityGroupDeleteCommand{})
@@ -28,8 +28,8 @@ type securityGroupListCommand struct {
 	filter string
 }
 
-func (s *securityGroupListCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	items, err := macbaremetal.NewSecurityGroupService(config.Client).List(ctx)
+func (s *securityGroupListCommand) Run(cmd *cobra.Command, args []string) error {
+	items, err := macbaremetal.NewSecurityGroupService(commands.Config.Client).List(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("fetch security groups: %w", err)
 	}
@@ -41,12 +41,13 @@ func (s *securityGroupListCommand) Run(ctx context.Context, config commands.Conf
 	return commands.PrintStdout(items)
 }
 
-func (s *securityGroupListCommand) Desc() *cobra.Command {
+func (s *securityGroupListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
+		Aliases: []string{"show", "ls", "get"},
 		Short:   "List security groups",
 		Long:    "Lists all mac bare metal security groups.",
-		Example: "", // TODO
+		RunE:    s.Run,
 	}
 
 	cmd.Flags().StringVar(&s.filter, "filter", "", "custom term to filter the results")
@@ -60,8 +61,8 @@ type securityGroupCreateCommand struct {
 	network     string
 }
 
-func (s *securityGroupCreateCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	networks, err := macbaremetal.NewNetworkService(config.Client).List(ctx)
+func (s *securityGroupCreateCommand) Run(cmd *cobra.Command, args []string) error {
+	networks, err := macbaremetal.NewNetworkService(commands.Config.Client).List(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("fetch networks: %w", err)
 	}
@@ -77,7 +78,7 @@ func (s *securityGroupCreateCommand) Run(ctx context.Context, config commands.Co
 		NetworkID:   network.ID,
 	}
 
-	item, err := macbaremetal.NewSecurityGroupService(config.Client).Create(ctx, data)
+	item, err := macbaremetal.NewSecurityGroupService(commands.Config.Client).Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create security group: %w", err)
 	}
@@ -85,12 +86,13 @@ func (s *securityGroupCreateCommand) Run(ctx context.Context, config commands.Co
 	return commands.PrintStdout(item)
 }
 
-func (s *securityGroupCreateCommand) Desc() *cobra.Command {
+func (s *securityGroupCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "create",
+		Aliases: []string{"add", "new"},
 		Short:   "Create new security group",
 		Long:    "Creates a new mac bare metal security group.",
-		Example: "", // TODO
+		RunE:    s.Run,
 	}
 
 	cmd.Flags().StringVar(&s.name, "name", "", "name to be applied to the security group")
@@ -108,10 +110,10 @@ type securityGroupUpdateCommand struct {
 	description string
 }
 
-func (s *securityGroupUpdateCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	service := macbaremetal.NewSecurityGroupService(config.Client)
+func (s *securityGroupUpdateCommand) Run(cmd *cobra.Command, args []string) error {
+	service := macbaremetal.NewSecurityGroupService(commands.Config.Client)
 
-	securityGroups, err := service.List(ctx)
+	securityGroups, err := service.List(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("fetch security groups: %w", err)
 	}
@@ -126,7 +128,7 @@ func (s *securityGroupUpdateCommand) Run(ctx context.Context, config commands.Co
 		Description: s.description,
 	}
 
-	securityGroup, err = service.Update(ctx, securityGroup.ID, update)
+	securityGroup, err = service.Update(cmd.Context(), securityGroup.ID, update)
 	if err != nil {
 		return fmt.Errorf("update security group: %w", err)
 	}
@@ -134,13 +136,13 @@ func (s *securityGroupUpdateCommand) Run(ctx context.Context, config commands.Co
 	return commands.PrintStdout(securityGroup)
 }
 
-func (s *securityGroupUpdateCommand) Desc() *cobra.Command {
+func (s *securityGroupUpdateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "update SECURITY-GROUP",
-		Short:   "Update security group",
-		Long:    "Updates a mac bare metal security group.",
-		Args:    cobra.ExactArgs(1),
-		Example: "", // TODO
+		Use:   "update SECURITY-GROUP",
+		Short: "Update security group",
+		Long:  "Updates a mac bare metal security group.",
+		Args:  cobra.ExactArgs(1),
+		RunE:  s.Run,
 	}
 
 	cmd.Flags().StringVar(&s.name, "name", "", "name to be applied to the security group")
@@ -153,10 +155,10 @@ type securityGroupDeleteCommand struct {
 	force bool
 }
 
-func (s *securityGroupDeleteCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	service := macbaremetal.NewSecurityGroupService(config.Client)
+func (s *securityGroupDeleteCommand) Run(cmd *cobra.Command, args []string) error {
+	service := macbaremetal.NewSecurityGroupService(commands.Config.Client)
 
-	securityGroups, err := service.List(ctx)
+	securityGroups, err := service.List(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("fetch security groups: %w", err)
 	}
@@ -166,9 +168,14 @@ func (s *securityGroupDeleteCommand) Run(ctx context.Context, config commands.Co
 		return fmt.Errorf("find security group: %w", err)
 	}
 
-	// TODO ask for confirmation
+	if !s.force {
+		if !console.Confirm(commands.Stderr, fmt.Sprintf("Are you sure you want to delete the security group %q?", securityGroup.Name)) {
+			commands.Stderr.Println("Aborted.")
+			return nil
+		}
+	}
 
-	err = service.Delete(ctx, securityGroup.ID)
+	err = service.Delete(cmd.Context(), securityGroup.ID)
 	if err != nil {
 		return fmt.Errorf("delete security group: %w", err)
 	}
@@ -176,14 +183,17 @@ func (s *securityGroupDeleteCommand) Run(ctx context.Context, config commands.Co
 	return nil
 }
 
-func (s *securityGroupDeleteCommand) Desc() *cobra.Command {
+func (s *securityGroupDeleteCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete SECURITY-GROUP",
+		Aliases: []string{"del", "remove", "rm"},
 		Short:   "Delete security group",
 		Long:    "Deletes a mac bare metal security group.",
 		Args:    cobra.ExactArgs(1),
-		Example: "", // TODO
+		RunE:    s.Run,
 	}
+
+	cmd.Flags().BoolVar(&s.force, "force", false, "force the deletion of the security group without asking for confirmation")
 
 	return cmd
 }

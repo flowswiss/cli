@@ -1,37 +1,41 @@
 package commands
 
 import (
-	"context"
+	"regexp"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
 
-type Command interface {
-	Run(ctx context.Context, cfg Config, args []string) error
-	Desc() *cobra.Command
+type CommandBuilder interface {
+	Build() *cobra.Command
 }
 
-type CommandFunc func(ctx context.Context, cfg Config) error
-
-func Build(cmd Command) *cobra.Command {
-	base := cmd.Desc()
-	base.RunE = wrapCommand(cmd)
-	return base
-}
-
-func Add(parent *cobra.Command, children ...Command) {
-	for _, child := range children {
-		parent.AddCommand(Build(child))
+func Add(parent *cobra.Command, builder ...CommandBuilder) {
+	for _, b := range builder {
+		parent.AddCommand(b.Build())
 	}
 }
 
-func wrapCommand(c Command) func(*cobra.Command, []string) error {
-	return func(cmd *cobra.Command, args []string) error {
-		cfg, err := loadConfig()
-		if err != nil {
-			return err
-		}
+var (
+	formatIndentRegex = regexp.MustCompile("\n[ \t]*")
+	formatIndent      = "  "
+)
 
-		return c.Run(cmd.Context(), cfg, args)
-	}
+func FormatAndIndent(text string, indent int) string {
+	firstIndent := formatIndentRegex.FindString(text)
+	totalIndent := strings.Repeat(formatIndent, indent)
+
+	text = strings.TrimSpace(text)
+	text = strings.ReplaceAll(text, firstIndent, "\n"+totalIndent)
+	text = totalIndent + text
+	return text
+}
+
+func FormatHelp(help string) string {
+	return FormatAndIndent(help, 0)
+}
+
+func FormatExamples(examples string) string {
+	return FormatAndIndent(examples, 1)
 }

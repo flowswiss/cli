@@ -1,8 +1,6 @@
 package common
 
 import (
-	"context"
-
 	"github.com/spf13/cobra"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
@@ -34,16 +32,16 @@ type productListCommand struct {
 	filter      string
 }
 
-func (p *productListCommand) Run(ctx context.Context, config commands.Config, args []string) (err error) {
+func (p *productListCommand) Run(cmd *cobra.Command, args []string) (err error) {
 	var items []common.Product
 
 	if len(p.productType) != 0 {
-		items, err = common.ProductsByType(ctx, config.Client, p.productType)
+		items, err = common.ProductsByType(cmd.Context(), commands.Config.Client, p.productType)
 		if err != nil {
 			return err
 		}
 	} else {
-		items, err = common.Products(ctx, config.Client)
+		items, err = common.Products(cmd.Context(), commands.Config.Client)
 		if err != nil {
 			return err
 		}
@@ -56,12 +54,13 @@ func (p *productListCommand) Run(ctx context.Context, config commands.Config, ar
 	return commands.PrintStdout(items)
 }
 
-func (p *productListCommand) Desc() *cobra.Command {
+func (p *productListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Short:   "List products",
 		Long:    "Lists all available products.",
 		Example: "", // TODO
+		RunE:    p.Run,
 	}
 
 	cmd.Flags().StringVar(&p.productType, "category", "", "product category to filter the results")
@@ -74,8 +73,8 @@ type productCategoryListCommand struct {
 	filter string
 }
 
-func (p *productCategoryListCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	items, err := common.ProductTypes(ctx, config.Client)
+func (p *productCategoryListCommand) Run(cmd *cobra.Command, args []string) error {
+	items, err := common.ProductTypes(cmd.Context(), commands.Config.Client)
 	if err != nil {
 		return err
 	}
@@ -87,12 +86,13 @@ func (p *productCategoryListCommand) Run(ctx context.Context, config commands.Co
 	return commands.PrintStdout(items)
 }
 
-func (p *productCategoryListCommand) Desc() *cobra.Command {
+func (p *productCategoryListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Short:   "List product categories",
 		Long:    "Lists all product categories.",
 		Example: "", // TODO
+		RunE:    p.Run,
 	}
 
 	cmd.Flags().StringVar(&p.filter, "filter", "", "custom term to filter the results")

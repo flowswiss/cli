@@ -16,11 +16,18 @@ import (
 func SecurityGroupRuleCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "rule",
+		Aliases: []string{"rules"},
 		Short:   "Manage mac bare metal security group rules",
-		Example: "", // TODO
+		Example: commands.FormatExamples(fmt.Sprintf(`
+			# List all security group rules
+			%[1]s mac-bare-metal security-group rule list default
+
+			# Create new security group rule to allow tcp traffic on port 80 (HTTP) from any source IP
+			%[1]s mac-bare-metal security-group rule create default --direction ingress --protocol tcp --from-port 80 --to-port 80
+		`, commands.Name)),
 	}
 
-	commands.Add(cmd, &securityGroupRuleListCommand{}, &securityGroupRuleCreateCommand{}, &securityGroupUpdateCommand{}, &securityGroupRuleDeleteCommand{})
+	commands.Add(cmd, &securityGroupRuleListCommand{}, &securityGroupRuleCreateCommand{}, &securityGroupRuleUpdateCommand{}, &securityGroupRuleDeleteCommand{})
 
 	return cmd
 }
@@ -29,15 +36,15 @@ type securityGroupRuleListCommand struct {
 	filter string
 }
 
-func (s *securityGroupRuleListCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	securityGroup, err := findSecurityGroup(ctx, config, args[0])
+func (s *securityGroupRuleListCommand) Run(cmd *cobra.Command, args []string) error {
+	securityGroup, err := findSecurityGroup(cmd.Context(), args[0])
 	if err != nil {
 		return err
 	}
 
-	service := macbaremetal.NewSecurityGroupRuleService(config.Client, securityGroup.ID)
+	service := macbaremetal.NewSecurityGroupRuleService(commands.Config.Client, securityGroup.ID)
 
-	items, err := service.List(ctx)
+	items, err := service.List(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("fetch security group rules: %w", err)
 	}
@@ -49,13 +56,14 @@ func (s *securityGroupRuleListCommand) Run(ctx context.Context, config commands.
 	return commands.PrintStdout(items)
 }
 
-func (s *securityGroupRuleListCommand) Desc() *cobra.Command {
+func (s *securityGroupRuleListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list SECURITY-GROUP",
+		Aliases: []string{"show", "ls", "get"},
 		Short:   "List security group rules",
 		Long:    "Lists all mac bare metal security group rules.",
 		Args:    cobra.ExactArgs(1),
-		Example: "", // TODO
+		RunE:    s.Run,
 	}
 
 	cmd.Flags().StringVar(&s.filter, "filter", "", "custom term to filter the results")
@@ -73,13 +81,13 @@ type securityGroupRuleCreateCommand struct {
 	ipRange   net.IPNet
 }
 
-func (s *securityGroupRuleCreateCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	securityGroup, err := findSecurityGroup(ctx, config, args[0])
+func (s *securityGroupRuleCreateCommand) Run(cmd *cobra.Command, args []string) error {
+	securityGroup, err := findSecurityGroup(cmd.Context(), args[0])
 	if err != nil {
 		return err
 	}
 
-	service := macbaremetal.NewSecurityGroupRuleService(config.Client, securityGroup.ID)
+	service := macbaremetal.NewSecurityGroupRuleService(commands.Config.Client, securityGroup.ID)
 
 	protocol, found := macbaremetal.ProtocolIDs[strings.ToLower(s.protocol)]
 	if !found {
@@ -96,7 +104,7 @@ func (s *securityGroupRuleCreateCommand) Run(ctx context.Context, config command
 		IPRange:   s.ipRange.String(),
 	}
 
-	item, err := service.Create(ctx, data)
+	item, err := service.Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create security group rule: %w", err)
 	}
@@ -104,13 +112,21 @@ func (s *securityGroupRuleCreateCommand) Run(ctx context.Context, config command
 	return commands.PrintStdout(item)
 }
 
-func (s *securityGroupRuleCreateCommand) Desc() *cobra.Command {
+func (s *securityGroupRuleCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "create SECURITY-GROUP",
+		Aliases: []string{"add", "new"},
 		Short:   "Create new security group",
 		Long:    "Creates a new mac bare metal security group.",
 		Args:    cobra.ExactArgs(1),
-		Example: "", // TODO
+		Example: commands.FormatExamples(fmt.Sprintf(`
+			# Create rule to allow tcp traffic on port 80 (HTTP) from any source IP
+			%[1]s mac-bare-metal security-group rule create default --direction ingress --protocol tcp --from-port 80 --to-port 80
+
+			# Create rule to allow tcp traffic on port 22 (SSH) only from subnet 1.1.1.0/24
+			%[1]s mac-bare-metal security-group rule create default --direction ingress --protocol tcp --from-port 22 --to-port 22 --ip-range 1.1.1.0/24
+		`, commands.Name)),
+		RunE: s.Run,
 	}
 
 	cmd.Flags().StringVar(&s.direction, "direction", "", "direction of the rule")
@@ -137,15 +153,15 @@ type securityGroupRuleUpdateCommand struct {
 	ipRange   net.IPNet
 }
 
-func (s *securityGroupRuleUpdateCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	securityGroup, err := findSecurityGroup(ctx, config, args[0])
+func (s *securityGroupRuleUpdateCommand) Run(cmd *cobra.Command, args []string) error {
+	securityGroup, err := findSecurityGroup(cmd.Context(), args[0])
 	if err != nil {
 		return err
 	}
 
-	service := macbaremetal.NewSecurityGroupRuleService(config.Client, securityGroup.ID)
+	service := macbaremetal.NewSecurityGroupRuleService(commands.Config.Client, securityGroup.ID)
 
-	rules, err := service.List(ctx)
+	rules, err := service.List(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("fetch security group rules: %w", err)
 	}
@@ -170,7 +186,7 @@ func (s *securityGroupRuleUpdateCommand) Run(ctx context.Context, config command
 		IPRange:   s.ipRange.String(),
 	}
 
-	item, err := service.Update(ctx, rule.ID, data)
+	item, err := service.Update(cmd.Context(), rule.ID, data)
 	if err != nil {
 		return fmt.Errorf("create security group rule: %w", err)
 	}
@@ -178,13 +194,18 @@ func (s *securityGroupRuleUpdateCommand) Run(ctx context.Context, config command
 	return commands.PrintStdout(item)
 }
 
-func (s *securityGroupRuleUpdateCommand) Desc() *cobra.Command {
+func (s *securityGroupRuleUpdateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "update SECURITY-GROUP RULE",
-		Short:   "Update security group rule",
-		Long:    "Updates a mac bare metal security group rule.",
-		Args:    cobra.ExactArgs(2),
-		Example: "", // TODO
+		Use:   "update SECURITY-GROUP RULE",
+		Short: "Update security group rule",
+		Long:  "Updates a mac bare metal security group rule.",
+
+		Example: commands.FormatExamples(fmt.Sprintf(`
+			# Update SSH rule to allow tcp traffic from broader subnet 1.1.0.0/16
+			%[1]s mac-bare-metal security-group rule update default 1234 --direction ingress --protocol tcp --from-port 22 --to-port 22 --ip-range 1.1.0.0/16
+		`, commands.Name)), // TODO
+		Args: cobra.ExactArgs(2),
+		RunE: s.Run,
 	}
 
 	cmd.Flags().StringVar(&s.direction, "direction", "", "direction of the rule")
@@ -205,15 +226,15 @@ type securityGroupRuleDeleteCommand struct {
 	force bool
 }
 
-func (s *securityGroupRuleDeleteCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	securityGroup, err := findSecurityGroup(ctx, config, args[0])
+func (s *securityGroupRuleDeleteCommand) Run(cmd *cobra.Command, args []string) error {
+	securityGroup, err := findSecurityGroup(cmd.Context(), args[0])
 	if err != nil {
 		return err
 	}
 
-	service := macbaremetal.NewSecurityGroupRuleService(config.Client, securityGroup.ID)
+	service := macbaremetal.NewSecurityGroupRuleService(commands.Config.Client, securityGroup.ID)
 
-	rules, err := service.List(ctx)
+	rules, err := service.List(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("fetch security group rules: %w", err)
 	}
@@ -225,7 +246,7 @@ func (s *securityGroupRuleDeleteCommand) Run(ctx context.Context, config command
 
 	// TODO ask for confirmation
 
-	err = service.Delete(ctx, rule.ID)
+	err = service.Delete(cmd.Context(), rule.ID)
 	if err != nil {
 		return fmt.Errorf("delete security group rule: %w", err)
 	}
@@ -233,20 +254,21 @@ func (s *securityGroupRuleDeleteCommand) Run(ctx context.Context, config command
 	return nil
 }
 
-func (s *securityGroupRuleDeleteCommand) Desc() *cobra.Command {
+func (s *securityGroupRuleDeleteCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete SECURITY-GROUP RULE",
+		Aliases: []string{"del", "remove", "rm"},
 		Short:   "Delete security group rule",
 		Long:    "Deletes a mac bare metal security group rule.",
 		Args:    cobra.ExactArgs(2),
-		Example: "", // TODO
+		RunE:    s.Run,
 	}
 
 	return cmd
 }
 
-func findSecurityGroup(ctx context.Context, config commands.Config, term string) (macbaremetal.SecurityGroup, error) {
-	securityGroups, err := macbaremetal.NewSecurityGroupService(config.Client).List(ctx)
+func findSecurityGroup(ctx context.Context, term string) (macbaremetal.SecurityGroup, error) {
+	securityGroups, err := macbaremetal.NewSecurityGroupService(commands.Config.Client).List(ctx)
 	if err != nil {
 		return macbaremetal.SecurityGroup{}, fmt.Errorf("fetch security groups: %w", err)
 	}

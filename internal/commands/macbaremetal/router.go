@@ -1,7 +1,6 @@
 package compute
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -14,8 +13,8 @@ import (
 func RouterCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "router",
+		Aliases: []string{"routers"},
 		Short:   "Manage mac bare metal routers",
-		Example: "", // TODO
 	}
 
 	commands.Add(cmd, &routerListCommand{}, &routerUpdateCommand{})
@@ -27,8 +26,8 @@ type routerListCommand struct {
 	filter string
 }
 
-func (r *routerListCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	items, err := macbaremetal.NewRouterService(config.Client).List(ctx)
+func (r *routerListCommand) Run(cmd *cobra.Command, args []string) error {
+	items, err := macbaremetal.NewRouterService(commands.Config.Client).List(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("fetch routers: %w", err)
 	}
@@ -40,12 +39,13 @@ func (r *routerListCommand) Run(ctx context.Context, config commands.Config, arg
 	return commands.PrintStdout(items)
 }
 
-func (r *routerListCommand) Desc() *cobra.Command {
+func (r *routerListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
+		Aliases: []string{"show", "ls", "get"},
 		Short:   "List routers",
 		Long:    "Lists all mac bare metal routers.",
-		Example: "", // TODO
+		RunE:    r.Run,
 	}
 
 	cmd.Flags().StringVar(&r.filter, "filter", "", "custom term to filter the results")
@@ -58,10 +58,10 @@ type routerUpdateCommand struct {
 	description string
 }
 
-func (r *routerUpdateCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	service := macbaremetal.NewRouterService(config.Client)
+func (r *routerUpdateCommand) Run(cmd *cobra.Command, args []string) error {
+	service := macbaremetal.NewRouterService(commands.Config.Client)
 
-	routers, err := service.List(ctx)
+	routers, err := service.List(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("fetch routers: %w", err)
 	}
@@ -76,7 +76,7 @@ func (r *routerUpdateCommand) Run(ctx context.Context, config commands.Config, a
 		Description: r.description,
 	}
 
-	router, err = service.Update(ctx, router.ID, update)
+	router, err = service.Update(cmd.Context(), router.ID, update)
 	if err != nil {
 		return fmt.Errorf("update router: %w", err)
 	}
@@ -84,13 +84,13 @@ func (r *routerUpdateCommand) Run(ctx context.Context, config commands.Config, a
 	return commands.PrintStdout(router)
 }
 
-func (r *routerUpdateCommand) Desc() *cobra.Command {
+func (r *routerUpdateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "update ROUTER",
-		Short:   "Update router",
-		Long:    "Updates a mac bare metal router.",
-		Args:    cobra.ExactArgs(1),
-		Example: "", // TODO
+		Use:   "update ROUTER",
+		Short: "Update router",
+		Long:  "Updates a mac bare metal router.",
+		Args:  cobra.ExactArgs(1),
+		RunE:  r.Run,
 	}
 
 	cmd.Flags().StringVar(&r.name, "name", "", "name to be applied to the router")

@@ -6,15 +6,14 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/flowswiss/cli/v2/internal/commands/build"
 	"github.com/flowswiss/cli/v2/pkg/console"
 )
 
 var (
-	Name        = "flow"
-	Description = "flow is a command-line interface for managing the Flow Swiss cloud platform."
-	Version     = "v2.0.0-beta.1"
-
-	DefaultEndpoint = "https://api.flow.swiss/"
+	Name            = build.Name
+	Version         = build.Version
+	DefaultEndpoint = build.DefaultEndpoint
 )
 
 var (
@@ -24,8 +23,8 @@ var (
 
 var Root = cobra.Command{
 	Use:           Name,
-	Short:         Description,
-	Version:       Version,
+	Short:         build.Description,
+	Version:       build.Version,
 	SilenceErrors: true,
 }
 

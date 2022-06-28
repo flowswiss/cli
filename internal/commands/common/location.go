@@ -1,8 +1,6 @@
 package common
 
 import (
-	"context"
-
 	"github.com/spf13/cobra"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
@@ -25,8 +23,8 @@ type locationListCommand struct {
 	filter string
 }
 
-func (l *locationListCommand) Run(ctx context.Context, config commands.Config, args []string) (err error) {
-	items, err := common.Locations(ctx, config.Client)
+func (l *locationListCommand) Run(cmd *cobra.Command, args []string) (err error) {
+	items, err := common.Locations(cmd.Context(), commands.Config.Client)
 	if err != nil {
 		return err
 	}
@@ -38,11 +36,12 @@ func (l *locationListCommand) Run(ctx context.Context, config commands.Config, a
 	return commands.PrintStdout(items)
 }
 
-func (l *locationListCommand) Desc() *cobra.Command {
+func (l *locationListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List datacenter locations",
 		Long:  "Lists all datacenter locations including their available modules.",
+		RunE:  l.Run,
 	}
 
 	cmd.Flags().StringVar(&l.filter, "filter", "", "custom term to filter the results")

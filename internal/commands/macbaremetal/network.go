@@ -1,7 +1,6 @@
 package compute
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -9,14 +8,22 @@ import (
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/common"
 	"github.com/flowswiss/cli/v2/pkg/api/macbaremetal"
+	"github.com/flowswiss/cli/v2/pkg/console"
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
 func NetworkCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "network",
+		Aliases: []string{"networks"},
 		Short:   "Manage mac bare metal networks",
-		Example: "", // TODO
+		Example: commands.FormatExamples(fmt.Sprintf(`
+			# List all networks
+			%[1]s mac-bare-metal network list
+
+			# Create a new network
+			%[1]s mac-bare-metal network create --name my-network --location ZRH1
+		`, commands.Name)),
 	}
 
 	commands.Add(cmd, &networkListCommand{}, &networkCreateCommand{}, &networkUpdateCommand{}, &networkDeleteCommand{})
@@ -28,8 +35,8 @@ type networkListCommand struct {
 	filter string
 }
 
-func (n *networkListCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	items, err := macbaremetal.NewNetworkService(config.Client).List(ctx)
+func (n *networkListCommand) Run(cmd *cobra.Command, args []string) error {
+	items, err := macbaremetal.NewNetworkService(commands.Config.Client).List(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("fetch networks: %w", err)
 	}
@@ -41,12 +48,13 @@ func (n *networkListCommand) Run(ctx context.Context, config commands.Config, ar
 	return commands.PrintStdout(items)
 }
 
-func (n *networkListCommand) Desc() *cobra.Command {
+func (n *networkListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
+		Aliases: []string{"show", "ls", "get"},
 		Short:   "List networks",
 		Long:    "Lists all mac bare metal networks.",
-		Example: "", // TODO
+		RunE:    n.Run,
 	}
 
 	cmd.Flags().StringVar(&n.filter, "filter", "", "custom term to filter the results")
@@ -60,8 +68,8 @@ type networkCreateCommand struct {
 	location    string
 }
 
-func (n *networkCreateCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	locations, err := common.Locations(ctx, config.Client)
+func (n *networkCreateCommand) Run(cmd *cobra.Command, args []string) error {
+	locations, err := common.Locations(cmd.Context(), commands.Config.Client)
 	if err != nil {
 		return fmt.Errorf("fetch locations: %w", err)
 	}
@@ -77,7 +85,7 @@ func (n *networkCreateCommand) Run(ctx context.Context, config commands.Config, 
 		LocationID:  location.Id,
 	}
 
-	item, err := macbaremetal.NewNetworkService(config.Client).Create(ctx, data)
+	item, err := macbaremetal.NewNetworkService(commands.Config.Client).Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create network: %w", err)
 	}
@@ -85,12 +93,13 @@ func (n *networkCreateCommand) Run(ctx context.Context, config commands.Config, 
 	return commands.PrintStdout(item)
 }
 
-func (n *networkCreateCommand) Desc() *cobra.Command {
+func (n *networkCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "create",
+		Aliases: []string{"add", "new"},
 		Short:   "Create new network",
 		Long:    "Creates a new mac bare metal network.",
-		Example: "", // TODO
+		RunE:    n.Run,
 	}
 
 	cmd.Flags().StringVar(&n.name, "name", "", "name to be applied to the network")
@@ -110,10 +119,10 @@ type networkUpdateCommand struct {
 	domainNameServer []string
 }
 
-func (n *networkUpdateCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	service := macbaremetal.NewNetworkService(config.Client)
+func (n *networkUpdateCommand) Run(cmd *cobra.Command, args []string) error {
+	service := macbaremetal.NewNetworkService(commands.Config.Client)
 
-	networks, err := service.List(ctx)
+	networks, err := service.List(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("fetch networks: %w", err)
 	}
@@ -130,7 +139,7 @@ func (n *networkUpdateCommand) Run(ctx context.Context, config commands.Config, 
 		DomainNameServers: n.domainNameServer,
 	}
 
-	network, err = service.Update(ctx, network.ID, update)
+	network, err = service.Update(cmd.Context(), network.ID, update)
 	if err != nil {
 		return fmt.Errorf("update network: %w", err)
 	}
@@ -138,12 +147,13 @@ func (n *networkUpdateCommand) Run(ctx context.Context, config commands.Config, 
 	return commands.PrintStdout(network)
 }
 
-func (n *networkUpdateCommand) Desc() *cobra.Command {
+func (n *networkUpdateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "update NETWORK",
 		Short:   "Update network",
 		Long:    "Updates a mac bare metal network.",
 		Example: "", // TODO
+		RunE:    n.Run,
 	}
 
 	cmd.Flags().StringVar(&n.name, "name", "", "name to be applied to the network")
@@ -158,10 +168,10 @@ type networkDeleteCommand struct {
 	force bool
 }
 
-func (n *networkDeleteCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	service := macbaremetal.NewNetworkService(config.Client)
+func (n *networkDeleteCommand) Run(cmd *cobra.Command, args []string) error {
+	service := macbaremetal.NewNetworkService(commands.Config.Client)
 
-	networks, err := service.List(ctx)
+	networks, err := service.List(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("fetch networks: %w", err)
 	}
@@ -171,9 +181,14 @@ func (n *networkDeleteCommand) Run(ctx context.Context, config commands.Config, 
 		return fmt.Errorf("find network: %w", err)
 	}
 
-	// TODO ask for confirmation
+	if !n.force {
+		if !console.Confirm(commands.Stderr, fmt.Sprintf("Are you sure you want to delete the network %q?", network.Name)) {
+			commands.Stderr.Println("Aborted.")
+			return nil
+		}
+	}
 
-	err = service.Delete(ctx, network.ID)
+	err = service.Delete(cmd.Context(), network.ID)
 	if err != nil {
 		return fmt.Errorf("delete network: %w", err)
 	}
@@ -181,14 +196,17 @@ func (n *networkDeleteCommand) Run(ctx context.Context, config commands.Config, 
 	return nil
 }
 
-func (n *networkDeleteCommand) Desc() *cobra.Command {
+func (n *networkDeleteCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete NETWORK",
+		Aliases: []string{"del", "remove", "rm"},
 		Short:   "Delete network",
 		Long:    "Deletes a mac bare metal network.",
 		Args:    cobra.ExactArgs(1),
-		Example: "", // TODO
+		RunE:    n.Run,
 	}
+
+	cmd.Flags().BoolVar(&n.force, "force", false, "force the deletion of the network without asking for confirmation")
 
 	return cmd
 }

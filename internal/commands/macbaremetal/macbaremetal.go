@@ -8,8 +8,9 @@ import (
 
 func AddCommands(parent *cobra.Command) {
 	cmd := &cobra.Command{
-		Use:   "mac-bare-metal",
-		Short: "Manage your mac bare metal devices and networking",
+		Use:     "mac-bare-metal",
+		Aliases: []string{"macbaremetal"},
+		Short:   "Manage your mac bare metal devices and networking",
 	}
 
 	cmd.AddCommand(

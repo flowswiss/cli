@@ -1,7 +1,6 @@
 package compute
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -14,8 +13,15 @@ import (
 func NetworkInterfaceCommands() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "interface",
+		Aliases: []string{"interfaces", "networkinterface", "networkinterfaces", "network-interface", "network-interfaces"},
 		Short:   "Manage network interfaces",
-		Example: "", // TODO
+		Example: commands.FormatExamples(fmt.Sprintf(`
+  			# List network interfaces of a device
+	  		%s mac-bare-metal device interface list my-device
+
+			# Update security group of a network interface
+			%s mac-bare-metal device interface update my-device 1.1.1.1 --security-group default
+		`)),
 	}
 
 	commands.Add(cmd, &networkInterfaceListCommand{}, &networkInterfaceUpdateCommand{})
@@ -26,13 +32,13 @@ func NetworkInterfaceCommands() *cobra.Command {
 type networkInterfaceListCommand struct {
 }
 
-func (n *networkInterfaceListCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	device, err := findDevice(ctx, config, args[0])
+func (n *networkInterfaceListCommand) Run(cmd *cobra.Command, args []string) error {
+	device, err := findDevice(cmd.Context(), args[0])
 	if err != nil {
 		return err
 	}
 
-	interfaces, err := macbaremetal.NewNetworkInterfaceService(config.Client, device.ID).List(ctx)
+	interfaces, err := macbaremetal.NewNetworkInterfaceService(commands.Config.Client, device.ID).List(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("fetch network interfaces: %w", err)
 	}
@@ -40,13 +46,14 @@ func (n *networkInterfaceListCommand) Run(ctx context.Context, config commands.C
 	return commands.PrintStdout(interfaces)
 }
 
-func (n *networkInterfaceListCommand) Desc() *cobra.Command {
+func (n *networkInterfaceListCommand) Build() *cobra.Command {
 	return &cobra.Command{
 		Use:     "list DEVICE",
+		Aliases: []string{"show", "ls", "get"},
 		Short:   "List network interfaces",
 		Long:    "Lists all network interfaces of a device.",
 		Args:    cobra.ExactArgs(1),
-		Example: "", // TODO
+		RunE:    n.Run,
 	}
 }
 
@@ -54,13 +61,13 @@ type networkInterfaceUpdateCommand struct {
 	securityGroup string
 }
 
-func (n *networkInterfaceUpdateCommand) Run(ctx context.Context, config commands.Config, args []string) error {
-	device, err := findDevice(ctx, config, args[0])
+func (n *networkInterfaceUpdateCommand) Run(cmd *cobra.Command, args []string) error {
+	device, err := findDevice(cmd.Context(), args[0])
 	if err != nil {
 		return err
 	}
 
-	interfaces, err := macbaremetal.NewNetworkInterfaceService(config.Client, device.ID).List(ctx)
+	interfaces, err := macbaremetal.NewNetworkInterfaceService(commands.Config.Client, device.ID).List(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("fetch network interfaces: %w", err)
 	}
@@ -71,7 +78,7 @@ func (n *networkInterfaceUpdateCommand) Run(ctx context.Context, config commands
 	}
 
 	if len(n.securityGroup) > 0 {
-		securityGroup, err := findSecurityGroup(ctx, config, n.securityGroup)
+		securityGroup, err := findSecurityGroup(cmd.Context(), n.securityGroup)
 		if err != nil {
 			return fmt.Errorf("find security group: %w", err)
 		}
@@ -80,7 +87,7 @@ func (n *networkInterfaceUpdateCommand) Run(ctx context.Context, config commands
 			SecurityGroupID: securityGroup.ID,
 		}
 
-		iface, err = macbaremetal.NewNetworkInterfaceService(config.Client, device.ID).UpdateSecurityGroup(ctx, iface.ID, update)
+		iface, err = macbaremetal.NewNetworkInterfaceService(commands.Config.Client, device.ID).UpdateSecurityGroup(cmd.Context(), iface.ID, update)
 		if err != nil {
 			return fmt.Errorf("update network interface security group: %w", err)
 		}
@@ -89,13 +96,13 @@ func (n *networkInterfaceUpdateCommand) Run(ctx context.Context, config commands
 	return commands.PrintStdout(iface)
 }
 
-func (n *networkInterfaceUpdateCommand) Desc() *cobra.Command {
+func (n *networkInterfaceUpdateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "update DEVICE INTERFACE",
-		Short:   "Update network interface",
-		Long:    "Updates a network interface of a device.",
-		Args:    cobra.ExactArgs(2),
-		Example: "", // TODO
+		Use:   "update DEVICE INTERFACE",
+		Short: "Update network interface",
+		Long:  "Updates a network interface of a device.",
+		Args:  cobra.ExactArgs(2),
+		RunE:  n.Run,
 	}
 
 	cmd.Flags().StringVar(&n.securityGroup, "security-group", "", "security group to be applied to the network interface")

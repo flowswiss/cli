@@ -8,8 +8,10 @@ import (
 	"path/filepath"
 
 	"github.com/flowswiss/goclient"
+	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/flowswiss/cli/v2/pkg/console"
 )
@@ -33,8 +35,11 @@ var (
 	baseFlagSet *pflag.FlagSet
 )
 
-type Config struct {
-	Client goclient.Client
+var Config config
+
+type config struct {
+	Client   goclient.Client
+	Terminal bool
 }
 
 func Print(out console.Writer, val interface{}) error {
@@ -68,24 +73,35 @@ func PrintStdout(val interface{}) error {
 	return Print(Stdout, val)
 }
 
-func loadConfig() (Config, error) {
+func load() {
+	cfg, err := loadConfig()
+	if err != nil {
+		Stderr.Errorf("%v\n", err)
+		os.Exit(1)
+	}
+
+	Config = cfg
+}
+
+func loadConfig() (config, error) {
 	if err := initViper(); err != nil {
-		return Config{}, err
+		return config{}, err
 	}
 
 	endpoint := viper.GetString(FlagEndpoint)
 	token := viper.GetString(FlagToken)
 
 	if len(token) == 0 {
-		return Config{}, fmt.Errorf("missing authentication token")
+		return config{}, fmt.Errorf("missing authentication token")
 	}
 
-	return Config{
+	return config{
 		Client: goclient.NewClient(
 			goclient.WithBase(endpoint),
 			goclient.WithToken(token),
 			goclient.WithUserAgent(fmt.Sprintf("%s/%s", Name, Version)),
 		),
+		Terminal: terminal.IsTerminal(int(os.Stdin.Fd())),
 	}, nil
 }
 
@@ -140,4 +156,6 @@ func init() {
 
 	Root.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.flow/config.json")
 	Root.PersistentFlags().AddFlagSet(baseFlagSet)
+
+	cobra.OnInitialize(load)
 }
