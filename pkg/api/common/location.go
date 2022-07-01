@@ -20,7 +20,7 @@ var (
 type Location common.Location
 
 func (l Location) Keys() []string {
-	return []string{fmt.Sprint(l.Id), l.Name, l.City}
+	return []string{fmt.Sprint(l.ID), l.Name, l.City}
 }
 
 func (l Location) Columns() []string {
@@ -38,7 +38,7 @@ func (l Location) Values() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"id":      l.Id,
+		"id":      l.ID,
 		"name":    l.Name,
 		"city":    l.City,
 		"modules": buf.String(),

@@ -82,7 +82,7 @@ func (e *elasticIPCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	data := macbaremetal.ElasticIPCreate{
-		LocationID: location.Id,
+		LocationID: location.ID,
 	}
 
 	item, err := macbaremetal.NewElasticIPService(commands.Config.Client).Create(cmd.Context(), data)
@@ -131,7 +131,7 @@ func (e *elasticIPDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 
 	if !e.force {
 		if !console.Confirm(commands.Stderr, fmt.Sprintf("Are you sure you want to delete the elastic ip %q?", elasticIP.PublicIP)) {
-			commands.Stderr.Println("Aborted.")
+			commands.Stderr.Println("aborted.")
 			return nil
 		}
 	}
@@ -249,7 +249,7 @@ func (e *elasticIPDetachCommand) Run(cmd *cobra.Command, args []string) error {
 
 	if !e.force {
 		if !console.Confirm(commands.Stderr, fmt.Sprintf("Are you sure you want to detach the elastic ip %q? Any connection to the device will be lost.", elasticIP.PublicIP)) {
-			commands.Stderr.Println("Aborted.")
+			commands.Stderr.Println("aborted.")
 			return nil
 		}
 	}

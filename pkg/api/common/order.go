@@ -19,7 +19,7 @@ type Order = common.Order
 func WaitForOrder(ctx context.Context, client goclient.Client, ordering Ordering) error {
 	id, err := ordering.ExtractIdentifier()
 	if err != nil {
-		return fmt.Errorf("extract order id from %s: %w", ordering.Ref, err)
+		return fmt.Errorf("extract order id from ref: %w", err)
 	}
 
 	service := common.NewOrderService(client)
@@ -31,7 +31,7 @@ func WaitForOrder(ctx context.Context, client goclient.Client, ordering Ordering
 			return fmt.Errorf("fetch order: %w", err)
 		}
 
-		switch order.Status.Id {
+		switch order.Status.ID {
 		case common.OrderStatusSucceeded:
 			return nil
 

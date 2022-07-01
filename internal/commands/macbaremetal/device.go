@@ -164,8 +164,8 @@ func (d *deviceCreateCommand) Run(cmd *cobra.Command, args []string) error {
 
 	data := macbaremetal.DeviceCreate{
 		Name:            d.name,
-		LocationID:      network.Location.Id,
-		ProductID:       product.Id,
+		LocationID:      network.Location.ID,
+		ProductID:       product.ID,
 		NetworkID:       network.ID,
 		AttachElasticIP: d.attachElasticIP,
 		Password:        d.password,
@@ -282,7 +282,7 @@ func (d *deviceDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 
 	if !d.force {
 		if !console.Confirm(commands.Stderr, fmt.Sprintf("Are you sure you want to delete the device %q?", device.Name)) {
-			commands.Stderr.Println("Aborted.")
+			commands.Stderr.Println("aborted.")
 			return nil
 		}
 	}

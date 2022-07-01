@@ -82,7 +82,7 @@ func (n *networkCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	data := macbaremetal.NetworkCreate{
 		Name:        n.name,
 		Description: n.description,
-		LocationID:  location.Id,
+		LocationID:  location.ID,
 	}
 
 	item, err := macbaremetal.NewNetworkService(commands.Config.Client).Create(cmd.Context(), data)
@@ -183,7 +183,7 @@ func (n *networkDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 
 	if !n.force {
 		if !console.Confirm(commands.Stderr, fmt.Sprintf("Are you sure you want to delete the network %q?", network.Name)) {
-			commands.Stderr.Println("Aborted.")
+			commands.Stderr.Println("aborted.")
 			return nil
 		}
 	}

@@ -15,7 +15,8 @@ import (
 const HoursPerMonth = 730
 
 const (
-	ProductTypeMacBareMetal = "bare-metal-device"
+	ProductTypeComputeServer = "compute-engine-vm"
+	ProductTypeMacBareMetal  = "bare-metal-device"
 )
 
 var (
@@ -30,7 +31,7 @@ func (p Product) PricePerHour() string {
 }
 
 func (p Product) Keys() []string {
-	return []string{fmt.Sprint(p.Id), p.Name, p.Category, p.Type.Name}
+	return []string{fmt.Sprint(p.ID), p.Name, p.Category, p.Type.Name}
 }
 
 func (p Product) Columns() []string {
@@ -61,7 +62,7 @@ func (p Product) Values() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"id":            p.Id,
+		"id":            p.ID,
 		"name":          p.Name,
 		"type":          p.Type.Name,
 		"configuration": configurationBuf.String(),
@@ -120,7 +121,7 @@ var (
 type ProductType common.ProductType
 
 func (p ProductType) Keys() []string {
-	return []string{fmt.Sprint(p.Id), p.Name, p.Key}
+	return []string{fmt.Sprint(p.ID), p.Name, p.Key}
 }
 
 func (p ProductType) Columns() []string {
@@ -129,7 +130,7 @@ func (p ProductType) Columns() []string {
 
 func (p ProductType) Values() map[string]interface{} {
 	return map[string]interface{}{
-		"id":   p.Id,
+		"id":   p.ID,
 		"name": p.Name,
 		"key":  p.Key,
 	}

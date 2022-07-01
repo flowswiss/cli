@@ -130,11 +130,7 @@ func (t *Table) insertStruct(value reflect.Value) error {
 	displayable := value.Interface().(Displayable)
 
 	if t.Columns == nil {
-		var cols []string
-		for _, col := range displayable.Columns() {
-			cols = append(cols, col)
-		}
-		t.insertColumns(cols)
+		t.insertColumns(displayable.Columns())
 	}
 
 	valuesFunc := value.MethodByName("Values")

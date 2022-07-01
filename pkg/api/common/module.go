@@ -20,7 +20,7 @@ var (
 type Module common.Module
 
 func (m Module) Keys() []string {
-	return []string{fmt.Sprint(m.Id), m.Name}
+	return []string{fmt.Sprint(m.ID), m.Name}
 }
 
 func (m Module) Columns() []string {
@@ -43,7 +43,7 @@ func (m Module) Values() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"id":        m.Id,
+		"id":        m.ID,
 		"name":      m.Name,
 		"parent":    parent,
 		"locations": buf.String(),
@@ -52,7 +52,7 @@ func (m Module) Values() map[string]interface{} {
 
 func (m Module) AvailableAt(location Location) bool {
 	for _, loc := range m.Locations {
-		if loc.Id == location.Id {
+		if loc.ID == location.ID {
 			return true
 		}
 	}

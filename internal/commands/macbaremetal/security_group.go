@@ -170,7 +170,7 @@ func (s *securityGroupDeleteCommand) Run(cmd *cobra.Command, args []string) erro
 
 	if !s.force {
 		if !console.Confirm(commands.Stderr, fmt.Sprintf("Are you sure you want to delete the security group %q?", securityGroup.Name)) {
-			commands.Stderr.Println("Aborted.")
+			commands.Stderr.Println("aborted.")
 			return nil
 		}
 	}

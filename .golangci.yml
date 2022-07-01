@@ -1,0 +1,11 @@
+run:
+  skip-dirs:
+    - flow
+
+linters:
+  enable:
+    - asciicheck
+    - decorder
+    - errorlint
+    - goimports
+    - stylecheck
