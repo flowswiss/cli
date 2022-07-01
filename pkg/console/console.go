@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 const (
@@ -45,20 +45,16 @@ type Writer interface {
 	Errorf(format string, a ...interface{}) Writer
 }
 
-func NewConsoleOutput(writer *os.File) Writer {
-	if terminal.IsTerminal(int(writer.Fd())) {
-		return ansiWriter{Writer: writer}
+func NewConsoleOutput(file *os.File) Writer {
+	if term.IsTerminal(int(file.Fd())) {
+		return ansiWriter{File: file}
 	}
 
-	return plainWriter{Writer: writer}
+	return plainWriter{File: file}
 }
 
 type plainWriter struct {
-	io.Writer
-}
-
-func NewPlainWriter(writer io.Writer) Writer {
-	return plainWriter{Writer: writer}
+	*os.File
 }
 
 func (w plainWriter) Color(Color) Writer { return w }
@@ -66,24 +62,24 @@ func (w plainWriter) Bold() Writer       { return w }
 func (w plainWriter) Reset() Writer      { return w }
 
 func (w plainWriter) Printf(format string, a ...interface{}) Writer {
-	_, _ = fmt.Fprintf(w.Writer, format, a...)
+	_, _ = fmt.Fprintf(w.File, format, a...)
 	return w
 }
 
 func (w plainWriter) Print(a ...interface{}) Writer {
-	_, _ = fmt.Fprint(w.Writer, a...)
+	_, _ = fmt.Fprint(w.File, a...)
 	return w
 }
 
 func (w plainWriter) Println(a ...interface{}) Writer {
-	_, _ = fmt.Fprintln(w.Writer, a...)
+	_, _ = fmt.Fprintln(w.File, a...)
 	return w
 }
 
 func (w plainWriter) Errorf(format string, a ...interface{}) Writer { return w.Printf(format, a...) }
 
 type ansiWriter struct {
-	io.Writer
+	*os.File
 }
 
 func (w ansiWriter) Color(color Color) Writer {
@@ -99,17 +95,17 @@ func (w ansiWriter) Reset() Writer {
 }
 
 func (w ansiWriter) Printf(format string, a ...interface{}) Writer {
-	_, _ = fmt.Fprintf(w.Writer, format, a...)
+	_, _ = fmt.Fprintf(w.File, format, a...)
 	return w
 }
 
 func (w ansiWriter) Print(a ...interface{}) Writer {
-	_, _ = fmt.Fprint(w.Writer, a...)
+	_, _ = fmt.Fprint(w.File, a...)
 	return w
 }
 
 func (w ansiWriter) Println(a ...interface{}) Writer {
-	_, _ = fmt.Fprintln(w.Writer, a...)
+	_, _ = fmt.Fprintln(w.File, a...)
 	return w
 }
 

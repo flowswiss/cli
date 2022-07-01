@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 
 	"github.com/flowswiss/cli/v2/pkg/console"
 )
@@ -19,6 +20,8 @@ import (
 const (
 	FlagEndpoint = "endpoint"
 	FlagToken    = "token"
+	FlagDump     = "dump"
+	FlagDryRun   = "dry-run"
 	FlagFormat   = "format"
 )
 
@@ -95,13 +98,31 @@ func loadConfig() (config, error) {
 		return config{}, fmt.Errorf("missing authentication token")
 	}
 
+	opts := []goclient.Option{
+		goclient.WithBase(endpoint),
+		goclient.WithToken(token),
+		goclient.WithUserAgent(fmt.Sprintf("%s-cli/%s", Name, Version)),
+	}
+
+	if viper.GetBool(FlagDump) {
+		opts = append(opts, goclient.WithHTTPClientOption(func(client *http.Client) {
+			client.Transport = dumpRequestTransport{
+				delegate: client.Transport,
+			}
+		}))
+	}
+
+	if viper.GetBool(FlagDryRun) {
+		opts = append(opts, goclient.WithHTTPClientOption(func(client *http.Client) {
+			client.Transport = dryRunTransport{
+				delegate: client.Transport,
+			}
+		}))
+	}
+
 	return config{
-		Client: goclient.NewClient(
-			goclient.WithBase(endpoint),
-			goclient.WithToken(token),
-			goclient.WithUserAgent(fmt.Sprintf("%s/%s", Name, Version)),
-		),
-		Terminal: terminal.IsTerminal(int(os.Stdin.Fd())),
+		Client:   goclient.NewClient(opts...),
+		Terminal: term.IsTerminal(int(os.Stdin.Fd())),
 	}, nil
 }
 
@@ -150,6 +171,8 @@ func init() {
 	baseFlagSet = pflag.NewFlagSet("base", pflag.ContinueOnError)
 	baseFlagSet.String(FlagEndpoint, DefaultEndpoint, "base endpoint to use for all api requests")
 	baseFlagSet.String(FlagToken, "", "authentication token to use for all api requests")
+	baseFlagSet.Bool(FlagDump, false, "dump all requests and responses to stderr")
+	baseFlagSet.Bool(FlagDryRun, false, "dry run mode, print requests to stdout instead of sending them to the server")
 	baseFlagSet.StringP(FlagFormat, "o", "table", fmt.Sprintf("output format to use. allowed values: %s, %s or %s", FormatTable, FormatCSV, FormatJSON))
 
 	_ = baseFlagSet.MarkHidden(FlagToken)
