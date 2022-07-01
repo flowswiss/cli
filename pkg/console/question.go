@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"os"
 	"strings"
+
+	"golang.org/x/term"
 )
 
 const (
@@ -85,4 +87,25 @@ func Ask[T optConstraint](writer Writer, question string, opts ...T) (res T, err
 	}
 
 	return res, nil
+}
+
+func Password(writer Writer, prompt string, valid func(string) error) (string, error) {
+	for {
+		writer.Print(prompt)
+		writer.Print(": ")
+
+		password, err := term.ReadPassword(int(os.Stdin.Fd()))
+		if err != nil {
+			return "", err
+		}
+
+		writer.Println()
+
+		err = valid(string(password))
+		if err == nil {
+			return string(password), nil
+		}
+
+		writer.Errorf("%v\n", err)
+	}
 }
