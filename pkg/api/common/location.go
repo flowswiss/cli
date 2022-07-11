@@ -62,3 +62,17 @@ func Locations(ctx context.Context, client goclient.Client) ([]Location, error) 
 
 	return items, nil
 }
+
+func FindLocation(ctx context.Context, client goclient.Client, term string) (Location, error) {
+	locations, err := Locations(ctx, client)
+	if err != nil {
+		return Location{}, fmt.Errorf("fetch locations: %w", err)
+	}
+
+	location, err := filter.FindOne(locations, term)
+	if err != nil {
+		return Location{}, fmt.Errorf("find location: %w", err)
+	}
+
+	return location, nil
+}

@@ -68,14 +68,9 @@ type networkCreateCommand struct {
 }
 
 func (n *networkCreateCommand) Run(cmd *cobra.Command, args []string) error {
-	locations, err := common.Locations(cmd.Context(), commands.Config.Client)
+	location, err := common.FindLocation(cmd.Context(), commands.Config.Client, n.location)
 	if err != nil {
-		return fmt.Errorf("fetch locations: %w", err)
-	}
-
-	location, err := filter.FindOne(locations, n.location)
-	if err != nil {
-		return fmt.Errorf("find location: %w", err)
+		return err
 	}
 
 	data := macbaremetal.NetworkCreate{

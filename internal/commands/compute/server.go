@@ -85,14 +85,9 @@ type serverCreateCommand struct {
 }
 
 func (s *serverCreateCommand) Run(cmd *cobra.Command, args []string) error {
-	locations, err := common.Locations(cmd.Context(), commands.Config.Client)
+	location, err := common.FindLocation(cmd.Context(), commands.Config.Client, s.location)
 	if err != nil {
-		return fmt.Errorf("fetch locations: %w", err)
-	}
-
-	location, err := filter.FindOne(locations, s.location)
-	if err != nil {
-		return fmt.Errorf("find location: %w", err)
+		return err
 	}
 
 	images, err := compute.Images(cmd.Context(), commands.Config.Client)
