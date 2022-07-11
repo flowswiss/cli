@@ -36,7 +36,14 @@ func ServerCommand() *cobra.Command {
 	}
 
 	commands.Add(cmd, &serverListCommand{}, &serverCreateCommand{}, &serverUpdateCommand{}, &serverDeleteCommand{})
-	cmd.AddCommand(NetworkInterfaceCommand())
+
+	commands.Add(cmd,
+		serverActionRunCommandPreset("start"),
+		serverActionRunCommandPreset("stop"),
+		serverActionRunCommandPreset("restart"),
+	)
+
+	cmd.AddCommand(NetworkInterfaceCommand(), ServerActionCommand())
 
 	return cmd
 }
