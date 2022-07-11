@@ -17,6 +17,7 @@ func AddCommands(parent *cobra.Command) {
 		ImageCommand(),
 		KeyPairCommand(),
 		NetworkCommand(),
+		RouterCommand(),
 		SecurityGroupCommand(),
 		ServerCommand(),
 		SnapshotCommand(),
