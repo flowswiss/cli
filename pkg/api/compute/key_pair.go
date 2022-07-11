@@ -10,6 +10,10 @@ import (
 
 type KeyPair compute.KeyPair
 
+func (k KeyPair) String() string {
+	return k.Name
+}
+
 func (k KeyPair) Keys() []string {
 	return []string{fmt.Sprint(k.ID), k.Name, k.Fingerprint}
 }

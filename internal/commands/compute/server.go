@@ -60,10 +60,11 @@ func (s *serverListCommand) Run(cmd *cobra.Command, args []string) error {
 
 func (s *serverListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list",
-		Short: "List all server",
-		Long:  "Prints a table of all compute servers belonging to the current organization.",
-		RunE:  s.Run,
+		Use:     "list",
+		Aliases: []string{"show", "ls", "get"},
+		Short:   "List all server",
+		Long:    "Prints a table of all compute servers belonging to the current organization.",
+		RunE:    s.Run,
 	}
 
 	cmd.Flags().StringVar(&s.filter, "filter", "", "") // TODO

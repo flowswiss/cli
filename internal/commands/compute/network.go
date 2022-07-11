@@ -51,10 +51,11 @@ func (n *networkListCommand) Run(cmd *cobra.Command, args []string) error {
 
 func (n *networkListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list",
-		Short: "List networks",
-		Long:  "Lists all networks of the current tenant.",
-		RunE:  n.Run,
+		Use:     "list",
+		Aliases: []string{"show", "ls", "get"},
+		Short:   "List networks",
+		Long:    "Lists all networks of the current tenant.",
+		RunE:    n.Run,
 	}
 
 	cmd.Flags().StringVar(&n.filter, "filter", "", "custom term to filter the results")
