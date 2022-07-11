@@ -10,6 +10,10 @@ import (
 
 type ElasticIP compute.ElasticIP
 
+func (e ElasticIP) String() string {
+	return e.PublicIP
+}
+
 func (e ElasticIP) Keys() []string {
 	return []string{fmt.Sprint(e.ID), e.PublicIP, e.PrivateIP}
 }
@@ -33,11 +37,13 @@ func (e ElasticIP) Values() map[string]interface{} {
 }
 
 type ElasticIPService struct {
+	client   goclient.Client
 	delegate compute.ElasticIPService
 }
 
 func NewElasticIPService(client goclient.Client) ElasticIPService {
 	return ElasticIPService{
+		client:   client,
 		delegate: compute.NewElasticIPService(client),
 	}
 }
@@ -54,6 +60,32 @@ func (e ElasticIPService) List(ctx context.Context) ([]ElasticIP, error) {
 	}
 
 	return items, nil
+}
+
+type ElasticIPCreate = compute.ElasticIPCreate
+
+func (e ElasticIPService) Create(ctx context.Context, data ElasticIPCreate) (ElasticIP, error) {
+	res, err := e.delegate.Create(ctx, data)
+	if err != nil {
+		return ElasticIP{}, err
+	}
+
+	return ElasticIP(res), nil
+}
+
+type ElasticIPAttach = compute.ElasticIPAttach
+
+func (e ElasticIPService) Attach(ctx context.Context, serverID int, data ElasticIPAttach) (ElasticIP, error) {
+	elasticIP, err := compute.NewServerElasticIPService(e.client, serverID).Attach(ctx, data)
+	if err != nil {
+		return ElasticIP{}, err
+	}
+
+	return ElasticIP(elasticIP), nil
+}
+
+func (e ElasticIPService) Detach(ctx context.Context, serverID, elasticIPID int) error {
+	return compute.NewServerElasticIPService(e.client, serverID).Detach(ctx, elasticIPID)
 }
 
 func (e ElasticIPService) Delete(ctx context.Context, id int) error {

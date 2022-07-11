@@ -13,6 +13,7 @@ func AddCommands(parent *cobra.Command) {
 	}
 
 	cmd.AddCommand(
+		ElasticIPCommand(),
 		ImageCommand(),
 		KeyPairCommand(),
 		NetworkCommand(),
