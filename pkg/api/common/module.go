@@ -19,6 +19,10 @@ var (
 
 type Module common.Module
 
+func (m Module) String() string {
+	return m.Name
+}
+
 func (m Module) Keys() []string {
 	return []string{fmt.Sprint(m.ID), m.Name}
 }

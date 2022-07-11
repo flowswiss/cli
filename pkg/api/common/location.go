@@ -19,6 +19,10 @@ var (
 
 type Location common.Location
 
+func (l Location) String() string {
+	return l.Name
+}
+
 func (l Location) Keys() []string {
 	return []string{fmt.Sprint(l.ID), l.Name, l.City}
 }

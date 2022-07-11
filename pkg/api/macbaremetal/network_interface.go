@@ -21,14 +21,14 @@ func (n NetworkInterface) Keys() []string {
 }
 
 func (n NetworkInterface) Columns() []string {
-	return []string{"id", "private ip", "mac address", "network", "security group", "attached elastic ip"}
+	return []string{"id", "mac address", "private ip", "network", "security group", "attached elastic ip"}
 }
 
 func (n NetworkInterface) Values() map[string]interface{} {
 	return map[string]interface{}{
 		"id":                  n.ID,
-		"private ip":          n.PrivateIP,
 		"mac address":         n.MacAddress,
+		"private ip":          n.PrivateIP,
 		"network":             fmt.Sprint(n.Network.Name, " (", n.Network.Subnet, ")"),
 		"security group":      n.SecurityGroup.Name,
 		"attached elastic ip": n.AttachedElasticIP.PublicIP,

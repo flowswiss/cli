@@ -1,6 +1,7 @@
 package compute
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"net"
@@ -19,8 +20,9 @@ import (
 
 func ServerCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "server",
-		Short: "Manage your compute server",
+		Use:     "server",
+		Aliases: []string{"servers"},
+		Short:   "Manage your compute server",
 		Example: commands.FormatExamples(fmt.Sprintf(`
 			# List all servers
 			%[1]s compute server list
@@ -34,6 +36,7 @@ func ServerCommand() *cobra.Command {
 	}
 
 	commands.Add(cmd, &serverListCommand{}, &serverCreateCommand{}, &serverUpdateCommand{}, &serverDeleteCommand{})
+	cmd.AddCommand(NetworkInterfaceCommand())
 
 	return cmd
 }
@@ -265,23 +268,16 @@ type serverUpdateCommand struct {
 }
 
 func (s *serverUpdateCommand) Run(cmd *cobra.Command, args []string) error {
-	service := compute.NewServerService(commands.Config.Client)
-
-	servers, err := service.List(cmd.Context())
+	server, err := findServer(cmd.Context(), args[0])
 	if err != nil {
-		return fmt.Errorf("fetch servers: %w", err)
-	}
-
-	server, err := filter.FindOne(servers, args[0])
-	if err != nil {
-		return fmt.Errorf("find server: %w", err)
+		return err
 	}
 
 	data := compute.ServerUpdate{
 		Name: s.name,
 	}
 
-	server, err = service.Update(cmd.Context(), server.ID, data)
+	server, err = compute.NewServerService(commands.Config.Client).Update(cmd.Context(), server.ID, data)
 	if err != nil {
 		return fmt.Errorf("update server: %w", err)
 	}
@@ -309,16 +305,9 @@ type serverDeleteCommand struct {
 }
 
 func (s *serverDeleteCommand) Run(cmd *cobra.Command, args []string) error {
-	service := compute.NewServerService(commands.Config.Client)
-
-	servers, err := service.List(cmd.Context())
+	server, err := findServer(cmd.Context(), args[0])
 	if err != nil {
-		return fmt.Errorf("fetch servers: %w", err)
-	}
-
-	server, err := filter.FindOne(servers, args[0])
-	if err != nil {
-		return fmt.Errorf("find server: %w", err)
+		return err
 	}
 
 	if !s.force {
@@ -328,7 +317,7 @@ func (s *serverDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	err = service.Delete(cmd.Context(), server.ID, !s.detachOnly)
+	err = compute.NewServerService(commands.Config.Client).Delete(cmd.Context(), server.ID, !s.detachOnly)
 	if err != nil {
 		return fmt.Errorf("delete server: %w", err)
 	}
@@ -356,6 +345,20 @@ func (s *serverDeleteCommand) Build() *cobra.Command {
 	cmd.Flags().BoolVar(&s.detachOnly, "detach-only", false, "specifies whether elastic ips should only be detached without getting deleted")
 
 	return cmd
+}
+
+func findServer(ctx context.Context, term string) (compute.Server, error) {
+	servers, err := compute.NewServerService(commands.Config.Client).List(ctx)
+	if err != nil {
+		return compute.Server{}, fmt.Errorf("fetch servers: %w", err)
+	}
+
+	server, err := filter.FindOne(servers, term)
+	if err != nil {
+		return compute.Server{}, fmt.Errorf("find server: %w", err)
+	}
+
+	return server, nil
 }
 
 const specialChars = "~!@#$%^&*_-+=`|\\(){}[]:;\"'<>,.?/"

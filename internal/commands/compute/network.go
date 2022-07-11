@@ -2,6 +2,7 @@ package compute
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net"
 
@@ -188,16 +189,9 @@ type networkUpdateCommand struct {
 }
 
 func (n *networkUpdateCommand) Run(cmd *cobra.Command, args []string) error {
-	service := compute.NewNetworkService(commands.Config.Client)
-
-	networks, err := service.List(cmd.Context())
+	network, err := findNetwork(cmd.Context(), args[0])
 	if err != nil {
-		return fmt.Errorf("fetch networks: %w", err)
-	}
-
-	network, err := filter.FindOne(networks, args[0])
-	if err != nil {
-		return fmt.Errorf("find network: %w", err)
+		return err
 	}
 
 	_, cidr, err := net.ParseCIDR(network.CIDR)
@@ -250,7 +244,7 @@ func (n *networkUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 		GatewayIP:           gateway,
 	}
 
-	network, err = service.Update(cmd.Context(), network.ID, data)
+	network, err = compute.NewNetworkService(commands.Config.Client).Update(cmd.Context(), network.ID, data)
 	if err != nil {
 		return fmt.Errorf("update network: %w", err)
 	}
@@ -282,16 +276,9 @@ type networkDeleteCommand struct {
 }
 
 func (n *networkDeleteCommand) Run(cmd *cobra.Command, args []string) error {
-	service := compute.NewNetworkService(commands.Config.Client)
-
-	networks, err := service.List(cmd.Context())
+	network, err := findNetwork(cmd.Context(), args[0])
 	if err != nil {
-		return fmt.Errorf("fetch networks: %w", err)
-	}
-
-	network, err := filter.FindOne(networks, args[0])
-	if err != nil {
-		return fmt.Errorf("find network: %w", err)
+		return err
 	}
 
 	if !n.force {
@@ -301,7 +288,7 @@ func (n *networkDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	err = service.Delete(cmd.Context(), network.ID)
+	err = compute.NewNetworkService(commands.Config.Client).Delete(cmd.Context(), network.ID)
 	if err != nil {
 		return fmt.Errorf("delete network: %w", err)
 	}
@@ -321,4 +308,18 @@ func (n *networkDeleteCommand) Build() *cobra.Command {
 	cmd.Flags().BoolVar(&n.force, "force", false, "force the deletion of the network without asking for confirmation")
 
 	return cmd
+}
+
+func findNetwork(ctx context.Context, term string) (compute.Network, error) {
+	networks, err := compute.NewNetworkService(commands.Config.Client).List(ctx)
+	if err != nil {
+		return compute.Network{}, fmt.Errorf("fetch networks: %w", err)
+	}
+
+	network, err := filter.FindOne(networks, term)
+	if err != nil {
+		return compute.Network{}, fmt.Errorf("find network: %w", err)
+	}
+
+	return network, nil
 }

@@ -6,10 +6,9 @@ import (
 	"strings"
 
 	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/common"
 	"github.com/flowswiss/goclient/compute"
 
-	commonmodels "github.com/flowswiss/cli/v2/pkg/api/common"
+	"github.com/flowswiss/cli/v2/pkg/api/common"
 )
 
 type Server compute.Server
@@ -63,9 +62,9 @@ func (s Server) Values() map[string]interface{} {
 		"id":               s.ID,
 		"name":             s.Name,
 		"status":           s.Status.Name,
-		"product":          fmt.Sprintf("%s (%s)", s.Product.Name, commonmodels.Product(s.Product).PricePerHour()),
-		"operating system": Image{Image: s.Image}.String(),
-		"location":         s.Location.Name,
+		"product":          common.Product(s.Product),
+		"operating system": Image{Image: s.Image},
+		"location":         common.Location(s.Location),
 		"public ip":        publicIP,
 		"network":          networkBuffer.String(),
 	}

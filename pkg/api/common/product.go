@@ -26,6 +26,10 @@ var (
 
 type Product common.Product
 
+func (p Product) String() string {
+	return fmt.Sprintf("%s (%s)", p.Name, p.PricePerHour())
+}
+
 func (p Product) PricePerHour() string {
 	return fmt.Sprintf("%.2f CHF/h", p.Price/float64(HoursPerMonth))
 }
@@ -69,10 +73,6 @@ func (p Product) Values() map[string]interface{} {
 		"price":         p.PricePerHour(),
 		"availability":  availabilityBuf.String(),
 	}
-}
-
-func (p Product) String() string {
-	return fmt.Sprintf("%s (%s)", p.Name, p.PricePerHour())
 }
 
 func Products(ctx context.Context, client goclient.Client) ([]Product, error) {

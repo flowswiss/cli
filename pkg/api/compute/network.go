@@ -6,6 +6,8 @@ import (
 
 	"github.com/flowswiss/goclient"
 	"github.com/flowswiss/goclient/compute"
+
+	"github.com/flowswiss/cli/v2/pkg/api/common"
 )
 
 type Network compute.Network
@@ -22,10 +24,14 @@ func (n Network) Values() map[string]interface{} {
 	return map[string]interface{}{
 		"id":       n.ID,
 		"name":     n.Name,
-		"location": n.Location.Name,
+		"location": common.Location(n.Location),
 		"cidr":     n.CIDR,
 		"usage":    fmt.Sprintf("%d/%d", n.UsedIPs, n.TotalIPs),
 	}
+}
+
+func (n Network) String() string {
+	return fmt.Sprintf("%s (%s)", n.Name, n.CIDR)
 }
 
 type NetworkService struct {

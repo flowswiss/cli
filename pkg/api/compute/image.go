@@ -62,7 +62,7 @@ func (i Image) Values() map[string]interface{} {
 			availabilityBuf.WriteString(", ")
 		}
 
-		availabilityBuf.WriteString(location.Name)
+		availabilityBuf.WriteString(location.String())
 	}
 
 	licenseBuf := &strings.Builder{}
