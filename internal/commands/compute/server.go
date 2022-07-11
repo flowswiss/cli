@@ -310,11 +310,9 @@ func (s *serverDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if !s.force {
-		if !console.Confirm(commands.Stderr, fmt.Sprintf("Are you sure you want to delete server %q?", server.Name)) {
-			commands.Stderr.Println("aborted.")
-			return nil
-		}
+	if !s.force && !commands.ConfirmDeletion("server", server) {
+		commands.Stderr.Println("aborted.")
+		return nil
 	}
 
 	err = compute.NewServerService(commands.Config.Client).Delete(cmd.Context(), server.ID, !s.detachOnly)

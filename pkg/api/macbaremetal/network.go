@@ -10,6 +10,10 @@ import (
 
 type Network macbaremetal.Network
 
+func (n Network) String() string {
+	return n.Name
+}
+
 func (n Network) Keys() []string {
 	return []string{fmt.Sprint(n.ID), n.Name, n.Subnet}
 }

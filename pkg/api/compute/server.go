@@ -13,6 +13,10 @@ import (
 
 type Server compute.Server
 
+func (s Server) String() string {
+	return s.Name
+}
+
 func (s Server) Keys() (identifiers []string) {
 	for _, network := range s.Networks {
 		identifiers = append(identifiers, network.Name, network.CIDR)

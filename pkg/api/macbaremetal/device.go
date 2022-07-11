@@ -13,6 +13,10 @@ import (
 
 type Device macbaremetal.Device
 
+func (d Device) String() string {
+	return d.Name
+}
+
 func (d Device) Keys() []string {
 	return []string{fmt.Sprint(d.ID), d.Name, d.Hostname}
 }

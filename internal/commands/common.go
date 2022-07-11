@@ -1,10 +1,13 @@
 package commands
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/flowswiss/cli/v2/pkg/console"
 )
 
 type CommandBuilder interface {
@@ -38,4 +41,12 @@ func FormatHelp(help string) string {
 
 func FormatExamples(examples string) string {
 	return FormatAndIndent(examples, 1)
+}
+
+func Confirm(message string) bool {
+	return console.Confirm(Stderr, message)
+}
+
+func ConfirmDeletion(kind string, item fmt.Stringer) bool {
+	return console.Confirm(Stderr, fmt.Sprintf("Are you sure you want to delete the %s %q?", kind, item))
 }

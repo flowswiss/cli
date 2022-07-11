@@ -10,6 +10,10 @@ import (
 
 type SecurityGroup macbaremetal.SecurityGroup
 
+func (s SecurityGroup) String() string {
+	return s.Name
+}
+
 func (s SecurityGroup) Keys() []string {
 	return []string{fmt.Sprint(s.ID), s.Name}
 }

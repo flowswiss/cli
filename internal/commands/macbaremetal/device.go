@@ -280,11 +280,9 @@ func (d *deviceDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("find device: %w", err)
 	}
 
-	if !d.force {
-		if !console.Confirm(commands.Stderr, fmt.Sprintf("Are you sure you want to delete the device %q?", device.Name)) {
-			commands.Stderr.Println("aborted.")
-			return nil
-		}
+	if !d.force && !commands.ConfirmDeletion("device", device) {
+		commands.Stderr.Println("aborted.")
+		return nil
 	}
 
 	err = service.Delete(cmd.Context(), device.ID)

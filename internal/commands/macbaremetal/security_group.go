@@ -7,7 +7,6 @@ import (
 
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/macbaremetal"
-	"github.com/flowswiss/cli/v2/pkg/console"
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
@@ -168,11 +167,9 @@ func (s *securityGroupDeleteCommand) Run(cmd *cobra.Command, args []string) erro
 		return fmt.Errorf("find security group: %w", err)
 	}
 
-	if !s.force {
-		if !console.Confirm(commands.Stderr, fmt.Sprintf("Are you sure you want to delete the security group %q?", securityGroup.Name)) {
-			commands.Stderr.Println("aborted.")
-			return nil
-		}
+	if !s.force && !commands.ConfirmDeletion("security group", securityGroup) {
+		commands.Stderr.Println("aborted.")
+		return nil
 	}
 
 	err = service.Delete(cmd.Context(), securityGroup.ID)

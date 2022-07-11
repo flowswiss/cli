@@ -9,7 +9,6 @@ import (
 
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/compute"
-	"github.com/flowswiss/cli/v2/pkg/console"
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
@@ -220,11 +219,9 @@ func (n *networkInterfaceDeleteCommand) Run(cmd *cobra.Command, args []string) e
 		return fmt.Errorf("network interface still has an elastic ip attached to it")
 	}
 
-	if !n.force {
-		if !console.Confirm(commands.Stderr, fmt.Sprintf("Are you sure you want to delete network interface %s (%s)?", iface.MacAddress, iface.PrivateIP)) {
-			commands.Stderr.Println("aborted.")
-			return nil
-		}
+	if !n.force && !commands.ConfirmDeletion("network interface", iface) {
+		commands.Stderr.Println("aborted.")
+		return nil
 	}
 
 	err = compute.NewNetworkInterfaceService(commands.Config.Client, server.ID).Delete(cmd.Context(), iface.ID)

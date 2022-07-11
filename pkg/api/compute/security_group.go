@@ -21,7 +21,7 @@ func (s SecurityGroup) Keys() []string {
 }
 
 func (s SecurityGroup) Columns() []string {
-	return []string{"id", "name", "network"}
+	return []string{"id", "name", "location"}
 }
 
 func (s SecurityGroup) Values() map[string]interface{} {

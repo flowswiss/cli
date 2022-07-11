@@ -11,6 +11,10 @@ import (
 
 type NetworkInterface compute.NetworkInterface
 
+func (n NetworkInterface) String() string {
+	return fmt.Sprintf("%s (%s)", n.MacAddress, n.PrivateIP)
+}
+
 func (n NetworkInterface) Keys() []string {
 	return []string{fmt.Sprint(n.ID), n.MacAddress, n.PrivateIP}
 }

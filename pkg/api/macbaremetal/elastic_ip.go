@@ -10,6 +10,10 @@ import (
 
 type ElasticIP macbaremetal.ElasticIP
 
+func (e ElasticIP) String() string {
+	return e.PublicIP
+}
+
 func (e ElasticIP) Keys() []string {
 	return []string{fmt.Sprint(e.ID), e.PublicIP}
 }

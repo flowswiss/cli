@@ -9,7 +9,6 @@ import (
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/common"
 	"github.com/flowswiss/cli/v2/pkg/api/macbaremetal"
-	"github.com/flowswiss/cli/v2/pkg/console"
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
@@ -129,11 +128,9 @@ func (e *elasticIPDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		commands.Stderr.Errorf("WARNING: The elastic ip is still attached to a device. Connections to the device will be lost.\n")
 	}
 
-	if !e.force {
-		if !console.Confirm(commands.Stderr, fmt.Sprintf("Are you sure you want to delete the elastic ip %q?", elasticIP.PublicIP)) {
-			commands.Stderr.Println("aborted.")
-			return nil
-		}
+	if !e.force && !commands.ConfirmDeletion("elastic ip", elasticIP) {
+		commands.Stderr.Println("aborted.")
+		return nil
 	}
 
 	if elasticIP.Attachment.ID != 0 {
@@ -247,11 +244,9 @@ func (e *elasticIPDetachCommand) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("elastic ip not attached to the selected device")
 	}
 
-	if !e.force {
-		if !console.Confirm(commands.Stderr, fmt.Sprintf("Are you sure you want to detach the elastic ip %q? Any connection to the device will be lost.", elasticIP.PublicIP)) {
-			commands.Stderr.Println("aborted.")
-			return nil
-		}
+	if !e.force && !commands.Confirm(fmt.Sprintf("Are you sure you want to detach the elastic ip %q? Any connection to the device will be lost.", elasticIP)) {
+		commands.Stderr.Println("aborted.")
+		return nil
 	}
 
 	err = macbaremetal.NewElasticIPService(commands.Config.Client).Detach(cmd.Context(), device.ID, elasticIP.ID)

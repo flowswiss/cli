@@ -8,7 +8,6 @@ import (
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/common"
 	"github.com/flowswiss/cli/v2/pkg/api/macbaremetal"
-	"github.com/flowswiss/cli/v2/pkg/console"
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
@@ -181,11 +180,9 @@ func (n *networkDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("find network: %w", err)
 	}
 
-	if !n.force {
-		if !console.Confirm(commands.Stderr, fmt.Sprintf("Are you sure you want to delete the network %q?", network.Name)) {
-			commands.Stderr.Println("aborted.")
-			return nil
-		}
+	if !n.force && !commands.ConfirmDeletion("network", network) {
+		commands.Stderr.Println("aborted.")
+		return nil
 	}
 
 	err = service.Delete(cmd.Context(), network.ID)
