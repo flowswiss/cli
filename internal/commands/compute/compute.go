@@ -19,6 +19,7 @@ func AddCommands(parent *cobra.Command) {
 		NetworkCommand(),
 		SecurityGroupCommand(),
 		ServerCommand(),
+		SnapshotCommand(),
 		VolumeCommand(),
 	)
 

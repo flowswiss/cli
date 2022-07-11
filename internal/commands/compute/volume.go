@@ -340,7 +340,7 @@ func (v *volumeDeleteCommand) Build() *cobra.Command {
 		RunE:  v.Run,
 	}
 
-	cmd.Flags().BoolVar(&v.force, "force", false, "force deleting the volume without asking for confirmation")
+	cmd.Flags().BoolVar(&v.force, "force", false, "force the deletion of the volume without asking for confirmation")
 
 	return cmd
 }
