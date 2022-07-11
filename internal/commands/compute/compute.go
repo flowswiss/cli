@@ -17,6 +17,7 @@ func AddCommands(parent *cobra.Command) {
 		ElasticIPCommand(),
 		ImageCommand(),
 		KeyPairCommand(),
+		LoadBalancerCommand(),
 		NetworkCommand(),
 		RouterCommand(),
 		SecurityGroupCommand(),
