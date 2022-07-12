@@ -117,6 +117,12 @@ func (s ServerService) Update(ctx context.Context, id int, data ServerUpdate) (S
 	return Server(res), nil
 }
 
+type ServerUpgrade = compute.ServerUpgrade
+
+func (s ServerService) Upgrade(ctx context.Context, id int, data ServerUpgrade) (common.Ordering, error) {
+	return s.delegate.Upgrade(ctx, id, data)
+}
+
 func (s ServerService) Delete(ctx context.Context, id int, deleteElasticIPs bool) error {
 	return s.delegate.Delete(ctx, id, deleteElasticIPs)
 }

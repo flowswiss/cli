@@ -35,7 +35,13 @@ func ServerCommand() *cobra.Command {
 		`, commands.Name)),
 	}
 
-	commands.Add(cmd, &serverListCommand{}, &serverCreateCommand{}, &serverUpdateCommand{}, &serverDeleteCommand{})
+	commands.Add(cmd,
+		&serverListCommand{},
+		&serverCreateCommand{},
+		&serverUpdateCommand{},
+		&serverUpgradeCommand{},
+		&serverDeleteCommand{},
+	)
 
 	commands.Add(cmd,
 		serverActionRunCommandPreset("start"),
@@ -43,7 +49,7 @@ func ServerCommand() *cobra.Command {
 		serverActionRunCommandPreset("restart"),
 	)
 
-	cmd.AddCommand(NetworkInterfaceCommand(), ServerActionCommand())
+	cmd.AddCommand(NetworkInterfaceCommand(), ServerActionCommand(), ServerVolumeCommand())
 
 	return cmd
 }
@@ -298,6 +304,65 @@ func (s *serverUpdateCommand) Build() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&s.name, "name", "", "new name of the server")
+
+	return cmd
+}
+
+type serverUpgradeCommand struct {
+	product string
+}
+
+func (s *serverUpgradeCommand) Run(cmd *cobra.Command, args []string) error {
+	server, err := findServer(cmd.Context(), args[0])
+	if err != nil {
+		return err
+	}
+
+	products, err := common.ProductsByType(cmd.Context(), commands.Config.Client, common.ProductTypeComputeServer)
+	if err != nil {
+		return fmt.Errorf("fetch products: %w", err)
+	}
+
+	product, err := filter.FindOne(products, s.product)
+	if err != nil {
+		return fmt.Errorf("find product: %w", err)
+	}
+
+	data := compute.ServerUpgrade{
+		ProductID: product.ID,
+	}
+
+	ordering, err := compute.NewServerService(commands.Config.Client).Upgrade(cmd.Context(), server.ID, data)
+	if err != nil {
+		return fmt.Errorf("upgrade server: %w", err)
+	}
+
+	progress := console.NewProgress("Upgrading server")
+	go progress.Display(commands.Stderr)
+
+	err = common.WaitForOrder(cmd.Context(), commands.Config.Client, ordering)
+	if err != nil {
+		progress.Complete("Order failed")
+
+		return fmt.Errorf("wait for order: %w", err)
+	}
+
+	progress.Complete("Order completed")
+	return nil
+}
+
+func (s *serverUpgradeCommand) Build() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "upgrade SERVER",
+		Short: "Upgrade server",
+		Long:  "Upgrades a compute server.",
+		Args:  cobra.ExactArgs(1),
+		RunE:  s.Run,
+	}
+
+	cmd.Flags().StringVar(&s.product, "product", "", "product to use for the new server")
+
+	_ = cmd.MarkFlagRequired("product")
 
 	return cmd
 }
