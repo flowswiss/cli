@@ -30,10 +30,16 @@ jobs:
         run: go test -v ./...
 
       - name: Build
-        run: go build -v ./...
+        run: make all
 
-      - name: Upload built artifacts
+      - name: Upload flow artifact
         uses: actions/upload-artifact@v2
         with:
           name: flow-${{ matrix.platform }}
-          path: flow
+          path: bin/flow
+
+      - name: Upload cloudbit artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: cloudbit-${{ matrix.platform }}
+          path: bin/cloudbit
