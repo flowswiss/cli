@@ -17,11 +17,11 @@ func NetworkInterfaceCommands() *cobra.Command {
 		Short:   "Manage network interfaces",
 		Example: commands.FormatExamples(fmt.Sprintf(`
   			# List network interfaces of a device
-	  		%s mac-bare-metal device interface list my-device
+	  		%[1]s mac-bare-metal device interface list my-device
 
 			# Update security group of a network interface
-			%s mac-bare-metal device interface update my-device 1.1.1.1 --security-group default
-		`)),
+			%[1]s mac-bare-metal device interface update my-device 1.1.1.1 --security-group default
+		`, commands.Name)),
 	}
 
 	commands.Add(cmd, &networkInterfaceListCommand{}, &networkInterfaceUpdateCommand{})
