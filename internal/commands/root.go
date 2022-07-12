@@ -12,7 +12,7 @@ import (
 
 var (
 	Name            = build.Name
-	Version         = build.Version
+	Version         = "dev"
 	DefaultEndpoint = build.DefaultEndpoint
 )
 
@@ -24,7 +24,7 @@ var (
 var Root = cobra.Command{
 	Use:           Name,
 	Short:         build.Description,
-	Version:       build.Version,
+	Version:       Version,
 	SilenceErrors: true,
 }
 
