@@ -277,8 +277,8 @@ func (l *loadBalancerHealthCheckTypeListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "health-check-type",
 		Aliases: []string{"health-check-types"},
-		Short:   "List load balancer algorithms",
-		Long:    "Lists all load balancer algorithms.",
+		Short:   "List load balancer health check types",
+		Long:    "Lists all load balancer health check types.",
 		RunE:    l.Run,
 	}
 
