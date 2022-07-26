@@ -57,6 +57,24 @@ func (n Node) Values() map[string]interface{} {
 	}
 }
 
+type NodeAction kubernetes.NodeAction
+
+func (c NodeAction) Keys() []string {
+	return []string{fmt.Sprint(c.ID), c.Name, c.Command}
+}
+
+func (c NodeAction) Columns() []string {
+	return []string{"id", "name", "command"}
+}
+
+func (c NodeAction) Values() map[string]interface{} {
+	return map[string]interface{}{
+		"id":      c.ID,
+		"name":    c.Name,
+		"command": c.Command,
+	}
+}
+
 type NodeService struct {
 	delegate kubernetes.NodeService
 }

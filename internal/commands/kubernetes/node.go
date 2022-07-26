@@ -23,6 +23,10 @@ func NodeCommand() *cobra.Command {
 		&nodeDeleteCommand{},
 	)
 
+	cmd.AddCommand(
+		NodeActionCommand(),
+	)
+
 	return cmd
 }
 

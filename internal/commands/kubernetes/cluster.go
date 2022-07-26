@@ -26,9 +26,11 @@ func ClusterCommand() *cobra.Command {
 		&clusterCreateCommand{},
 		&clusterUpdateCommand{},
 		&clusterDeleteCommand{},
+		&clusterUpgradeCommand{},
 	)
 
 	cmd.AddCommand(
+		ClusterActionCommand(),
 		LoadBalancerCommand(),
 		NodeCommand(),
 		VolumeCommand(),
@@ -234,6 +236,60 @@ func (c *clusterDeleteCommand) Build() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&c.force, "force", false, "forces deletion of the cluster without asking for confirmation")
+
+	return cmd
+}
+
+type clusterUpgradeCommand struct {
+	workerProduct string
+	workerCount   int
+}
+
+func (c *clusterUpgradeCommand) Run(cmd *cobra.Command, args []string) error {
+	cluster, err := findCluster(cmd.Context(), args[0])
+	if err != nil {
+		return err
+	}
+
+	products, err := common.ProductsByType(cmd.Context(), commands.Config.Client, common.ProductTypeKubernetesNode)
+	if err != nil {
+		return fmt.Errorf("fetch products: %w", err)
+	}
+
+	workerProduct, err := filter.FindOne(products, c.workerProduct)
+	if err != nil {
+		return fmt.Errorf("find product: %w", err)
+	}
+
+	data := kubernetes.ClusterUpdateFlavor{
+		Worker: kubernetes.ClusterWorkerUpdate{
+			ProductID: workerProduct.ID,
+			Count:     c.workerCount,
+		},
+	}
+
+	cluster, err = kubernetes.NewClusterService(commands.Config.Client).UpdateFlavor(cmd.Context(), cluster.ID, data)
+	if err != nil {
+		return fmt.Errorf("upgrade cluster: %w", err)
+	}
+
+	return commands.PrintStdout(cluster)
+}
+
+func (c *clusterUpgradeCommand) Build() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "upgrade CLUSTER",
+		Short: "Upgrade cluster",
+		Long:  "Upgrades a kubernetes cluster.",
+		Args:  cobra.ExactArgs(1),
+		RunE:  c.Run,
+	}
+
+	cmd.Flags().StringVar(&c.workerProduct, "worker-product", "", "product for the worker nodes (required)")
+	cmd.Flags().IntVar(&c.workerCount, "worker-count", 0, "number of worker nodes (required)")
+
+	_ = cmd.MarkFlagRequired("worker-product")
+	_ = cmd.MarkFlagRequired("worker-count")
 
 	return cmd
 }

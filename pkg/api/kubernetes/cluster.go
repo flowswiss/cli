@@ -17,7 +17,7 @@ func (c Cluster) String() string {
 	return c.Name
 }
 
-func (c Cluster) Keys() (identifiers []string) {
+func (c Cluster) Keys() []string {
 	return []string{fmt.Sprint(c.ID), c.Name, c.DNSName, c.PublicAddress}
 }
 
@@ -36,6 +36,24 @@ func (c Cluster) Values() map[string]interface{} {
 		"address":       fmt.Sprintf("%s (%s)", c.DNSName, c.PublicAddress),
 		"control plane": fmt.Sprintf("%d/%d (%s)", c.NodeCount.Current.ControlPlane, c.NodeCount.Expected.ControlPlane, c.ExpectedPreset.ControlPlane.Name),
 		"worker":        fmt.Sprintf("%d/%d (%s)", c.NodeCount.Current.Worker, c.NodeCount.Expected.Worker, c.ExpectedPreset.Worker.Name),
+	}
+}
+
+type ClusterAction kubernetes.ClusterAction
+
+func (c ClusterAction) Keys() []string {
+	return []string{fmt.Sprint(c.ID), c.Name, c.Command}
+}
+
+func (c ClusterAction) Columns() []string {
+	return []string{"id", "name", "command"}
+}
+
+func (c ClusterAction) Values() map[string]interface{} {
+	return map[string]interface{}{
+		"id":      c.ID,
+		"name":    c.Name,
+		"command": c.Command,
 	}
 }
 
@@ -102,6 +120,7 @@ func (c ClusterService) UpdateConfiguration(ctx context.Context, id int, data Cl
 }
 
 type ClusterUpdateFlavor = kubernetes.ClusterUpdateFlavor
+type ClusterWorkerUpdate = kubernetes.ClusterWorkerUpdate
 
 func (c ClusterService) UpdateFlavor(ctx context.Context, id int, data ClusterUpdateFlavor) (Cluster, error) {
 	cluster, err := c.delegate.UpdateFlavor(ctx, id, data)
