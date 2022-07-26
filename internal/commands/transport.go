@@ -78,7 +78,7 @@ func (d dumpRequestTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	if err != nil {
 		return nil, err
 	}
-	Stderr.Println(string(data))
+	Stderr.Print(string(data))
 
 	// make request
 	res, err := d.base().RoundTrip(req)
@@ -91,7 +91,10 @@ func (d dumpRequestTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	if err != nil {
 		return nil, err
 	}
-	Stderr.Println(string(data))
+	Stderr.Print(string(data))
+
+	Stderr.Println()
+	Stderr.Println()
 
 	return res, nil
 }
