@@ -142,7 +142,7 @@ type deviceCreateCommand struct {
 }
 
 func (d *deviceCreateCommand) Run(cmd *cobra.Command, args []string) error {
-	products, err := common.ProductsByType(cmd.Context(), commands.Config.Client, common.ProductTypeMacBareMetal)
+	products, err := common.ProductsByType(cmd.Context(), commands.Config.Client, common.ProductTypeMacBareMetalDevice)
 	if err != nil {
 		return fmt.Errorf("fetch products: %w", err)
 	}

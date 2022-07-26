@@ -15,8 +15,9 @@ import (
 const HoursPerMonth = 730
 
 const (
-	ProductTypeComputeServer = "compute-engine-vm"
-	ProductTypeMacBareMetal  = "bare-metal-device"
+	ProductTypeComputeServer      = "compute-engine-vm"
+	ProductTypeMacBareMetalDevice = "bare-metal-device"
+	ProductTypeKubernetesNode     = "compute-kubernetes-node"
 )
 
 var (
