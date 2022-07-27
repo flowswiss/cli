@@ -1,6 +1,7 @@
 package compute
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -47,13 +48,18 @@ func (n *networkListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
+func (n *networkListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (n *networkListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List networks",
-		Long:    "Lists all mac bare metal networks.",
-		RunE:    n.Run,
+		Use:               "list",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List networks",
+		Long:              "Lists all mac bare metal networks.",
+		ValidArgsFunction: n.CompleteArg,
+		RunE:              n.Run,
 	}
 
 	cmd.Flags().StringVar(&n.filter, "filter", "", "custom term to filter the results")
@@ -87,13 +93,18 @@ func (n *networkCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(item)
 }
 
+func (n *networkCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (n *networkCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "create",
-		Aliases: []string{"add", "new"},
-		Short:   "Create new network",
-		Long:    "Creates a new mac bare metal network.",
-		RunE:    n.Run,
+		Use:               "create",
+		Aliases:           []string{"add", "new"},
+		Short:             "Create new network",
+		Long:              "Creates a new mac bare metal network.",
+		ValidArgsFunction: n.CompleteArg,
+		RunE:              n.Run,
 	}
 
 	cmd.Flags().StringVar(&n.name, "name", "", "name to be applied to the network")
@@ -141,13 +152,22 @@ func (n *networkUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(network)
 }
 
+func (n *networkUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeNetwork(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (n *networkUpdateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "update NETWORK",
-		Short:   "Update network",
-		Long:    "Updates a mac bare metal network.",
-		Example: "", // TODO
-		RunE:    n.Run,
+		Use:               "update NETWORK",
+		Short:             "Update network",
+		Long:              "Updates a mac bare metal network.",
+		Example:           "", // TODO
+		ValidArgsFunction: n.CompleteArg,
+		RunE:              n.Run,
 	}
 
 	cmd.Flags().StringVar(&n.name, "name", "", "name to be applied to the network")
@@ -188,17 +208,42 @@ func (n *networkDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (n *networkDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeNetwork(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (n *networkDeleteCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "delete NETWORK",
-		Aliases: []string{"del", "remove", "rm"},
-		Short:   "Delete network",
-		Long:    "Deletes a mac bare metal network.",
-		Args:    cobra.ExactArgs(1),
-		RunE:    n.Run,
+		Use:               "delete NETWORK",
+		Aliases:           []string{"del", "remove", "rm"},
+		Short:             "Delete network",
+		Long:              "Deletes a mac bare metal network.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: n.CompleteArg,
+		RunE:              n.Run,
 	}
 
 	cmd.Flags().BoolVar(&n.force, "force", false, "force the deletion of the network without asking for confirmation")
 
 	return cmd
+}
+
+func completeNetwork(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
+	networks, err := macbaremetal.NewNetworkService(commands.Config.Client).List(ctx)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.Find(networks, term)
+
+	names := make([]string, len(filtered))
+	for i, network := range filtered {
+		names[i] = network.Name
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
 }

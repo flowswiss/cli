@@ -45,13 +45,18 @@ func (l *loadBalancerListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
+func (l *loadBalancerListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (l *loadBalancerListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List load balancers",
-		Long:    "Lists all load balancers of the current tenant.",
-		RunE:    l.Run,
+		Use:               "list",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List load balancers",
+		Long:              "Lists all load balancers of the current tenant.",
+		ValidArgsFunction: l.CompleteArg,
+		RunE:              l.Run,
 	}
 
 	cmd.Flags().StringVar(&l.filter, "filter", "", "custom term to filter the results")
@@ -102,12 +107,17 @@ func (l *loadBalancerCreateCommand) Run(cmd *cobra.Command, args []string) error
 	return nil
 }
 
+func (l *loadBalancerCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (l *loadBalancerCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Create a load balancer",
-		Long:  "Creates a new load balancer",
-		RunE:  l.Run,
+		Use:               "create",
+		Short:             "Create a load balancer",
+		Long:              "Creates a new load balancer",
+		ValidArgsFunction: l.CompleteArg,
+		RunE:              l.Run,
 	}
 
 	cmd.Flags().StringVar(&l.name, "name", "", "name of the load balancer")
@@ -143,13 +153,22 @@ func (l *loadBalancerUpdateCommand) Run(cmd *cobra.Command, args []string) error
 	return commands.PrintStdout(loadBalancer)
 }
 
+func (l *loadBalancerUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeLoadBalancer(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (l *loadBalancerUpdateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update LOAD-BALANCER",
-		Short: "Update load balancer",
-		Long:  "Updates a compute load balancer.",
-		Args:  cobra.ExactArgs(1),
-		RunE:  l.Run,
+		Use:               "update LOAD-BALANCER",
+		Short:             "Update load balancer",
+		Long:              "Updates a compute load balancer.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: l.CompleteArg,
+		RunE:              l.Run,
 	}
 
 	cmd.Flags().StringVar(&l.name, "name", "", "name of the load balancer")
@@ -180,13 +199,22 @@ func (l *loadBalancerDeleteCommand) Run(cmd *cobra.Command, args []string) error
 	return nil
 }
 
+func (l *loadBalancerDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeLoadBalancer(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (l *loadBalancerDeleteCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "delete LOAD-BALANCER",
-		Short: "Delete load balancer",
-		Long:  "Deletes a compute load balancer.",
-		Args:  cobra.ExactArgs(1),
-		RunE:  l.Run,
+		Use:               "delete LOAD-BALANCER",
+		Short:             "Delete load balancer",
+		Long:              "Deletes a compute load balancer.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: l.CompleteArg,
+		RunE:              l.Run,
 	}
 
 	cmd.Flags().BoolVar(&l.force, "force", false, "force the deletion of the load balancer without asking for confirmation")
@@ -211,13 +239,18 @@ func (l *loadBalancerProtocolListCommand) Run(cmd *cobra.Command, args []string)
 	return commands.PrintStdout(items)
 }
 
+func (l *loadBalancerProtocolListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (l *loadBalancerProtocolListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "protocol",
-		Aliases: []string{"protocols"},
-		Short:   "List load balancer protocols",
-		Long:    "Lists all load balancer protocols.",
-		RunE:    l.Run,
+		Use:               "protocol",
+		Aliases:           []string{"protocols"},
+		Short:             "List load balancer protocols",
+		Long:              "Lists all load balancer protocols.",
+		ValidArgsFunction: l.CompleteArg,
+		RunE:              l.Run,
 	}
 
 	cmd.Flags().StringVar(&l.filter, "filter", "", "custom term to filter the results")
@@ -242,13 +275,18 @@ func (l *loadBalancerAlgorithmListCommand) Run(cmd *cobra.Command, args []string
 	return commands.PrintStdout(items)
 }
 
+func (l *loadBalancerAlgorithmListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (l *loadBalancerAlgorithmListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "algorithm",
-		Aliases: []string{"algorithms"},
-		Short:   "List load balancer algorithms",
-		Long:    "Lists all load balancer algorithms.",
-		RunE:    l.Run,
+		Use:               "algorithm",
+		Aliases:           []string{"algorithms"},
+		Short:             "List load balancer algorithms",
+		Long:              "Lists all load balancer algorithms.",
+		ValidArgsFunction: l.CompleteArg,
+		RunE:              l.Run,
 	}
 
 	cmd.Flags().StringVar(&l.filter, "filter", "", "custom term to filter the results")
@@ -273,18 +311,39 @@ func (l *loadBalancerHealthCheckTypeListCommand) Run(cmd *cobra.Command, args []
 	return commands.PrintStdout(items)
 }
 
+func (l *loadBalancerHealthCheckTypeListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (l *loadBalancerHealthCheckTypeListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "health-check-type",
-		Aliases: []string{"health-check-types"},
-		Short:   "List load balancer health check types",
-		Long:    "Lists all load balancer health check types.",
-		RunE:    l.Run,
+		Use:               "health-check-type",
+		Aliases:           []string{"health-check-types"},
+		Short:             "List load balancer health check types",
+		Long:              "Lists all load balancer health check types.",
+		ValidArgsFunction: l.CompleteArg,
+		RunE:              l.Run,
 	}
 
 	cmd.Flags().StringVar(&l.filter, "filter", "", "custom term to filter the results")
 
 	return cmd
+}
+
+func completeLoadBalancer(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
+	loadBalancers, err := compute.NewLoadBalancerService(commands.Config.Client).List(ctx)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.Find(loadBalancers, term)
+
+	names := make([]string, len(filtered))
+	for i, loadBalancer := range filtered {
+		names[i] = loadBalancer.Name
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
 func findLoadBalancer(ctx context.Context, term string) (compute.LoadBalancer, error) {

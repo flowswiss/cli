@@ -1,6 +1,7 @@
 package compute
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -31,7 +32,7 @@ type loadBalancerMemberListCommand struct {
 	filter string
 }
 
-func (r *loadBalancerMemberListCommand) Run(cmd *cobra.Command, args []string) error {
+func (l *loadBalancerMemberListCommand) Run(cmd *cobra.Command, args []string) error {
 	loadBalancer, err := findLoadBalancer(cmd.Context(), args[0])
 	if err != nil {
 		return err
@@ -49,24 +50,42 @@ func (r *loadBalancerMemberListCommand) Run(cmd *cobra.Command, args []string) e
 		return fmt.Errorf("fetch loadBalancerMembers: %w", err)
 	}
 
-	if len(r.filter) != 0 {
-		items = filter.Find(items, r.filter)
+	if len(l.filter) != 0 {
+		items = filter.Find(items, l.filter)
 	}
 
 	return commands.PrintStdout(items)
 }
 
-func (r *loadBalancerMemberListCommand) Build() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "list LOAD-BALANCER POOL",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List load balancer members",
-		Long:    "Lists all load balancer member of the selected load balancer pool.",
-		Args:    cobra.ExactArgs(2),
-		RunE:    r.Run,
+func (l *loadBalancerMemberListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeLoadBalancer(cmd.Context(), toComplete)
 	}
 
-	cmd.Flags().StringVar(&r.filter, "filter", "", "custom term to filter the results")
+	if len(args) == 1 {
+		loadBalancer, err := findLoadBalancer(cmd.Context(), args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		return completeLoadBalancerPool(cmd.Context(), loadBalancer, toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
+func (l *loadBalancerMemberListCommand) Build() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:               "list LOAD-BALANCER POOL",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List load balancer members",
+		Long:              "Lists all load balancer member of the selected load balancer pool.",
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: l.CompleteArg,
+		RunE:              l.Run,
+	}
+
+	cmd.Flags().StringVar(&l.filter, "filter", "", "custom term to filter the results")
 
 	return cmd
 }
@@ -77,7 +96,7 @@ type loadBalancerMemberCreateCommand struct {
 	port    int
 }
 
-func (r *loadBalancerMemberCreateCommand) Run(cmd *cobra.Command, args []string) error {
+func (l *loadBalancerMemberCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	loadBalancer, err := findLoadBalancer(cmd.Context(), args[0])
 	if err != nil {
 		return err
@@ -91,9 +110,9 @@ func (r *loadBalancerMemberCreateCommand) Run(cmd *cobra.Command, args []string)
 	service := compute.NewLoadBalancerMemberService(commands.Config.Client, loadBalancer.ID, pool.ID)
 
 	data := compute.LoadBalancerMemberCreate{
-		Name:    r.name,
-		Address: r.address.String(),
-		Port:    r.port,
+		Name:    l.name,
+		Address: l.address.String(),
+		Port:    l.port,
 	}
 
 	item, err := service.Create(cmd.Context(), data)
@@ -104,18 +123,36 @@ func (r *loadBalancerMemberCreateCommand) Run(cmd *cobra.Command, args []string)
 	return commands.PrintStdout(item)
 }
 
-func (r *loadBalancerMemberCreateCommand) Build() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "create LOAD-BALANCER POOL",
-		Short: "Create a load balancer member",
-		Long:  "Creates a new load balancer member.",
-		Args:  cobra.ExactArgs(2),
-		RunE:  r.Run,
+func (l *loadBalancerMemberCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeLoadBalancer(cmd.Context(), toComplete)
 	}
 
-	cmd.Flags().StringVar(&r.name, "name", "", "name of the load balancer member")
-	cmd.Flags().IPVar(&r.address, "address", net.IP{}, "ip address of the load balancer member")
-	cmd.Flags().IntVar(&r.port, "port", 0, "port of the load balancer member")
+	if len(args) == 1 {
+		loadBalancer, err := findLoadBalancer(cmd.Context(), args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		return completeLoadBalancerPool(cmd.Context(), loadBalancer, toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
+func (l *loadBalancerMemberCreateCommand) Build() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:               "create LOAD-BALANCER POOL",
+		Short:             "Create a load balancer member",
+		Long:              "Creates a new load balancer member.",
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: l.CompleteArg,
+		RunE:              l.Run,
+	}
+
+	cmd.Flags().StringVar(&l.name, "name", "", "name of the load balancer member")
+	cmd.Flags().IPVar(&l.address, "address", net.IP{}, "ip address of the load balancer member")
+	cmd.Flags().IntVar(&l.port, "port", 0, "port of the load balancer member")
 
 	_ = cmd.MarkFlagRequired("name")
 	_ = cmd.MarkFlagRequired("address")
@@ -128,7 +165,7 @@ type loadBalancerMemberDeleteCommand struct {
 	force bool
 }
 
-func (r *loadBalancerMemberDeleteCommand) Run(cmd *cobra.Command, args []string) error {
+func (l *loadBalancerMemberDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	loadBalancer, err := findLoadBalancer(cmd.Context(), args[0])
 	if err != nil {
 		return err
@@ -151,7 +188,7 @@ func (r *loadBalancerMemberDeleteCommand) Run(cmd *cobra.Command, args []string)
 		return fmt.Errorf("find load balancer member: %w", err)
 	}
 
-	if !r.force && !commands.ConfirmDeletion("load balancer member", member) {
+	if !l.force && !commands.ConfirmDeletion("load balancer member", member) {
 		commands.Stderr.Println("aborted.")
 		return nil
 	}
@@ -164,16 +201,64 @@ func (r *loadBalancerMemberDeleteCommand) Run(cmd *cobra.Command, args []string)
 	return nil
 }
 
-func (r *loadBalancerMemberDeleteCommand) Build() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "delete LOAD-BALANCER POOL MEMBER",
-		Short: "Delete load balancer member",
-		Long:  "Deletes a load balancer member.",
-		Args:  cobra.ExactArgs(3),
-		RunE:  r.Run,
+func (l *loadBalancerMemberDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeLoadBalancer(cmd.Context(), toComplete)
 	}
 
-	cmd.Flags().BoolVar(&r.force, "force", false, "force the deletion of the loadBalancerMember without asking for confirmation")
+	if len(args) == 1 {
+		loadBalancer, err := findLoadBalancer(cmd.Context(), args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		return completeLoadBalancerPool(cmd.Context(), loadBalancer, toComplete)
+	}
+
+	if len(args) == 2 {
+		loadBalancer, err := findLoadBalancer(cmd.Context(), args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		pool, err := findLoadBalancerPool(cmd.Context(), loadBalancer.ID, args[1])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		return completeLoadBalancerMember(cmd.Context(), loadBalancer, pool, toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
+func (l *loadBalancerMemberDeleteCommand) Build() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:               "delete LOAD-BALANCER POOL MEMBER",
+		Short:             "Delete load balancer member",
+		Long:              "Deletes a load balancer member.",
+		Args:              cobra.ExactArgs(3),
+		ValidArgsFunction: l.CompleteArg,
+		RunE:              l.Run,
+	}
+
+	cmd.Flags().BoolVar(&l.force, "force", false, "force the deletion of the loadBalancerMember without asking for confirmation")
 
 	return cmd
+}
+
+func completeLoadBalancerMember(ctx context.Context, loadBalancer compute.LoadBalancer, pool compute.LoadBalancerPool, term string) ([]string, cobra.ShellCompDirective) {
+	members, err := compute.NewLoadBalancerMemberService(commands.Config.Client, loadBalancer.ID, pool.ID).List(ctx)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.Find(members, term)
+
+	names := make([]string, len(filtered))
+	for i, member := range filtered {
+		names[i] = member.Name
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
 }

@@ -36,12 +36,17 @@ func (l *locationListCommand) Run(cmd *cobra.Command, args []string) (err error)
 	return commands.PrintStdout(items)
 }
 
+func (l *locationListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (l *locationListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list",
-		Short: "List datacenter locations",
-		Long:  "Lists all datacenter locations including their available modules.",
-		RunE:  l.Run,
+		Use:               "list",
+		Short:             "List datacenter locations",
+		Long:              "Lists all datacenter locations including their available modules.",
+		ValidArgsFunction: l.CompleteArg,
+		RunE:              l.Run,
 	}
 
 	cmd.Flags().StringVar(&l.filter, "filter", "", "custom term to filter the results")

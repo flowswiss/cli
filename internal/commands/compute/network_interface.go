@@ -48,14 +48,23 @@ func (n *networkInterfaceListCommand) Run(cmd *cobra.Command, args []string) err
 	return commands.PrintStdout(items)
 }
 
+func (n *networkInterfaceListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeServer(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (n networkInterfaceListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list SERVER",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List network interfaces",
-		Long:    "Lists all network interfaces of the current server.",
-		Args:    cobra.ExactArgs(1),
-		RunE:    n.Run,
+		Use:               "list SERVER",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List network interfaces",
+		Long:              "Lists all network interfaces of the current server.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: n.CompleteArg,
+		RunE:              n.Run,
 	}
 
 	cmd.Flags().StringVar(&n.filter, "filter", "", "custom term to filter the results")
@@ -106,14 +115,23 @@ func (n *networkInterfaceCreateCommand) Run(cmd *cobra.Command, args []string) e
 	return commands.PrintStdout(iface)
 }
 
+func (n *networkInterfaceCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeServer(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (n *networkInterfaceCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "create SERVER",
-		Aliases: []string{"add", "new"},
-		Short:   "Create a network interface",
-		Long:    "Creates a new network interface for the current server.",
-		Args:    cobra.ExactArgs(1),
-		RunE:    n.Run,
+		Use:               "create SERVER",
+		Aliases:           []string{"add", "new"},
+		Short:             "Create a network interface",
+		Long:              "Creates a new network interface for the current server.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: n.CompleteArg,
+		RunE:              n.Run,
 	}
 
 	cmd.Flags().StringVar(&n.network, "network", "", "the network to use")
@@ -182,13 +200,31 @@ func (n *networkInterfaceUpdateCommand) Run(cmd *cobra.Command, args []string) e
 	return commands.PrintStdout(iface)
 }
 
+func (n *networkInterfaceUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeServer(cmd.Context(), toComplete)
+	}
+
+	if len(args) == 1 {
+		server, err := findServer(cmd.Context(), args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		return completeNetworkInterface(cmd.Context(), server, toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (n *networkInterfaceUpdateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update SERVER NETWORK-INTERFACE",
-		Short: "Update a network interface",
-		Long:  "Updates a network interface of the current server.",
-		Args:  cobra.ExactArgs(2),
-		RunE:  n.Run,
+		Use:               "update SERVER NETWORK-INTERFACE",
+		Short:             "Update a network interface",
+		Long:              "Updates a network interface of the current server.",
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: n.CompleteArg,
+		RunE:              n.Run,
 	}
 
 	cmd.Flags().BoolVar(&n.disableSecurity, "disable-security", false, "disable security for the network interface")
@@ -232,19 +268,53 @@ func (n *networkInterfaceDeleteCommand) Run(cmd *cobra.Command, args []string) e
 	return nil
 }
 
+func (n *networkInterfaceDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeServer(cmd.Context(), toComplete)
+	}
+
+	if len(args) == 1 {
+		server, err := findServer(cmd.Context(), args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		return completeNetworkInterface(cmd.Context(), server, toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (n *networkInterfaceDeleteCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "delete SERVER NETWORK-INTERFACE",
-		Aliases: []string{"remove", "rm", "delete", "del"},
-		Short:   "Delete a network interface",
-		Long:    "Deletes a network interface of the current server.",
-		Args:    cobra.ExactArgs(2),
-		RunE:    n.Run,
+		Use:               "delete SERVER NETWORK-INTERFACE",
+		Aliases:           []string{"remove", "rm", "delete", "del"},
+		Short:             "Delete a network interface",
+		Long:              "Deletes a network interface of the current server.",
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: n.CompleteArg,
+		RunE:              n.Run,
 	}
 
 	cmd.Flags().BoolVar(&n.force, "force", false, "force the deletion of the network interface without asking for confirmation")
 
 	return cmd
+}
+
+func completeNetworkInterface(ctx context.Context, server compute.Server, term string) ([]string, cobra.ShellCompDirective) {
+	interfaces, err := compute.NewNetworkInterfaceService(commands.Config.Client, server.ID).List(ctx)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.Find(interfaces, term)
+
+	names := make([]string, len(filtered))
+	for i, iface := range filtered {
+		names[i] = iface.PrivateIP
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
 func findNetworkInterface(ctx context.Context, serverID int, term string) (compute.NetworkInterface, error) {

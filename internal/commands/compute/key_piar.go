@@ -41,13 +41,18 @@ func (k *keyPairListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(keyPairs)
 }
 
+func (k *keyPairListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (k *keyPairListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List compute key pairs",
-		Long:    "Lists all compute key pairs.",
-		RunE:    k.Run,
+		Use:               "list",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List compute key pairs",
+		Long:              "Lists all compute key pairs.",
+		ValidArgsFunction: k.CompleteArg,
+		RunE:              k.Run,
 	}
 
 	cmd.Flags().StringVar(&k.filter, "filter", "", "custom term to filter the results")
@@ -79,13 +84,18 @@ func (k *keyPairCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(keyPair)
 }
 
+func (k *keyPairCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (k *keyPairCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "create",
-		Aliases: []string{"add", "new"},
-		Short:   "Create a new compute key pair",
-		Long:    "Creates a new compute key pair.",
-		RunE:    k.Run,
+		Use:               "create",
+		Aliases:           []string{"add", "new"},
+		Short:             "Create a new compute key pair",
+		Long:              "Creates a new compute key pair.",
+		ValidArgsFunction: k.CompleteArg,
+		RunE:              k.Run,
 	}
 
 	cmd.Flags().StringVar(&k.name, "name", "", "name of the key pair")
@@ -121,19 +131,44 @@ func (k *keyPairDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (k *keyPairDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeKeyPair(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (k *keyPairDeleteCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "delete KEY-PAIR",
-		Aliases: []string{"del", "remove", "rm"},
-		Short:   "Delete a compute key pair",
-		Long:    "Deletes a compute key pair.",
-		Args:    cobra.ExactArgs(1),
-		RunE:    k.Run,
+		Use:               "delete KEY-PAIR",
+		Aliases:           []string{"del", "remove", "rm"},
+		Short:             "Delete a compute key pair",
+		Long:              "Deletes a compute key pair.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: k.CompleteArg,
+		RunE:              k.Run,
 	}
 
 	cmd.Flags().BoolVar(&k.force, "force", false, "force the deletion of the key pair without asking for confirmation")
 
 	return cmd
+}
+
+func completeKeyPair(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
+	keyPairs, err := compute.NewKeyPairService(commands.Config.Client).List(ctx)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.Find(keyPairs, term)
+
+	names := make([]string, len(filtered))
+	for i, keyPair := range filtered {
+		names[i] = keyPair.Name
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
 func findKeyPair(ctx context.Context, term string) (compute.KeyPair, error) {

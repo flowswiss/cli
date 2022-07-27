@@ -71,13 +71,18 @@ func (s *serverListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
+func (s *serverListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (s *serverListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List all server",
-		Long:    "Prints a table of all compute servers belonging to the current organization.",
-		RunE:    s.Run,
+		Use:               "list",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List all server",
+		Long:              "Prints a table of all compute servers belonging to the current organization.",
+		ValidArgsFunction: s.CompleteArg,
+		RunE:              s.Run,
 	}
 
 	cmd.Flags().StringVar(&s.filter, "filter", "", "") // TODO
@@ -237,6 +242,10 @@ func (s *serverCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (s *serverCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (s *serverCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -249,7 +258,8 @@ func (s *serverCreateCommand) Build() *cobra.Command {
 			# Create a new windows server
 	  		%[1]s compute server create --name my-server --location ALP1 --image microsoft-windows-server-2019 --product b1.2x8
 		`, commands.Name)), // TODO select correct image names
-		RunE: s.Run,
+		ValidArgsFunction: s.CompleteArg,
+		RunE:              s.Run,
 	}
 
 	cmd.Flags().StringVarP(&s.name, "name", "n", "", "name of the new server (required)")
@@ -294,13 +304,22 @@ func (s *serverUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(server)
 }
 
+func (s *serverUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeServer(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (s *serverUpdateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update SERVER",
-		Short: "Update server",
-		Long:  "Updates a compute server.",
-		Args:  cobra.ExactArgs(1),
-		RunE:  s.Run,
+		Use:               "update SERVER",
+		Short:             "Update server",
+		Long:              "Updates a compute server.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: s.CompleteArg,
+		RunE:              s.Run,
 	}
 
 	cmd.Flags().StringVar(&s.name, "name", "", "new name of the server")
@@ -351,13 +370,22 @@ func (s *serverUpgradeCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (s *serverUpgradeCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeServer(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (s *serverUpgradeCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "upgrade SERVER",
-		Short: "Upgrade server",
-		Long:  "Upgrades a compute server.",
-		Args:  cobra.ExactArgs(1),
-		RunE:  s.Run,
+		Use:               "upgrade SERVER",
+		Short:             "Upgrade server",
+		Long:              "Upgrades a compute server.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: s.CompleteArg,
+		RunE:              s.Run,
 	}
 
 	cmd.Flags().StringVar(&s.product, "product", "", "product to use for the new server")
@@ -391,6 +419,14 @@ func (s *serverDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (s *serverDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeServer(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (s *serverDeleteCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete SERVER",
@@ -403,14 +439,31 @@ func (s *serverDeleteCommand) Build() *cobra.Command {
 			# Delete a server, but keep elastic ips
 			%[1]s compute server delete my-server --detach-only
 		`, commands.Name)),
-		Args: cobra.ExactArgs(1),
-		RunE: s.Run,
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: s.CompleteArg,
+		RunE:              s.Run,
 	}
 
 	cmd.Flags().BoolVar(&s.force, "force", false, "forces deletion of the server without asking for confirmation")
 	cmd.Flags().BoolVar(&s.detachOnly, "detach-only", false, "specifies whether elastic ips should only be detached without getting deleted")
 
 	return cmd
+}
+
+func completeServer(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
+	servers, err := compute.NewServerService(commands.Config.Client).List(ctx)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.Find(servers, term)
+
+	names := make([]string, len(filtered))
+	for i, server := range filtered {
+		names[i] = server.Name
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
 func findServer(ctx context.Context, term string) (compute.Server, error) {

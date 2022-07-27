@@ -1,6 +1,7 @@
 package compute
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -44,14 +45,23 @@ func (r *routerInterfaceListCommand) Run(cmd *cobra.Command, args []string) erro
 	return commands.PrintStdout(items)
 }
 
+func (r *routerInterfaceListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeRouter(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (r *routerInterfaceListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list ROUTER",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List router interfaces",
-		Long:    "Lists all router interfaces of the selected router.",
-		Args:    cobra.ExactArgs(1),
-		RunE:    r.Run,
+		Use:               "list ROUTER",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List router interfaces",
+		Long:              "Lists all router interfaces of the selected router.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: r.CompleteArg,
+		RunE:              r.Run,
 	}
 
 	cmd.Flags().StringVar(&r.filter, "filter", "", "custom term to filter the results")
@@ -100,13 +110,22 @@ func (r *routerInterfaceCreateCommand) Run(cmd *cobra.Command, args []string) er
 	return commands.PrintStdout(item)
 }
 
+func (r *routerInterfaceCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeRouter(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (r *routerInterfaceCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "create ROUTER",
-		Short: "Create a router interface",
-		Long:  "Creates a new router interface.",
-		Args:  cobra.ExactArgs(1),
-		RunE:  r.Run,
+		Use:               "create ROUTER",
+		Short:             "Create a router interface",
+		Long:              "Creates a new router interface.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: r.CompleteArg,
+		RunE:              r.Run,
 	}
 
 	cmd.Flags().StringVar(&r.network, "network", "", "the network to use")
@@ -150,16 +169,50 @@ func (r *routerInterfaceDeleteCommand) Run(cmd *cobra.Command, args []string) er
 	return nil
 }
 
+func (r *routerInterfaceDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeRouter(cmd.Context(), toComplete)
+	}
+
+	if len(args) == 1 {
+		router, err := findRouter(cmd.Context(), args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		return completeRouterInterface(cmd.Context(), router, toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (r *routerInterfaceDeleteCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "delete ROUTER INTERFACE",
-		Short: "Delete router interface",
-		Long:  "Deletes a compute router interface.",
-		Args:  cobra.ExactArgs(2),
-		RunE:  r.Run,
+		Use:               "delete ROUTER INTERFACE",
+		Short:             "Delete router interface",
+		Long:              "Deletes a compute router interface.",
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: r.CompleteArg,
+		RunE:              r.Run,
 	}
 
 	cmd.Flags().BoolVar(&r.force, "force", false, "force the deletion of the router interface without asking for confirmation")
 
 	return cmd
+}
+
+func completeRouterInterface(ctx context.Context, router compute.Router, term string) ([]string, cobra.ShellCompDirective) {
+	interfaces, err := compute.NewRouterInterfaceService(commands.Config.Client, router.ID).List(ctx)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.Find(interfaces, term)
+
+	names := make([]string, len(filtered))
+	for i, item := range filtered {
+		names[i] = item.PrivateIP
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
 }

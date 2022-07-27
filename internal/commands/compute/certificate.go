@@ -29,29 +29,34 @@ type certificateListCommand struct {
 	filter string
 }
 
-func (r *certificateListCommand) Run(cmd *cobra.Command, args []string) error {
+func (c *certificateListCommand) Run(cmd *cobra.Command, args []string) error {
 	items, err := compute.NewCertificateService(commands.Config.Client).List(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("fetch certificates: %w", err)
 	}
 
-	if len(r.filter) != 0 {
-		items = filter.Find(items, r.filter)
+	if len(c.filter) != 0 {
+		items = filter.Find(items, c.filter)
 	}
 
 	return commands.PrintStdout(items)
 }
 
-func (r *certificateListCommand) Build() *cobra.Command {
+func (c *certificateListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
+func (c *certificateListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List certificates",
-		Long:    "Lists all certificates of the current tenant.",
-		RunE:    r.Run,
+		Use:               "list",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List certificates",
+		Long:              "Lists all certificates of the current tenant.",
+		ValidArgsFunction: c.CompleteArg,
+		RunE:              c.Run,
 	}
 
-	cmd.Flags().StringVar(&r.filter, "filter", "", "custom term to filter the results")
+	cmd.Flags().StringVar(&c.filter, "filter", "", "custom term to filter the results")
 
 	return cmd
 }
@@ -63,24 +68,24 @@ type certificateCreateCommand struct {
 	privateKey  string
 }
 
-func (r *certificateCreateCommand) Run(cmd *cobra.Command, args []string) error {
-	location, err := common.FindLocation(cmd.Context(), commands.Config.Client, r.location)
+func (c *certificateCreateCommand) Run(cmd *cobra.Command, args []string) error {
+	location, err := common.FindLocation(cmd.Context(), commands.Config.Client, c.location)
 	if err != nil {
 		return err
 	}
 
-	certificate, err := os.ReadFile(r.certificate)
+	certificate, err := os.ReadFile(c.certificate)
 	if err != nil {
 		return fmt.Errorf("read certificate: %w", err)
 	}
 
-	privateKey, err := os.ReadFile(r.privateKey)
+	privateKey, err := os.ReadFile(c.privateKey)
 	if err != nil {
 		return fmt.Errorf("read private key: %w", err)
 	}
 
 	data := compute.CertificateCreate{
-		Name:        r.name,
+		Name:        c.name,
 		LocationID:  location.ID,
 		Certificate: base64.StdEncoding.EncodeToString(certificate),
 		PrivateKey:  base64.StdEncoding.EncodeToString(privateKey),
@@ -94,18 +99,23 @@ func (r *certificateCreateCommand) Run(cmd *cobra.Command, args []string) error 
 	return commands.PrintStdout(item)
 }
 
-func (r *certificateCreateCommand) Build() *cobra.Command {
+func (c *certificateCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
+func (c *certificateCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Create a certificate",
-		Long:  "Creates a new certificate",
-		RunE:  r.Run,
+		Use:               "create",
+		Short:             "Create a certificate",
+		Long:              "Creates a new certificate",
+		ValidArgsFunction: c.CompleteArg,
+		RunE:              c.Run,
 	}
 
-	cmd.Flags().StringVar(&r.name, "name", "", "name of the certificate")
-	cmd.Flags().StringVar(&r.location, "location", "", "location of the certificate")
-	cmd.Flags().StringVar(&r.certificate, "certificate", "", "path to the certificate file")
-	cmd.Flags().StringVar(&r.privateKey, "private-key", "", "path to the private key file")
+	cmd.Flags().StringVar(&c.name, "name", "", "name of the certificate")
+	cmd.Flags().StringVar(&c.location, "location", "", "location of the certificate")
+	cmd.Flags().StringVar(&c.certificate, "certificate", "", "path to the certificate file")
+	cmd.Flags().StringVar(&c.privateKey, "private-key", "", "path to the private key file")
 
 	_ = cmd.MarkFlagRequired("name")
 	_ = cmd.MarkFlagRequired("location")
@@ -122,13 +132,13 @@ type certificateDeleteCommand struct {
 	force bool
 }
 
-func (r *certificateDeleteCommand) Run(cmd *cobra.Command, args []string) error {
+func (c *certificateDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	certificate, err := findCertificate(cmd.Context(), args[0])
 	if err != nil {
 		return err
 	}
 
-	if !r.force && !commands.ConfirmDeletion("certificate", certificate) {
+	if !c.force && !commands.ConfirmDeletion("certificate", certificate) {
 		commands.Stderr.Println("aborted.")
 		return nil
 	}
@@ -141,18 +151,43 @@ func (r *certificateDeleteCommand) Run(cmd *cobra.Command, args []string) error 
 	return nil
 }
 
-func (r *certificateDeleteCommand) Build() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "delete CERTIFICATE",
-		Short: "Delete certificate",
-		Long:  "Deletes a compute certificate.",
-		Args:  cobra.ExactArgs(1),
-		RunE:  r.Run,
+func (c *certificateDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeCertificate(cmd.Context(), toComplete)
 	}
 
-	cmd.Flags().BoolVar(&r.force, "force", false, "force the deletion of the certificate without asking for confirmation")
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
+func (c *certificateDeleteCommand) Build() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:               "delete CERTIFICATE",
+		Short:             "Delete certificate",
+		Long:              "Deletes a compute certificate.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: c.CompleteArg,
+		RunE:              c.Run,
+	}
+
+	cmd.Flags().BoolVar(&c.force, "force", false, "force the deletion of the certificate without asking for confirmation")
 
 	return cmd
+}
+
+func completeCertificate(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
+	certificates, err := compute.NewCertificateService(commands.Config.Client).List(ctx)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.Find(certificates, term)
+
+	names := make([]string, len(filtered))
+	for i, item := range filtered {
+		names[i] = item.Name
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
 func findCertificate(ctx context.Context, term string) (compute.Certificate, error) {

@@ -51,13 +51,18 @@ func (e *elasticIPListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
+func (e *elasticIPListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (e *elasticIPListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List elastic ips",
-		Long:    "Lists all mac bare metal elastic ips.",
-		RunE:    e.Run,
+		Use:               "list",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List elastic ips",
+		Long:              "Lists all mac bare metal elastic ips.",
+		ValidArgsFunction: e.CompleteArg,
+		RunE:              e.Run,
 	}
 
 	cmd.Flags().StringVar(&e.filter, "filter", "", "custom term to filter the results")
@@ -87,13 +92,18 @@ func (e *elasticIPCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(item)
 }
 
+func (e *elasticIPCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (e *elasticIPCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "create",
-		Aliases: []string{"add", "new"},
-		Short:   "Create new elastic ip",
-		Long:    "Creates a new mac bare metal elastic ip.",
-		RunE:    e.Run,
+		Use:               "create",
+		Aliases:           []string{"add", "new"},
+		Short:             "Create new elastic ip",
+		Long:              "Creates a new mac bare metal elastic ip.",
+		ValidArgsFunction: e.CompleteArg,
+		RunE:              e.Run,
 	}
 
 	cmd.Flags().StringVar(&e.location, "location", "", "location where the elastic ip will be created")
@@ -143,6 +153,14 @@ func (e *elasticIPDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (e *elasticIPDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeElasticIP(cmd.Context(), toComplete, nil)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (e *elasticIPDeleteCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete ELASTIC-IP",
@@ -156,8 +174,9 @@ func (e *elasticIPDeleteCommand) Build() *cobra.Command {
 			# Force the deletion a mac bare metal elastic ip without confirmation
 			%[1]s mac-bare-metal elastic-ip delete 1.1.1.1 --force
 		`, commands.Name)),
-		Args: cobra.ExactArgs(1),
-		RunE: e.Run,
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: e.CompleteArg,
+		RunE:              e.Run,
 	}
 
 	cmd.Flags().BoolVar(&e.force, "force", false, "force the deletion of the elastic ip without asking for confirmation")
@@ -208,13 +227,28 @@ func (e *elasticIPAttachCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (e *elasticIPAttachCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeElasticIP(cmd.Context(), toComplete, func(ip macbaremetal.ElasticIP) bool {
+			return ip.Attachment.ID == 0
+		})
+	}
+
+	if len(args) == 1 {
+		return completeDevice(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (e *elasticIPAttachCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "attach ELASTIC-IP DEVICE",
-		Short: "Attach elastic ip to device",
-		Long:  "Attaches a mac bare metal elastic ip to a device.",
-		Args:  cobra.ExactArgs(2),
-		RunE:  e.Run,
+		Use:               "attach ELASTIC-IP DEVICE",
+		Short:             "Attach elastic ip to device",
+		Long:              "Attaches a mac bare metal elastic ip to a device.",
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: e.CompleteArg,
+		RunE:              e.Run,
 	}
 
 	return cmd
@@ -252,18 +286,58 @@ func (e *elasticIPDetachCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (e *elasticIPDetachCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeElasticIP(cmd.Context(), toComplete, func(ip macbaremetal.ElasticIP) bool {
+			return ip.Attachment.ID != 0
+		})
+	}
+
+	if len(args) == 1 {
+		elasticIP, err := findElasticIP(cmd.Context(), args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		if elasticIP.Attachment.ID == 0 {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+
+		return []string{elasticIP.Attachment.Name}, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (e *elasticIPDetachCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "detach ELASTIC-IP DEVICE",
-		Short: "Detach elastic ip from device",
-		Long:  "Detaches a mac bare metal elastic ip from a device.",
-		Args:  cobra.ExactArgs(2),
-		RunE:  e.Run,
+		Use:               "detach ELASTIC-IP DEVICE",
+		Short:             "Detach elastic ip from device",
+		Long:              "Detaches a mac bare metal elastic ip from a device.",
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: e.CompleteArg,
+		RunE:              e.Run,
 	}
 
 	cmd.Flags().BoolVar(&e.force, "force", false, "force the detachment of the elastic ip without asking for confirmation")
 
 	return cmd
+}
+
+func completeElasticIP(ctx context.Context, term string, itemFilter func(ip macbaremetal.ElasticIP) bool) ([]string, cobra.ShellCompDirective) {
+	elasticIPs, err := macbaremetal.NewElasticIPService(commands.Config.Client).List(ctx)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.FindWithCustomFilter(elasticIPs, term, itemFilter)
+
+	names := make([]string, len(filtered))
+	for i, elasticIP := range filtered {
+		names[i] = elasticIP.PublicIP
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
 func findElasticIP(ctx context.Context, term string) (macbaremetal.ElasticIP, error) {

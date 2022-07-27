@@ -44,14 +44,23 @@ func (l *loadBalancerListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
+func (l *loadBalancerListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeCluster(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (l *loadBalancerListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list CLUSTER",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List all load balancer",
-		Long:    "Prints a table of all load balancer belonging to the selected cluster.",
-		Args:    cobra.ExactArgs(1),
-		RunE:    l.Run,
+		Use:               "list CLUSTER",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List all load balancer",
+		Long:              "Prints a table of all load balancer belonging to the selected cluster.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: l.CompleteArg,
+		RunE:              l.Run,
 	}
 
 	cmd.Flags().StringVar(&l.filter, "filter", "", "custom term to filter the results")

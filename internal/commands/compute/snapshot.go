@@ -45,13 +45,18 @@ func (s *snapshotListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(snapshots)
 }
 
+func (s *snapshotListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (s *snapshotListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List snapshots",
-		Long:    "Lists all compute snapshots.",
-		RunE:    s.Run,
+		Use:               "list",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List snapshots",
+		Long:              "Lists all compute snapshots.",
+		ValidArgsFunction: s.CompleteArg,
+		RunE:              s.Run,
 	}
 
 	cmd.Flags().StringVar(&s.filter, "filter", "", "custom term to filter the results")
@@ -83,13 +88,18 @@ func (s *snapshotCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(snapshot)
 }
 
+func (s *snapshotCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (s *snapshotCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "create",
-		Aliases: []string{"add", "new"},
-		Short:   "Create a new snapshot",
-		Long:    "Creates a new compute snapshot.",
-		RunE:    s.Run,
+		Use:               "create",
+		Aliases:           []string{"add", "new"},
+		Short:             "Create a new snapshot",
+		Long:              "Creates a new compute snapshot.",
+		ValidArgsFunction: s.CompleteArg,
+		RunE:              s.Run,
 	}
 
 	cmd.Flags().StringVar(&s.name, "name", "", "name of the snapshot")
@@ -123,12 +133,21 @@ func (s *snapshotUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(snapshot)
 }
 
+func (s *snapshotUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeSnapshot(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (s *snapshotUpdateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update SNAPSHOT",
-		Short: "Update snapshot",
-		Long:  "Updates a snapshot.",
-		RunE:  s.Run,
+		Use:               "update SNAPSHOT",
+		Short:             "Update snapshot",
+		Long:              "Updates a snapshot.",
+		ValidArgsFunction: s.CompleteArg,
+		RunE:              s.Run,
 	}
 
 	cmd.Flags().StringVar(&s.name, "name", "", "name of the snapshot")
@@ -159,18 +178,43 @@ func (s *snapshotDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (s *snapshotDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeSnapshot(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (s *snapshotDeleteCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "delete SNAPSHOT",
-		Short: "Delete a snapshot",
-		Long:  "Deletes a snapshot.",
-		Args:  cobra.ExactArgs(1),
-		RunE:  s.Run,
+		Use:               "delete SNAPSHOT",
+		Short:             "Delete a snapshot",
+		Long:              "Deletes a snapshot.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: s.CompleteArg,
+		RunE:              s.Run,
 	}
 
 	cmd.Flags().BoolVar(&s.force, "force", false, "force the deletion of the snapshot without asking for confirmation")
 
 	return cmd
+}
+
+func completeSnapshot(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
+	snapshots, err := compute.NewSnapshotService(commands.Config.Client).List(ctx)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.Find(snapshots, term)
+
+	names := make([]string, len(filtered))
+	for i, snapshot := range filtered {
+		names[i] = snapshot.Name
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
 func findSnapshot(ctx context.Context, term string) (compute.Snapshot, error) {

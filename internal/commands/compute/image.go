@@ -48,13 +48,18 @@ func (i *imageListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
+func (i *imageListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (i *imageListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List server images",
-		Long:    "Lists all server images.",
-		RunE:    i.Run,
+		Use:               "list",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List server images",
+		Long:              "Lists all server images.",
+		ValidArgsFunction: i.CompleteArg,
+		RunE:              i.Run,
 	}
 
 	cmd.Flags().StringVar(&i.filter, "filter", "", "custom term to filter the results")

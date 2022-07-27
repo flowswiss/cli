@@ -55,6 +55,10 @@ func (d *deviceListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
+func (d *deviceListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (d *deviceListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
@@ -71,7 +75,8 @@ func (d *deviceListCommand) Build() *cobra.Command {
 			# Print all devices in JSON format
 			%[1]s mac-bare-metal device list --format json
 		`, commands.Name)), // TODO
-		RunE: d.Run,
+		ValidArgsFunction: d.CompleteArg,
+		RunE:              d.Run,
 	}
 
 	cmd.Flags().StringVar(&d.filter, "filter", "", "custom term to filter the results")
@@ -105,6 +110,14 @@ func (d *deviceVNCCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (d *deviceVNCCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeDevice(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (d *deviceVNCCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "vnc DEVICE",
@@ -117,15 +130,9 @@ func (d *deviceVNCCommand) Build() *cobra.Command {
 			# Open the VNC url of the device "my-device" in the browser
 			%[1]s mac-bare-metal device vnc my-device --open
 		`, commands.Name)),
-		Args: cobra.ExactArgs(1),
-		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			if len(args) == 0 {
-				return completeDevice(cmd.Context(), toComplete)
-			}
-
-			return nil, cobra.ShellCompDirectiveNoFileComp
-		},
-		RunE: d.Run,
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: d.CompleteArg,
+		RunE:              d.Run,
 	}
 
 	cmd.Flags().BoolVar(&d.open, "open", false, "open the VNC url in the browser")
@@ -193,14 +200,19 @@ func (d *deviceCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (d *deviceCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (d *deviceCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "create",
-		Aliases: []string{"add", "new"},
-		Short:   "Create new device",
-		Long:    "Creates a new mac bare metal device.",
-		Example: "", // TODO
-		RunE:    d.Run,
+		Use:               "create",
+		Aliases:           []string{"add", "new"},
+		Short:             "Create new device",
+		Long:              "Creates a new mac bare metal device.",
+		Example:           "", // TODO
+		ValidArgsFunction: d.CompleteArg,
+		RunE:              d.Run,
 	}
 
 	cmd.Flags().StringVar(&d.name, "name", "", "name to be applied to the device")
@@ -246,14 +258,23 @@ func (d *deviceUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(device)
 }
 
+func (d *deviceUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeDevice(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (d *deviceUpdateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "update DEVICE",
-		Short:   "Update device",
-		Long:    "Updates a mac bare metal device.",
-		Args:    cobra.ExactArgs(1),
-		Example: "", // TODO
-		RunE:    d.Run,
+		Use:               "update DEVICE",
+		Short:             "Update device",
+		Long:              "Updates a mac bare metal device.",
+		Example:           "", // TODO
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: d.CompleteArg,
+		RunE:              d.Run,
 	}
 
 	cmd.Flags().StringVar(&d.name, "name", "", "name to be applied to the device")
@@ -293,13 +314,20 @@ func (d *deviceDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (d *deviceDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeDevice(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (d *deviceDeleteCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete DEVICE",
 		Aliases: []string{"del", "remove", "rm"},
 		Short:   "Delete device",
 		Long:    "Deletes a mac bare metal device.",
-		Args:    cobra.ExactArgs(1),
 		Example: commands.FormatExamples(fmt.Sprintf(`
 			# Delete a device
 			%[1]s mac-bare-metal device delete my-device
@@ -307,7 +335,9 @@ func (d *deviceDeleteCommand) Build() *cobra.Command {
 			# Force the deletion of a device (without confirmation)
 			%[1]s mac-bare-metal device delete my-device --force
 		`, commands.Name)),
-		RunE: d.Run,
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: d.CompleteArg,
+		RunE:              d.Run,
 	}
 
 	cmd.Flags().BoolVar(&d.force, "force", false, "force the deletion of the device without asking for confirmation")

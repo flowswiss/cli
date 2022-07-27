@@ -1,6 +1,8 @@
 package common
 
 import (
+	"context"
+
 	"github.com/spf13/cobra"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
@@ -28,15 +30,14 @@ func ProductCommand() *cobra.Command {
 }
 
 type productListCommand struct {
-	productType string
-	filter      string
+	filter string
 }
 
 func (p *productListCommand) Run(cmd *cobra.Command, args []string) (err error) {
 	var items []common.Product
 
-	if len(p.productType) != 0 {
-		items, err = common.ProductsByType(cmd.Context(), commands.Config.Client, p.productType)
+	if len(args) != 0 {
+		items, err = common.ProductsByType(cmd.Context(), commands.Config.Client, args[0])
 		if err != nil {
 			return err
 		}
@@ -54,16 +55,24 @@ func (p *productListCommand) Run(cmd *cobra.Command, args []string) (err error) 
 	return commands.PrintStdout(items)
 }
 
-func (p *productListCommand) Build() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "list",
-		Short:   "List products",
-		Long:    "Lists all available products.",
-		Example: "", // TODO
-		RunE:    p.Run,
+func (p *productListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeProductCategory(cmd.Context(), toComplete)
 	}
 
-	cmd.Flags().StringVar(&p.productType, "category", "", "product category to filter the results")
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
+func (p *productListCommand) Build() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:               "list [CATEGORY]",
+		Short:             "List products",
+		Long:              "Lists all available products.",
+		Example:           "", // TODO
+		ValidArgsFunction: p.CompleteArg,
+		RunE:              p.Run,
+	}
+
 	cmd.Flags().StringVar(&p.filter, "filter", "", "custom term to filter the results")
 
 	return cmd
@@ -86,16 +95,37 @@ func (p *productCategoryListCommand) Run(cmd *cobra.Command, args []string) erro
 	return commands.PrintStdout(items)
 }
 
+func (p *productCategoryListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (p *productCategoryListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list",
-		Short:   "List product categories",
-		Long:    "Lists all product categories.",
-		Example: "", // TODO
-		RunE:    p.Run,
+		Use:               "list",
+		Short:             "List product categories",
+		Long:              "Lists all product categories.",
+		Example:           "", // TODO
+		ValidArgsFunction: p.CompleteArg,
+		RunE:              p.Run,
 	}
 
 	cmd.Flags().StringVar(&p.filter, "filter", "", "custom term to filter the results")
 
 	return cmd
+}
+
+func completeProductCategory(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
+	categories, err := common.ProductTypes(ctx, commands.Config.Client)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.Find(categories, term)
+
+	names := make([]string, len(filtered))
+	for i, category := range filtered {
+		names[i] = category.Key
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
 }

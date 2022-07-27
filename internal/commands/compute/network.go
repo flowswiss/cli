@@ -49,13 +49,18 @@ func (n *networkListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
+func (n *networkListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (n *networkListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List networks",
-		Long:    "Lists all networks of the current tenant.",
-		RunE:    n.Run,
+		Use:               "list",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List networks",
+		Long:              "Lists all networks of the current tenant.",
+		ValidArgsFunction: n.CompleteArg,
+		RunE:              n.Run,
 	}
 
 	cmd.Flags().StringVar(&n.filter, "filter", "", "custom term to filter the results")
@@ -135,6 +140,10 @@ func (n *networkCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(item)
 }
 
+func (n *networkCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (n *networkCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -150,7 +159,8 @@ func (n *networkCreateCommand) Build() *cobra.Command {
 			# Create a new network using custom allocation pool
 			%[1]s compute network create --name my-network --location ALP1 --cidr 10.0.0.0/16 --allocation-pool-start 10.0.1.0 --allocation-pool-end 10.0.1.255
 		`, commands.Name)),
-		RunE: n.Run,
+		ValidArgsFunction: n.CompleteArg,
+		RunE:              n.Run,
 	}
 
 	defaultNet := net.IPNet{
@@ -247,13 +257,22 @@ func (n *networkUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(network)
 }
 
+func (n *networkUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeNetwork(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (n *networkUpdateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update NETWORK",
-		Short: "Update network",
-		Long:  "Updates a compute network.",
-		Args:  cobra.ExactArgs(1),
-		RunE:  n.Run,
+		Use:               "update NETWORK",
+		Short:             "Update network",
+		Long:              "Updates a compute network.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: n.CompleteArg,
+		RunE:              n.Run,
 	}
 
 	cmd.Flags().StringVar(&n.name, "name", "", "name of the network")
@@ -289,18 +308,43 @@ func (n *networkDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (n *networkDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeNetwork(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (n *networkDeleteCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "delete NETWORK",
-		Short: "Delete network",
-		Long:  "Deletes a compute network.",
-		Args:  cobra.ExactArgs(1),
-		RunE:  n.Run,
+		Use:               "delete NETWORK",
+		Short:             "Delete network",
+		Long:              "Deletes a compute network.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: n.CompleteArg,
+		RunE:              n.Run,
 	}
 
 	cmd.Flags().BoolVar(&n.force, "force", false, "force the deletion of the network without asking for confirmation")
 
 	return cmd
+}
+
+func completeNetwork(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
+	networks, err := compute.NewNetworkService(commands.Config.Client).List(ctx)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.Find(networks, term)
+
+	names := make([]string, len(filtered))
+	for i, network := range filtered {
+		names[i] = network.Name
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
 func findNetwork(ctx context.Context, term string) (compute.Network, error) {

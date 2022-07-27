@@ -48,13 +48,18 @@ func (r *routerListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
+func (r *routerListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (r *routerListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List routers",
-		Long:    "Lists all routers of the current tenant.",
-		RunE:    r.Run,
+		Use:               "list",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List routers",
+		Long:              "Lists all routers of the current tenant.",
+		ValidArgsFunction: r.CompleteArg,
+		RunE:              r.Run,
 	}
 
 	cmd.Flags().StringVar(&r.filter, "filter", "", "custom term to filter the results")
@@ -90,12 +95,17 @@ func (r *routerCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(item)
 }
 
+func (r *routerCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (r *routerCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Create a router",
-		Long:  "Creates a new router",
-		RunE:  r.Run,
+		Use:               "create",
+		Short:             "Create a router",
+		Long:              "Creates a new router",
+		ValidArgsFunction: r.CompleteArg,
+		RunE:              r.Run,
 	}
 
 	cmd.Flags().StringVar(&r.name, "name", "", "name of the router")
@@ -143,13 +153,22 @@ func (r *routerUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(router)
 }
 
+func (r *routerUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeRouter(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (r *routerUpdateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update ROUTER",
-		Short: "Update router",
-		Long:  "Updates a compute router.",
-		Args:  cobra.ExactArgs(1),
-		RunE:  r.Run,
+		Use:               "update ROUTER",
+		Short:             "Update router",
+		Long:              "Updates a compute router.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: r.CompleteArg,
+		RunE:              r.Run,
 	}
 
 	cmd.Flags().StringVar(&r.name, "name", "", "name of the router")
@@ -185,18 +204,43 @@ func (r *routerDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (r *routerDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeRouter(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (r *routerDeleteCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "delete ROUTER",
-		Short: "Delete router",
-		Long:  "Deletes a compute router.",
-		Args:  cobra.ExactArgs(1),
-		RunE:  r.Run,
+		Use:               "delete ROUTER",
+		Short:             "Delete router",
+		Long:              "Deletes a compute router.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: r.CompleteArg,
+		RunE:              r.Run,
 	}
 
 	cmd.Flags().BoolVar(&r.force, "force", false, "force the deletion of the router without asking for confirmation")
 
 	return cmd
+}
+
+func completeRouter(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
+	routers, err := compute.NewRouterService(commands.Config.Client).List(ctx)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.Find(routers, term)
+
+	names := make([]string, len(filtered))
+	for i, router := range filtered {
+		names[i] = router.Name
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
 func findRouter(ctx context.Context, term string) (compute.Router, error) {

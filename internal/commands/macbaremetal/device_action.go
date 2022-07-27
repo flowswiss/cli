@@ -46,14 +46,23 @@ func (d *deviceActionListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(availableActions)
 }
 
+func (d *deviceActionListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeDevice(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (d *deviceActionListCommand) Build() *cobra.Command {
 	return &cobra.Command{
-		Use:     "list DEVICE",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List actions of device",
-		Long:    "Lists all available actions of the specified device.",
-		Args:    cobra.ExactArgs(1),
-		RunE:    d.Run,
+		Use:               "list DEVICE",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List actions of device",
+		Long:              "Lists all available actions of the specified device.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: d.CompleteArg,
+		RunE:              d.Run,
 	}
 }
 
@@ -62,6 +71,23 @@ type deviceActionRunCommand struct {
 
 func (d *deviceActionRunCommand) Run(cmd *cobra.Command, args []string) error {
 	return runAction(cmd.Context(), args[0], args[1])
+}
+
+func (d *deviceActionRunCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeDevice(cmd.Context(), toComplete)
+	}
+
+	if len(args) == 1 {
+		device, err := findDevice(cmd.Context(), args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		return completeAction(cmd.Context(), device, toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
 func (d *deviceActionRunCommand) Build() *cobra.Command {
@@ -81,8 +107,9 @@ func (d *deviceActionRunCommand) Build() *cobra.Command {
 			%[1]s device power-off my-device
 			%[1]s device power-on my-device
 		`, commands.Name)),
-		Args: cobra.ExactArgs(2),
-		RunE: d.Run,
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: d.CompleteArg,
+		RunE:              d.Run,
 	}
 }
 
@@ -90,6 +117,14 @@ type deviceActionRunCommandPreset string
 
 func (d deviceActionRunCommandPreset) Run(cmd *cobra.Command, args []string) error {
 	return runAction(cmd.Context(), args[0], string(d))
+}
+
+func (d *deviceActionRunCommandPreset) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeDevice(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
 func (d deviceActionRunCommandPreset) Build() *cobra.Command {
@@ -101,8 +136,9 @@ func (d deviceActionRunCommandPreset) Build() *cobra.Command {
 
 			This is a shortcut for "%[1]s mac-bare-metal device action run DEVICE %[2]s".
 		`, commands.Name, string(d))),
-		Args: cobra.ExactArgs(1),
-		RunE: d.Run,
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: d.CompleteArg,
+		RunE:              d.Run,
 	}
 }
 
@@ -143,13 +179,22 @@ func (d *deviceWorkflowListCommand) Run(cmd *cobra.Command, args []string) error
 	return commands.PrintStdout(workflows)
 }
 
+func (d *deviceWorkflowListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeDevice(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (d *deviceWorkflowListCommand) Build() *cobra.Command {
 	return &cobra.Command{
-		Use:   "list DEVICE",
-		Short: "List device workflows",
-		Long:  "Lists the available workflows on the specified device.",
-		Args:  cobra.ExactArgs(1),
-		RunE:  d.Run,
+		Use:               "list DEVICE",
+		Short:             "List device workflows",
+		Long:              "Lists the available workflows on the specified device.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: d.CompleteArg,
+		RunE:              d.Run,
 	}
 }
 
@@ -186,14 +231,57 @@ func (d *deviceWorkflowRunCommand) Run(cmd *cobra.Command, args []string) error 
 	return commands.PrintStdout(device)
 }
 
+func (d *deviceWorkflowRunCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeDevice(cmd.Context(), toComplete)
+	}
+
+	if len(args) == 1 {
+		device, err := findDevice(cmd.Context(), args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		return completeWorkflow(cmd.Context(), device, toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (d *deviceWorkflowRunCommand) Build() *cobra.Command {
 	return &cobra.Command{
-		Use:   "run DEVICE WORKFLOW",
-		Short: "Run workflow on device",
-		Long:  "Runs the specified workflow on the specified device.",
-		Args:  cobra.ExactArgs(2),
-		RunE:  d.Run,
+		Use:               "run DEVICE WORKFLOW",
+		Short:             "Run workflow on device",
+		Long:              "Runs the specified workflow on the specified device.",
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: d.CompleteArg,
+		RunE:              d.Run,
 	}
+}
+
+func completeAction(ctx context.Context, device macbaremetal.Device, term string) ([]string, cobra.ShellCompDirective) {
+	actions := make([]string, len(device.Status.Actions))
+	for i, action := range device.Status.Actions {
+		actions[i] = action.Command
+	}
+
+	return actions, cobra.ShellCompDirectiveNoFileComp
+}
+
+func completeWorkflow(ctx context.Context, device macbaremetal.Device, term string) ([]string, cobra.ShellCompDirective) {
+	workflows, err := macbaremetal.NewDeviceWorkflowService(commands.Config.Client, device.ID).List(ctx)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.Find(workflows, term)
+
+	names := make([]string, len(filtered))
+	for i, w := range filtered {
+		names[i] = w.Command
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
 func runAction(ctx context.Context, deviceTerm, actionTerm string) error {

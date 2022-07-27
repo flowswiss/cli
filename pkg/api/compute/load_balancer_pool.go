@@ -10,13 +10,17 @@ import (
 
 type LoadBalancerPool compute.LoadBalancerPool
 
+func (l LoadBalancerPool) NameWithoutSpaces() string {
+	return fmt.Sprintf("%s-on-port-%d-to-%s", l.EntryProtocol.Key, l.EntryPort, l.TargetProtocol.Key)
+}
+
 func (l LoadBalancerPool) String() string {
 	return l.Name
 }
 
 func (l LoadBalancerPool) Keys() []string {
 	return []string{
-		fmt.Sprint(l.ID), l.Name, fmt.Sprint(l.EntryPort),
+		fmt.Sprint(l.ID), l.Name, l.NameWithoutSpaces(), fmt.Sprint(l.EntryPort),
 		l.Status.Name, l.Status.Key,
 		l.EntryProtocol.Name, l.EntryProtocol.Key,
 		l.TargetProtocol.Name, l.TargetProtocol.Key,

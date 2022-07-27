@@ -51,14 +51,23 @@ func (l *loadBalancerPoolListCommand) Run(cmd *cobra.Command, args []string) err
 	return commands.PrintStdout(items)
 }
 
+func (l *loadBalancerPoolListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeLoadBalancer(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (l *loadBalancerPoolListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list LOAD-BALANCER",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List load balancer pools",
-		Long:    "Lists all pools of the selected load balancer.",
-		Args:    cobra.ExactArgs(1),
-		RunE:    l.Run,
+		Use:               "list LOAD-BALANCER",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List load balancer pools",
+		Long:              "Lists all pools of the selected load balancer.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: l.CompleteArg,
+		RunE:              l.Run,
 	}
 
 	cmd.Flags().StringVar(&l.filter, "filter", "", "custom term to filter the results")
@@ -159,13 +168,22 @@ func (l *loadBalancerPoolCreateCommand) Run(cmd *cobra.Command, args []string) e
 	return commands.PrintStdout(item)
 }
 
+func (l *loadBalancerPoolCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeLoadBalancer(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (l *loadBalancerPoolCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "create LOAD-BALANCER",
-		Short: "Create a load balancer pool",
-		Long:  "Creates a new load balancer pool",
-		Args:  cobra.ExactArgs(1),
-		RunE:  l.Run,
+		Use:               "create LOAD-BALANCER",
+		Short:             "Create a load balancer pool",
+		Long:              "Creates a new load balancer pool",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: l.CompleteArg,
+		RunE:              l.Run,
 	}
 
 	cmd.Flags().StringVar(&l.entryProtocol, "entry-protocol", "", "name of the entry protocol to use")
@@ -273,6 +291,23 @@ func (l *loadBalancerPoolUpdateCommand) Run(cmd *cobra.Command, args []string) e
 	return commands.PrintStdout(loadBalancerPool)
 }
 
+func (l *loadBalancerPoolUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeLoadBalancer(cmd.Context(), toComplete)
+	}
+
+	if len(args) == 1 {
+		loadBalancer, err := findLoadBalancer(cmd.Context(), args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		return completeLoadBalancerPool(cmd.Context(), loadBalancer, toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (l *loadBalancerPoolUpdateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update LOAD-BALANCER POOL",
@@ -325,18 +360,52 @@ func (l *loadBalancerPoolDeleteCommand) Run(cmd *cobra.Command, args []string) e
 	return nil
 }
 
+func (l *loadBalancerPoolDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeLoadBalancer(cmd.Context(), toComplete)
+	}
+
+	if len(args) == 1 {
+		loadBalancer, err := findLoadBalancer(cmd.Context(), args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		return completeLoadBalancerPool(cmd.Context(), loadBalancer, toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (l *loadBalancerPoolDeleteCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "delete LOAD-BALANCER POOL",
-		Short: "Delete load balancer pool",
-		Long:  "Deletes a compute load balancer pool.",
-		Args:  cobra.ExactArgs(2),
-		RunE:  l.Run,
+		Use:               "delete LOAD-BALANCER POOL",
+		Short:             "Delete load balancer pool",
+		Long:              "Deletes a compute load balancer pool.",
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: l.CompleteArg,
+		RunE:              l.Run,
 	}
 
 	cmd.Flags().BoolVar(&l.force, "force", false, "force the deletion of the load balancer pool without asking for confirmation")
 
 	return cmd
+}
+
+func completeLoadBalancerPool(ctx context.Context, loadBalancer compute.LoadBalancer, term string) ([]string, cobra.ShellCompDirective) {
+	loadBalancerPools, err := compute.NewLoadBalancerPoolService(commands.Config.Client, loadBalancer.ID).List(ctx)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.Find(loadBalancerPools, term)
+
+	names := make([]string, len(filtered))
+	for i, loadBalancerPool := range filtered {
+		names[i] = loadBalancerPool.NameWithoutSpaces()
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
 func findLoadBalancerPool(ctx context.Context, loadBalancerID int, term string) (compute.LoadBalancerPool, error) {

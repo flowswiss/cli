@@ -42,13 +42,18 @@ func (s *securityGroupListCommand) Run(cmd *cobra.Command, args []string) error 
 	return commands.PrintStdout(items)
 }
 
+func (s *securityGroupListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (s *securityGroupListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List security groups",
-		Long:    "Lists all compute security groups.",
-		RunE:    s.Run,
+		Use:               "list",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List security groups",
+		Long:              "Lists all compute security groups.",
+		ValidArgsFunction: s.CompleteArg,
+		RunE:              s.Run,
 	}
 
 	cmd.Flags().StringVar(&s.filter, "filter", "", "custom term to filter the results")
@@ -82,13 +87,18 @@ func (s *securityGroupCreateCommand) Run(cmd *cobra.Command, args []string) erro
 	return commands.PrintStdout(item)
 }
 
+func (s *securityGroupCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (s *securityGroupCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "create",
-		Aliases: []string{"add", "new"},
-		Short:   "Create new security group",
-		Long:    "Creates a new compute security group.",
-		RunE:    s.Run,
+		Use:               "create",
+		Aliases:           []string{"add", "new"},
+		Short:             "Create new security group",
+		Long:              "Creates a new compute security group.",
+		ValidArgsFunction: s.CompleteArg,
+		RunE:              s.Run,
 	}
 
 	cmd.Flags().StringVar(&s.name, "name", "", "name to be applied to the security group")
@@ -132,13 +142,22 @@ func (s *securityGroupUpdateCommand) Run(cmd *cobra.Command, args []string) erro
 	return commands.PrintStdout(securityGroup)
 }
 
+func (s *securityGroupUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeSecurityGroup(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (s *securityGroupUpdateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update SECURITY-GROUP",
-		Short: "Update security group",
-		Long:  "Updates a compute security group.",
-		Args:  cobra.ExactArgs(1),
-		RunE:  s.Run,
+		Use:               "update SECURITY-GROUP",
+		Short:             "Update security group",
+		Long:              "Updates a compute security group.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: s.CompleteArg,
+		RunE:              s.Run,
 	}
 
 	cmd.Flags().StringVar(&s.name, "name", "", "name to be applied to the security group")
@@ -177,19 +196,44 @@ func (s *securityGroupDeleteCommand) Run(cmd *cobra.Command, args []string) erro
 	return nil
 }
 
+func (s *securityGroupDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeSecurityGroup(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (s *securityGroupDeleteCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "delete SECURITY-GROUP",
-		Aliases: []string{"del", "remove", "rm"},
-		Short:   "Delete security group",
-		Long:    "Deletes a compute security group.",
-		Args:    cobra.ExactArgs(1),
-		RunE:    s.Run,
+		Use:               "delete SECURITY-GROUP",
+		Aliases:           []string{"del", "remove", "rm"},
+		Short:             "Delete security group",
+		Long:              "Deletes a compute security group.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: s.CompleteArg,
+		RunE:              s.Run,
 	}
 
 	cmd.Flags().BoolVar(&s.force, "force", false, "force the deletion of the security group without asking for confirmation")
 
 	return cmd
+}
+
+func completeSecurityGroup(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
+	securityGroups, err := compute.NewSecurityGroupService(commands.Config.Client).List(ctx)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.Find(securityGroups, term)
+
+	names := make([]string, len(filtered))
+	for i, securityGroup := range filtered {
+		names[i] = securityGroup.Name
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
 func findSecurityGroup(ctx context.Context, term string) (compute.SecurityGroup, error) {

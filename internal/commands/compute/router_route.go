@@ -1,6 +1,7 @@
 package compute
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -44,14 +45,23 @@ func (r *routeListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
+func (r *routeListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeRouter(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (r *routeListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list ROUTER",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List routes",
-		Long:    "Lists all routes of the selected router.",
-		Args:    cobra.ExactArgs(1),
-		RunE:    r.Run,
+		Use:               "list ROUTER",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List routes",
+		Long:              "Lists all routes of the selected router.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: r.CompleteArg,
+		RunE:              r.Run,
 	}
 
 	cmd.Flags().StringVar(&r.filter, "filter", "", "custom term to filter the results")
@@ -83,13 +93,22 @@ func (r *routeCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(item)
 }
 
+func (r *routeCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeRouter(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (r *routeCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "create ROUTER",
-		Short: "Create a route",
-		Long:  "Creates a new route.",
-		Args:  cobra.ExactArgs(1),
-		RunE:  r.Run,
+		Use:               "create ROUTER",
+		Short:             "Create a route",
+		Long:              "Creates a new route.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: r.CompleteArg,
+		RunE:              r.Run,
 	}
 
 	cmd.Flags().IPNetVar(&r.destination, "destination", net.IPNet{}, "destination of the route")
@@ -134,16 +153,50 @@ func (r *routeDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (r *routeDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeRouter(cmd.Context(), toComplete)
+	}
+
+	if len(args) == 1 {
+		router, err := findRouter(cmd.Context(), args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		return completeRouterRoute(cmd.Context(), router, toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (r *routeDeleteCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "delete ROUTER ROUTE",
-		Short: "Delete route",
-		Long:  "Deletes a compute route.",
-		Args:  cobra.ExactArgs(2),
-		RunE:  r.Run,
+		Use:               "delete ROUTER ROUTE",
+		Short:             "Delete route",
+		Long:              "Deletes a compute route.",
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: r.CompleteArg,
+		RunE:              r.Run,
 	}
 
 	cmd.Flags().BoolVar(&r.force, "force", false, "force the deletion of the route without asking for confirmation")
 
 	return cmd
+}
+
+func completeRouterRoute(ctx context.Context, router compute.Router, term string) ([]string, cobra.ShellCompDirective) {
+	routes, err := compute.NewRouteService(commands.Config.Client, router.ID).List(ctx)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.Find(routes, term)
+
+	names := make([]string, len(filtered))
+	for i, route := range filtered {
+		names[i] = route.Destination
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
 }

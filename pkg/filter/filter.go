@@ -22,6 +22,19 @@ func Find[T Filterable](items []T, term string) []T {
 	return filtered
 }
 
+func FindWithCustomFilter[T Filterable](items []T, term string, filter func(T) bool) []T {
+	term = strings.ToLower(term)
+
+	var filtered []T
+	for _, item := range items {
+		if matches(item, term) != noMatch && (filter == nil || filter(item)) {
+			filtered = append(filtered, item)
+		}
+	}
+
+	return filtered
+}
+
 func FindOne[T Filterable](items []T, term string) (res T, err error) {
 	var filtered = Find[T](items, term)
 

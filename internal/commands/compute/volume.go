@@ -49,13 +49,18 @@ func (v *volumeListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(volumes)
 }
 
+func (v *volumeListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (v *volumeListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List volumes",
-		Long:    "Lists all compute volumes.",
-		RunE:    v.Run,
+		Use:               "list",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List volumes",
+		Long:              "Lists all compute volumes.",
+		ValidArgsFunction: v.CompleteArg,
+		RunE:              v.Run,
 	}
 
 	cmd.Flags().StringVar(&v.filter, "filter", "", "custom term to filter the results")
@@ -128,13 +133,18 @@ func (v *volumeCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(volume)
 }
 
+func (v *volumeCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (v *volumeCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "create",
-		Aliases: []string{"add", "new"},
-		Short:   "Create a new volume",
-		Long:    "Creates a new compute volume.",
-		RunE:    v.Run,
+		Use:               "create",
+		Aliases:           []string{"add", "new"},
+		Short:             "Create a new volume",
+		Long:              "Creates a new compute volume.",
+		ValidArgsFunction: v.CompleteArg,
+		RunE:              v.Run,
 	}
 
 	cmd.Flags().StringVar(&v.name, "name", "", "name of the volume")
@@ -174,13 +184,28 @@ func (v *volumeAttachCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(volume)
 }
 
+func (v *volumeAttachCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeVolume(cmd.Context(), toComplete, func(volume compute.Volume) bool {
+			return volume.AttachedTo.ID == 0
+		})
+	}
+
+	if len(args) == 1 {
+		return completeServer(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (v *volumeAttachCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "attach VOLUME SERVER",
-		Short: "Attach a volume to a server",
-		Long:  "Attaches a volume to a server.",
-		Args:  cobra.ExactArgs(2),
-		RunE:  v.Run,
+		Use:               "attach VOLUME SERVER",
+		Short:             "Attach a volume to a server",
+		Long:              "Attaches a volume to a server.",
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: v.CompleteArg,
+		RunE:              v.Run,
 	}
 
 	return cmd
@@ -218,13 +243,33 @@ func (v *volumeDetachCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (v *volumeDetachCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeVolume(cmd.Context(), toComplete, func(volume compute.Volume) bool {
+			return volume.AttachedTo.ID != 0
+		})
+	}
+
+	if len(args) == 1 {
+		volume, err := findVolume(cmd.Context(), args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		return []string{volume.AttachedTo.Name}, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (v *volumeDetachCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "detach VOLUME SERVER",
-		Short: "Detach a volume from a server",
-		Long:  "Detaches a volume from a server.",
-		Args:  cobra.ExactArgs(2),
-		RunE:  v.Run,
+		Use:               "detach VOLUME SERVER",
+		Short:             "Detach a volume from a server",
+		Long:              "Detaches a volume from a server.",
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: v.CompleteArg,
+		RunE:              v.Run,
 	}
 
 	cmd.Flags().BoolVar(&v.force, "force", false, "force detaching the volume without asking for confirmation")
@@ -258,13 +303,31 @@ func (v *volumeRevertCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(volume)
 }
 
+func (v *volumeRevertCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeVolume(cmd.Context(), toComplete, nil)
+	}
+
+	if len(args) == 1 {
+		volume, err := findVolume(cmd.Context(), args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		return completeVolumeSnapshot(cmd.Context(), volume, toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (v *volumeRevertCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "revert VOLUME SNAPSHOT",
-		Short: "Revert a volume to a snapshot",
-		Long:  "Reverts a volume to a snapshot.",
-		Args:  cobra.ExactArgs(2),
-		RunE:  v.Run,
+		Use:               "revert VOLUME SNAPSHOT",
+		Short:             "Revert a volume to a snapshot",
+		Long:              "Reverts a volume to a snapshot.",
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: v.CompleteArg,
+		RunE:              v.Run,
 	}
 
 	return cmd
@@ -292,13 +355,22 @@ func (v *volumeExpandCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(volume)
 }
 
+func (v *volumeExpandCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeVolume(cmd.Context(), toComplete, nil)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (v *volumeExpandCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "expand VOLUME",
-		Short: "Expand a volume",
-		Long:  "Expands a volume.",
-		Args:  cobra.ExactArgs(1),
-		RunE:  v.Run,
+		Use:               "expand VOLUME",
+		Short:             "Expand a volume",
+		Long:              "Expands a volume.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: v.CompleteArg,
+		RunE:              v.Run,
 	}
 
 	cmd.Flags().IntVar(&v.size, "size", 0, "size of the volume in GiB")
@@ -331,18 +403,61 @@ func (v *volumeDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (v *volumeDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeVolume(cmd.Context(), toComplete, nil)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (v *volumeDeleteCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "delete VOLUME",
-		Short: "Delete a volume",
-		Long:  "Deletes a volume.",
-		Args:  cobra.ExactArgs(1),
-		RunE:  v.Run,
+		Use:               "delete VOLUME",
+		Short:             "Delete a volume",
+		Long:              "Deletes a volume.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: v.CompleteArg,
+		RunE:              v.Run,
 	}
 
 	cmd.Flags().BoolVar(&v.force, "force", false, "force the deletion of the volume without asking for confirmation")
 
 	return cmd
+}
+
+func completeVolume(ctx context.Context, term string, itemFilter func(volume compute.Volume) bool) ([]string, cobra.ShellCompDirective) {
+	volumes, err := compute.NewVolumeService(commands.Config.Client).List(ctx)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.FindWithCustomFilter(volumes, term, itemFilter)
+
+	names := make([]string, len(filtered))
+	for i, volume := range filtered {
+		names[i] = volume.Name
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
+}
+
+func completeVolumeSnapshot(ctx context.Context, volume compute.Volume, term string) ([]string, cobra.ShellCompDirective) {
+	snapshots, err := compute.NewSnapshotService(commands.Config.Client).List(ctx)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.FindWithCustomFilter(snapshots, term, func(snapshot compute.Snapshot) bool {
+		return snapshot.Volume.ID == volume.ID
+	})
+
+	names := make([]string, len(filtered))
+	for i, snapshot := range filtered {
+		names[i] = snapshot.Name
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
 func findVolume(ctx context.Context, term string) (compute.Volume, error) {

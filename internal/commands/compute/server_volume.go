@@ -32,7 +32,7 @@ type serverVolumeListCommand struct {
 	filter string
 }
 
-func (v *serverVolumeListCommand) Run(cmd *cobra.Command, args []string) error {
+func (s *serverVolumeListCommand) Run(cmd *cobra.Command, args []string) error {
 	server, err := findServer(cmd.Context(), args[0])
 	if err != nil {
 		return err
@@ -50,24 +50,33 @@ func (v *serverVolumeListCommand) Run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if len(v.filter) != 0 {
-		volumes = filter.Find(volumes, v.filter)
+	if len(s.filter) != 0 {
+		volumes = filter.Find(volumes, s.filter)
 	}
 
 	return commands.PrintStdout(volumes)
 }
 
-func (v *serverVolumeListCommand) Build() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "list SERVER",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List volumes attached to server",
-		Long:    "Lists all compute volumes attached to the selected server.",
-		Args:    cobra.ExactArgs(1),
-		RunE:    v.Run,
+func (s *serverVolumeListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeServer(cmd.Context(), toComplete)
 	}
 
-	cmd.Flags().StringVar(&v.filter, "filter", "", "custom term to filter the results")
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
+func (s *serverVolumeListCommand) Build() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:               "list SERVER",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List volumes attached to server",
+		Long:              "Lists all compute volumes attached to the selected server.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: s.CompleteArg,
+		RunE:              s.Run,
+	}
+
+	cmd.Flags().StringVar(&s.filter, "filter", "", "custom term to filter the results")
 
 	return cmd
 }
@@ -78,21 +87,21 @@ type serverVolumeCreateCommand struct {
 	snapshot string
 }
 
-func (v *serverVolumeCreateCommand) Run(cmd *cobra.Command, args []string) error {
+func (s *serverVolumeCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	server, err := findServer(cmd.Context(), args[0])
 	if err != nil {
 		return err
 	}
 
 	data := compute.VolumeCreate{
-		Name:       v.name,
-		Size:       v.size,
+		Name:       s.name,
+		Size:       s.size,
 		LocationID: server.Location.ID,
 		InstanceID: server.ID,
 	}
 
-	if len(v.snapshot) != 0 {
-		snapshot, err := findSnapshot(cmd.Context(), v.snapshot)
+	if len(s.snapshot) != 0 {
+		snapshot, err := findSnapshot(cmd.Context(), s.snapshot)
 		if err != nil {
 			return err
 		}
@@ -112,19 +121,28 @@ func (v *serverVolumeCreateCommand) Run(cmd *cobra.Command, args []string) error
 	return commands.PrintStdout(volume)
 }
 
-func (v *serverVolumeCreateCommand) Build() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "create SERVER",
-		Aliases: []string{"add", "new"},
-		Short:   "Create a new volume",
-		Long:    "Creates a new compute volume.",
-		Args:    cobra.ExactArgs(1),
-		RunE:    v.Run,
+func (s *serverVolumeCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeServer(cmd.Context(), toComplete)
 	}
 
-	cmd.Flags().StringVar(&v.name, "name", "", "name of the volume")
-	cmd.Flags().IntVar(&v.size, "size", 0, "size of the volume in GiB")
-	cmd.Flags().StringVar(&v.snapshot, "restore-from", "", "snapshot to create the volume from")
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
+func (s *serverVolumeCreateCommand) Build() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:               "create SERVER",
+		Aliases:           []string{"add", "new"},
+		Short:             "Create a new volume",
+		Long:              "Creates a new compute volume.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: s.CompleteArg,
+		RunE:              s.Run,
+	}
+
+	cmd.Flags().StringVar(&s.name, "name", "", "name of the volume")
+	cmd.Flags().IntVar(&s.size, "size", 0, "size of the volume in GiB")
+	cmd.Flags().StringVar(&s.snapshot, "restore-from", "", "snapshot to create the volume from")
 
 	_ = cmd.MarkFlagRequired("name")
 
@@ -134,7 +152,7 @@ func (v *serverVolumeCreateCommand) Build() *cobra.Command {
 type serverVolumeAttachCommand struct {
 }
 
-func (v *serverVolumeAttachCommand) Run(cmd *cobra.Command, args []string) error {
+func (s *serverVolumeAttachCommand) Run(cmd *cobra.Command, args []string) error {
 	server, err := findServer(cmd.Context(), args[0])
 	if err != nil {
 		return err
@@ -166,13 +184,28 @@ func (v *serverVolumeAttachCommand) Run(cmd *cobra.Command, args []string) error
 	return commands.PrintStdout(volume)
 }
 
-func (v *serverVolumeAttachCommand) Build() *cobra.Command {
+func (s *serverVolumeAttachCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeServer(cmd.Context(), toComplete)
+	}
+
+	if len(args) == 1 {
+		return completeVolume(cmd.Context(), toComplete, func(item compute.Volume) bool {
+			return item.AttachedTo.ID == 0
+		})
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
+func (s *serverVolumeAttachCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "attach SERVER VOLUME",
-		Short: "Attach a volume to a server",
-		Long:  "Attaches a volume to a server.",
-		Args:  cobra.ExactArgs(2),
-		RunE:  v.Run,
+		Use:               "attach SERVER VOLUME",
+		Short:             "Attach a volume to a server",
+		Long:              "Attaches a volume to a server.",
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: s.CompleteArg,
+		RunE:              s.Run,
 	}
 
 	return cmd
@@ -182,7 +215,7 @@ type serverVolumeDetachCommand struct {
 	force bool
 }
 
-func (v *serverVolumeDetachCommand) Run(cmd *cobra.Command, args []string) error {
+func (s *serverVolumeDetachCommand) Run(cmd *cobra.Command, args []string) error {
 	server, err := findServer(cmd.Context(), args[0])
 	if err != nil {
 		return err
@@ -197,7 +230,7 @@ func (v *serverVolumeDetachCommand) Run(cmd *cobra.Command, args []string) error
 		return fmt.Errorf("volume is not attached to the server")
 	}
 
-	if !v.force && !commands.Confirm(fmt.Sprintf("are you sure you want to detach volume %q from server %q?", volume, server)) {
+	if !s.force && !commands.Confirm(fmt.Sprintf("are you sure you want to detach volume %q from server %q?", volume, server)) {
 		commands.Stderr.Println("aborted.")
 		return nil
 	}
@@ -210,16 +243,36 @@ func (v *serverVolumeDetachCommand) Run(cmd *cobra.Command, args []string) error
 	return nil
 }
 
-func (v *serverVolumeDetachCommand) Build() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "detach SERVER VOLUME",
-		Short: "Detach a volume from a server",
-		Long:  "Detaches a volume from a server.",
-		Args:  cobra.ExactArgs(2),
-		RunE:  v.Run,
+func (s *serverVolumeDetachCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeServer(cmd.Context(), toComplete)
 	}
 
-	cmd.Flags().BoolVar(&v.force, "force", false, "force detaching the volume without asking for confirmation")
+	if len(args) == 1 {
+		server, err := findServer(cmd.Context(), args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		return completeVolume(cmd.Context(), toComplete, func(item compute.Volume) bool {
+			return item.AttachedTo.ID == server.ID
+		})
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
+func (s *serverVolumeDetachCommand) Build() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:               "detach SERVER VOLUME",
+		Short:             "Detach a volume from a server",
+		Long:              "Detaches a volume from a server.",
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: s.CompleteArg,
+		RunE:              s.Run,
+	}
+
+	cmd.Flags().BoolVar(&s.force, "force", false, "force detaching the volume without asking for confirmation")
 
 	return cmd
 }
@@ -228,7 +281,7 @@ type serverVolumeDeleteCommand struct {
 	force bool
 }
 
-func (v *serverVolumeDeleteCommand) Run(cmd *cobra.Command, args []string) error {
+func (s *serverVolumeDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	server, err := findServer(cmd.Context(), args[0])
 	if err != nil {
 		return err
@@ -243,7 +296,7 @@ func (v *serverVolumeDeleteCommand) Run(cmd *cobra.Command, args []string) error
 		return fmt.Errorf("volume is not attached to the server")
 	}
 
-	if !v.force && !commands.ConfirmDeletion("volume", volume) {
+	if !s.force && !commands.ConfirmDeletion("volume", volume) {
 		commands.Stderr.Println("aborted.")
 		return nil
 	}
@@ -263,16 +316,36 @@ func (v *serverVolumeDeleteCommand) Run(cmd *cobra.Command, args []string) error
 	return nil
 }
 
-func (v *serverVolumeDeleteCommand) Build() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "delete SERVER VOLUME",
-		Short: "Delete a volume from a server",
-		Long:  "Deletes a volume currently attached to a server.",
-		Args:  cobra.ExactArgs(2),
-		RunE:  v.Run,
+func (s *serverVolumeDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeServer(cmd.Context(), toComplete)
 	}
 
-	cmd.Flags().BoolVar(&v.force, "force", false, "force the deletion of the volume without asking for confirmation")
+	if len(args) == 1 {
+		server, err := findServer(cmd.Context(), args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		return completeVolume(cmd.Context(), toComplete, func(item compute.Volume) bool {
+			return item.AttachedTo.ID == server.ID
+		})
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
+func (s *serverVolumeDeleteCommand) Build() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:               "delete SERVER VOLUME",
+		Short:             "Delete a volume from a server",
+		Long:              "Deletes a volume currently attached to a server.",
+		Args:              cobra.ExactArgs(2),
+		ValidArgsFunction: s.CompleteArg,
+		RunE:              s.Run,
+	}
+
+	cmd.Flags().BoolVar(&s.force, "force", false, "force the deletion of the volume without asking for confirmation")
 
 	return cmd
 }

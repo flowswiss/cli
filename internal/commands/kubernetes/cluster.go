@@ -56,13 +56,18 @@ func (c *clusterListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
+func (c *clusterListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (c *clusterListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"show", "ls", "get"},
-		Short:   "List all cluster",
-		Long:    "Prints a table of all kubernetes clusters belonging to the current organization.",
-		RunE:    c.Run,
+		Use:               "list",
+		Aliases:           []string{"show", "ls", "get"},
+		Short:             "List all cluster",
+		Long:              "Prints a table of all kubernetes clusters belonging to the current organization.",
+		ValidArgsFunction: c.CompleteArg,
+		RunE:              c.Run,
 	}
 
 	cmd.Flags().StringVar(&c.filter, "filter", "", "custom term to filter the results")
@@ -145,12 +150,17 @@ func (c *clusterCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (c *clusterCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (c *clusterCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Create new cluster",
-		Long:  "Creates a new kubernetes cluster.",
-		RunE:  c.Run,
+		Use:               "create",
+		Short:             "Create new cluster",
+		Long:              "Creates a new kubernetes cluster.",
+		ValidArgsFunction: c.CompleteArg,
+		RunE:              c.Run,
 	}
 
 	cmd.Flags().StringVarP(&c.name, "name", "n", "", "name of the cluster (required)")
@@ -189,13 +199,22 @@ func (c *clusterUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(cluster)
 }
 
+func (c *clusterUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeCluster(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (c *clusterUpdateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update CLUSTER",
-		Short: "Update cluster",
-		Long:  "Updates a kubernetes cluster.",
-		Args:  cobra.ExactArgs(1),
-		RunE:  c.Run,
+		Use:               "update CLUSTER",
+		Short:             "Update cluster",
+		Long:              "Updates a kubernetes cluster.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: c.CompleteArg,
+		RunE:              c.Run,
 	}
 
 	cmd.Flags().StringVar(&c.name, "name", "", "new name of the cluster")
@@ -226,13 +245,22 @@ func (c *clusterDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (c *clusterDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeCluster(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (c *clusterDeleteCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "delete CLUSTER",
-		Short: "Delete cluster",
-		Long:  "Deletes a kubernetes cluster.",
-		Args:  cobra.ExactArgs(1),
-		RunE:  c.Run,
+		Use:               "delete CLUSTER",
+		Short:             "Delete cluster",
+		Long:              "Deletes a kubernetes cluster.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: c.CompleteArg,
+		RunE:              c.Run,
 	}
 
 	cmd.Flags().BoolVar(&c.force, "force", false, "forces deletion of the cluster without asking for confirmation")
@@ -276,13 +304,22 @@ func (c *clusterUpgradeCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(cluster)
 }
 
+func (c *clusterUpgradeCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeCluster(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (c *clusterUpgradeCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "upgrade CLUSTER",
-		Short: "Upgrade cluster",
-		Long:  "Upgrades a kubernetes cluster.",
-		Args:  cobra.ExactArgs(1),
-		RunE:  c.Run,
+		Use:               "upgrade CLUSTER",
+		Short:             "Upgrade cluster",
+		Long:              "Upgrades a kubernetes cluster.",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: c.CompleteArg,
+		RunE:              c.Run,
 	}
 
 	cmd.Flags().StringVar(&c.workerProduct, "worker-product", "", "product for the worker nodes (required)")
@@ -292,6 +329,22 @@ func (c *clusterUpgradeCommand) Build() *cobra.Command {
 	_ = cmd.MarkFlagRequired("worker-count")
 
 	return cmd
+}
+
+func completeCluster(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
+	clusters, err := kubernetes.NewClusterService(commands.Config.Client).List(ctx)
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	filtered := filter.Find(clusters, term)
+
+	names := make([]string, len(filtered))
+	for i, cluster := range filtered {
+		names[i] = cluster.Name
+	}
+
+	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
 func findCluster(ctx context.Context, term string) (kubernetes.Cluster, error) {

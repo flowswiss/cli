@@ -36,12 +36,17 @@ func (m *moduleListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
+func (m *moduleListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
 func (m *moduleListCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list",
-		Short: "List available modules",
-		Long:  "Lists all available modules including their location availability.",
-		RunE:  m.Run,
+		Use:               "list",
+		Short:             "List available modules",
+		Long:              "Lists all available modules including their location availability.",
+		ValidArgsFunction: m.CompleteArg,
+		RunE:              m.Run,
 	}
 
 	cmd.Flags().StringVar(&m.filter, "filter", "", "custom term to filter the results")
