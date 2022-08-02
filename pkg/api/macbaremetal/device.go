@@ -85,6 +85,11 @@ func (d DeviceService) List(ctx context.Context) ([]Device, error) {
 	return items, nil
 }
 
+func (d DeviceService) Get(ctx context.Context, id int) (Device, error) {
+	device, err := d.delegate.Get(ctx, id)
+	return Device(device), err
+}
+
 type DeviceVNCConnection = macbaremetal.DeviceVNCConnection
 
 func (d DeviceService) GetVNC(ctx context.Context, id int) (DeviceVNCConnection, error) {

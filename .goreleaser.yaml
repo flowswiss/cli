@@ -6,6 +6,8 @@ builds:
   - id: flow
     main: ./cmd/flow
     binary: flow
+    ldflags:
+      - '-X github.com/flowswiss/cli/v2/internal/commands.Version={{.Version}}'
     env:
       - CGO_ENABLED=0
     goos:
@@ -15,6 +17,8 @@ builds:
   - id: cloudbit
     main: ./cmd/flow
     binary: cloudbit
+    ldflags:
+      - '-X github.com/flowswiss/cli/v2/internal/commands.Version={{.Version}}'
     tags:
       - cloudbit
     env:

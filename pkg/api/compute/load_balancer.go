@@ -89,6 +89,11 @@ func (l LoadBalancerService) List(ctx context.Context) ([]LoadBalancer, error) {
 	return items, nil
 }
 
+func (l LoadBalancerService) Get(ctx context.Context, id int) (LoadBalancer, error) {
+	loadBalancer, err := l.delegate.Get(ctx, id)
+	return LoadBalancer(loadBalancer), err
+}
+
 type LoadBalancerCreate = compute.LoadBalancerCreate
 
 func (l LoadBalancerService) Create(ctx context.Context, data LoadBalancerCreate) (common.Ordering, error) {

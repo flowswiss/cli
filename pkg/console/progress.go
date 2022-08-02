@@ -1,29 +1,36 @@
 package console
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 // TODO refactor
 
 type Progress struct {
-	Message string
-	Done    chan string
-	Sync    chan struct{}
+	message string
+
+	done chan struct{}
+	wg   sync.WaitGroup
 }
 
 func NewProgress(message string) *Progress {
 	return &Progress{
-		Message: message,
-		Done:    make(chan string),
-		Sync:    make(chan struct{}),
+		message: message,
+		done:    make(chan struct{}),
+		wg:      sync.WaitGroup{},
 	}
 }
 
-func (p *Progress) Complete(message string) {
-	p.Done <- message
-	<-p.Sync
+func (p *Progress) Done() {
+	close(p.done)
+	p.wg.Wait()
 }
 
 func (p *Progress) displayAnsi(out Writer) {
+	ticker := time.NewTicker(200 * time.Millisecond)
+	defer ticker.Stop()
+
 	chars := []rune{'|', '/', '-', '\\'}
 	idx := 0
 
@@ -32,25 +39,23 @@ func (p *Progress) displayAnsi(out Writer) {
 		out.Print("\u001B[u\u001B[0K") // restore cursor position and clear line
 
 		select {
-		case message := <-p.Done:
-			out.Println(message)
+		case <-p.done:
 			return
-		default:
-			out.Printf("[%s] %s ", string(chars[idx]), p.Message)
-			idx = (idx + 1) % len(chars)
 
-			time.Sleep(200 * time.Millisecond)
+		case <-ticker.C:
+			out.Printf("[%s] %s ", string(chars[idx]), p.message)
+			idx = (idx + 1) % len(chars)
 		}
 	}
 }
 
 func (p *Progress) Display(out Writer) {
+	defer p.wg.Done()
+
 	if _, ok := out.(ansiWriter); ok {
 		p.displayAnsi(out)
 	} else {
-		out.Printf("%s\n", p.Message)
-		out.Printf("%s\n", <-p.Done)
+		out.Printf("%s\n", p.message)
+		<-p.done
 	}
-
-	close(p.Sync)
 }

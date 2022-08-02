@@ -100,6 +100,11 @@ func (s ServerService) List(ctx context.Context) ([]Server, error) {
 	return items, nil
 }
 
+func (s ServerService) Get(ctx context.Context, id int) (Server, error) {
+	server, err := s.delegate.Get(ctx, id)
+	return Server(server), err
+}
+
 type ServerCreate = compute.ServerCreate
 
 func (s ServerService) Create(ctx context.Context, data ServerCreate) (common.Ordering, error) {

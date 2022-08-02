@@ -81,6 +81,11 @@ func (c ClusterService) List(ctx context.Context) ([]Cluster, error) {
 	return items, nil
 }
 
+func (c ClusterService) Get(ctx context.Context, id int) (Cluster, error) {
+	cluster, err := c.delegate.Get(ctx, id)
+	return Cluster(cluster), err
+}
+
 type ClusterCreate = kubernetes.ClusterCreate
 type ClusterWorkerCreate = kubernetes.ClusterWorkerCreate
 
