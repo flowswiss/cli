@@ -1,0 +1,74 @@
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: flow
+    main: ./cmd/flow
+    binary: flow
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+  - id: cloudbit
+    main: ./cmd/flow
+    binary: cloudbit
+    tags:
+      - cloudbit
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+
+universal_binaries:
+  - id: flow
+    replace: false
+    name_template: flow
+  - id: cloudbit
+    replace: false
+    name_template: flow
+
+archives:
+  - id: flow
+    builds:
+      - flow
+    name_template: flow-{{.Version}}-{{.Os}}-{{.Arch}}
+    replacements:
+      all: universal
+      386: i386
+    format_overrides:
+      - goos: windows
+        format: zip
+  - id: cloudbit
+    builds:
+      - cloudbit
+    name_template: cloudbit-{{.Version}}-{{.Os}}-{{.Arch}}
+    replacements:
+      all: universal
+      386: i386
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+
+release:
+  github:
+    owner: flowswiss
+    name: cli
+  draft: true
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-dev"

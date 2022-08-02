@@ -9,7 +9,7 @@ This command line interface serves as an additional frontend for the [Flow Swiss
 If you have GoLang installed, you can download and install the CLI with 
 
 ```shell script
-go get github.com/flowswiss/cli/v2/cmd/flow
+go install github.com/flowswiss/cli/v2/cmd/flow@latest
 ```
 
 Otherwise, you will need to download the executable for your system from the
