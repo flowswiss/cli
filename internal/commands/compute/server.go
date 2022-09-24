@@ -222,24 +222,24 @@ func (s *serverCreateCommand) Run(cmd *cobra.Command, args []string) error {
 		CloudInit:        cloudInit,
 	}
 
-	ordering, err := compute.NewServerService(commands.Config.Client).Create(cmd.Context(), data)
+	service := compute.NewServerService(commands.Config.Client)
+
+	ordering, err := service.Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create server: %w", err)
 	}
 
-	progress := console.NewProgress("Creating server")
-	go progress.Display(commands.Stderr)
-
-	err = common.WaitForOrder(cmd.Context(), commands.Config.Client, ordering)
+	order, err := commands.WaitForOrder(cmd.Context(), "Creating server", ordering)
 	if err != nil {
-		progress.Complete("Order failed")
-
 		return fmt.Errorf("wait for order: %w", err)
 	}
 
-	progress.Complete("Order completed")
+	server, err := service.Get(cmd.Context(), order.Product.ID)
+	if err != nil {
+		return fmt.Errorf("fetch server: %w", err)
+	}
 
-	return nil
+	return commands.PrintStdout(server)
 }
 
 func (s *serverCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -351,23 +351,24 @@ func (s *serverUpgradeCommand) Run(cmd *cobra.Command, args []string) error {
 		ProductID: product.ID,
 	}
 
-	ordering, err := compute.NewServerService(commands.Config.Client).Upgrade(cmd.Context(), server.ID, data)
+	service := compute.NewServerService(commands.Config.Client)
+
+	ordering, err := service.Upgrade(cmd.Context(), server.ID, data)
 	if err != nil {
 		return fmt.Errorf("upgrade server: %w", err)
 	}
 
-	progress := console.NewProgress("Upgrading server")
-	go progress.Display(commands.Stderr)
-
-	err = common.WaitForOrder(cmd.Context(), commands.Config.Client, ordering)
+	order, err := commands.WaitForOrder(cmd.Context(), "Upgrading server", ordering)
 	if err != nil {
-		progress.Complete("Order failed")
-
 		return fmt.Errorf("wait for order: %w", err)
 	}
 
-	progress.Complete("Order completed")
-	return nil
+	server, err = service.Get(cmd.Context(), order.Product.ID)
+	if err != nil {
+		return fmt.Errorf("fetch server: %w", err)
+	}
+
+	return commands.PrintStdout(server)
 }
 
 func (s *serverUpgradeCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {

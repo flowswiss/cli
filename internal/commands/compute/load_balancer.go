@@ -8,9 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
-	"github.com/flowswiss/cli/v2/pkg/api/common"
 	"github.com/flowswiss/cli/v2/pkg/api/compute"
-	"github.com/flowswiss/cli/v2/pkg/console"
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
@@ -88,23 +86,24 @@ func (l *loadBalancerCreateCommand) Run(cmd *cobra.Command, args []string) error
 		data.PrivateIP = l.privateIP.String()
 	}
 
-	ordering, err := compute.NewLoadBalancerService(commands.Config.Client).Create(cmd.Context(), data)
+	service := compute.NewLoadBalancerService(commands.Config.Client)
+
+	ordering, err := service.Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create load balancer: %w", err)
 	}
 
-	progress := console.NewProgress("Creating load balancer")
-	go progress.Display(commands.Stderr)
-
-	err = common.WaitForOrder(cmd.Context(), commands.Config.Client, ordering)
+	order, err := commands.WaitForOrder(cmd.Context(), "Creating load balancer", ordering)
 	if err != nil {
-		progress.Complete("Order failed")
-
 		return fmt.Errorf("wait for order: %w", err)
 	}
 
-	progress.Complete("Order completed")
-	return nil
+	loadBalancer, err := service.Get(cmd.Context(), order.Product.ID)
+	if err != nil {
+		return fmt.Errorf("fetch load balancer: %w", err)
+	}
+
+	return commands.PrintStdout(loadBalancer)
 }
 
 func (l *loadBalancerCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {

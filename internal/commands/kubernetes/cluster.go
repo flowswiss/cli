@@ -10,7 +10,6 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/api/common"
 	"github.com/flowswiss/cli/v2/pkg/api/compute"
 	"github.com/flowswiss/cli/v2/pkg/api/kubernetes"
-	"github.com/flowswiss/cli/v2/pkg/console"
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
@@ -130,24 +129,24 @@ func (c *clusterCreateCommand) Run(cmd *cobra.Command, args []string) error {
 		AttachExternalIP: c.attachExternalIP,
 	}
 
-	ordering, err := kubernetes.NewClusterService(commands.Config.Client).Create(cmd.Context(), data)
+	service := kubernetes.NewClusterService(commands.Config.Client)
+
+	ordering, err := service.Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create cluster: %w", err)
 	}
 
-	progress := console.NewProgress("Creating cluster")
-	go progress.Display(commands.Stderr)
-
-	err = common.WaitForOrder(cmd.Context(), commands.Config.Client, ordering)
+	order, err := commands.WaitForOrder(cmd.Context(), "Creating cluster", ordering)
 	if err != nil {
-		progress.Complete("Order failed")
-
 		return fmt.Errorf("wait for order: %w", err)
 	}
 
-	progress.Complete("Order completed")
+	cluster, err := service.Get(cmd.Context(), order.Product.ID)
+	if err != nil {
+		return fmt.Errorf("fetch cluster: %w", err)
+	}
 
-	return nil
+	return commands.PrintStdout(cluster)
 }
 
 func (c *clusterCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -156,9 +155,13 @@ func (c *clusterCreateCommand) CompleteArg(cmd *cobra.Command, args []string, to
 
 func (c *clusterCreateCommand) Build() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:               "create",
-		Short:             "Create new cluster",
-		Long:              "Creates a new kubernetes cluster.",
+		Use:   "create",
+		Short: "Create new cluster",
+		Long:  "Creates a new kubernetes cluster.",
+		Example: commands.FormatExamples(fmt.Sprintf(`
+			# Create a new cluster
+      %[1]s kubernetes cluster create --name my-cluster --location ALP1 --worker-count 3 --worker-product k1.1x2
+		`, commands.Name)),
 		ValidArgsFunction: c.CompleteArg,
 		RunE:              c.Run,
 	}

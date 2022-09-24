@@ -10,7 +10,6 @@ import (
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/common"
 	"github.com/flowswiss/cli/v2/pkg/api/macbaremetal"
-	"github.com/flowswiss/cli/v2/pkg/console"
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
@@ -178,26 +177,24 @@ func (d *deviceCreateCommand) Run(cmd *cobra.Command, args []string) error {
 		Password:        d.password,
 	}
 
-	ordering, err := macbaremetal.NewDeviceService(commands.Config.Client).Create(cmd.Context(), data)
+	service := macbaremetal.NewDeviceService(commands.Config.Client)
+
+	ordering, err := service.Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create device: %w", err)
 	}
 
-	progress := console.NewProgress("Creating device")
-	go progress.Display(commands.Stderr)
-
-	err = common.WaitForOrder(cmd.Context(), commands.Config.Client, ordering)
+	order, err := commands.WaitForOrder(cmd.Context(), "Creating device", ordering)
 	if err != nil {
-		progress.Complete("Order filed")
-
 		return fmt.Errorf("wait for order: %w", err)
 	}
 
-	progress.Complete("Order completed")
+	device, err := service.Get(cmd.Context(), order.Product.ID)
+	if err != nil {
+		return fmt.Errorf("fetch order: %w", err)
+	}
 
-	// TODO find device created through order and print it
-
-	return nil
+	return commands.PrintStdout(device)
 }
 
 func (d *deviceCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {

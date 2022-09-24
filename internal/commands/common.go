@@ -1,12 +1,14 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/flowswiss/cli/v2/pkg/api/common"
 	"github.com/flowswiss/cli/v2/pkg/console"
 )
 
@@ -49,4 +51,13 @@ func Confirm(message string) bool {
 
 func ConfirmDeletion(kind string, item fmt.Stringer) bool {
 	return console.Confirm(Stderr, fmt.Sprintf("Are you sure you want to delete the %s %q?", kind, item))
+}
+
+func WaitForOrder(ctx context.Context, action string, ordering common.Ordering) (common.Order, error) {
+	progress := console.NewProgress(action)
+	defer progress.Done()
+
+	go progress.Display(Stderr)
+
+	return common.WaitForOrder(ctx, Config.Client, ordering)
 }
