@@ -2,6 +2,7 @@ package compute
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -26,6 +27,7 @@ func ClusterCommand() *cobra.Command {
 		&clusterUpdateCommand{},
 		&clusterDeleteCommand{},
 		&clusterUpgradeCommand{},
+		&clusterKubeConfigCommand{},
 	)
 
 	cmd.AddCommand(
@@ -330,6 +332,50 @@ func (c *clusterUpgradeCommand) Build() *cobra.Command {
 
 	_ = cmd.MarkFlagRequired("worker-product")
 	_ = cmd.MarkFlagRequired("worker-count")
+
+	return cmd
+}
+
+type clusterKubeConfigCommand struct {
+}
+
+func (c *clusterKubeConfigCommand) Run(cmd *cobra.Command, args []string) error {
+	cluster, err := findCluster(cmd.Context(), args[0])
+	if err != nil {
+		return err
+	}
+
+	kubeConfig, err := kubernetes.NewClusterService(commands.Config.Client).GetKubeConfig(cmd.Context(), cluster.ID)
+	if err != nil {
+		return fmt.Errorf("fetch kube config: %w", err)
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(kubeConfig.KubeConfig)
+	if err != nil {
+		return fmt.Errorf("decode base64 kube-config: %w", err)
+	}
+
+	commands.Stdout.Println(string(decoded))
+	return nil
+}
+
+func (c *clusterKubeConfigCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) == 0 {
+		return completeCluster(cmd.Context(), toComplete)
+	}
+
+	return nil, cobra.ShellCompDirectiveNoFileComp
+}
+
+func (c *clusterKubeConfigCommand) Build() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:               "kube-config CLUSTER",
+		Short:             "Display kube config",
+		Long:              "Displays the kubernetes cluster kube config to access the cluster",
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: c.CompleteArg,
+		RunE:              c.Run,
+	}
 
 	return cmd
 }
