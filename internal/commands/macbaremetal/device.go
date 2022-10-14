@@ -1,4 +1,4 @@
-package compute
+package macbaremetal
 
 import (
 	"context"
@@ -13,21 +13,32 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func DeviceCommand() *cobra.Command {
+func DeviceCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "device",
 		Aliases: []string{"devices"},
 		Short:   "Manage mac bare metal devices",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-			# Create a new device
-			%[1]s mac-bare-metal device create --name "my-device" --product "macmini.2018.6-16-256" --network default --password "some-secure-user-password"
-		`, commands.Name)),
+      # Create a new device
+      %[1]s mac-bare-metal device create --name "my-device" --product "macmini.2018.6-16-256" --network default --password "some-secure-user-password"
+		`, app.Name)),
 	}
 
-	commands.Add(cmd, &deviceListCommand{}, &deviceCreateCommand{}, &deviceUpdateCommand{}, &deviceDeleteCommand{}, &deviceVNCCommand{})
-	cmd.AddCommand(DeviceActionCommand(), DeviceWorkflowCommand(), NetworkInterfaceCommands())
+	commands.Add(app, cmd,
+		&deviceListCommand{},
+		&deviceCreateCommand{},
+		&deviceUpdateCommand{},
+		&deviceDeleteCommand{},
+		&deviceVNCCommand{},
+	)
 
-	commands.Add(cmd,
+	cmd.AddCommand(
+		DeviceActionCommand(app),
+		DeviceWorkflowCommand(app),
+		NetworkInterfaceCommands(app),
+	)
+
+	commands.Add(app, cmd,
 		deviceActionRunCommandPreset("power-off"),
 		deviceActionRunCommandPreset("power-on"),
 		deviceActionRunCommandPreset("power-cord-un-plug"),
@@ -58,22 +69,22 @@ func (d *deviceListCommand) CompleteArg(cmd *cobra.Command, args []string, toCom
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (d *deviceListCommand) Build() *cobra.Command {
+func (d *deviceListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"show", "ls", "get"},
 		Short:   "List devices",
 		Long:    "Prints a table of all mac bare metal devices belonging to the current organization.",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-			# Print all devices
-			%[1]s mac-bare-metal device list
-
-			# Print all devices containing the name "device"
-			%[1]s mac-bare-metal device list --filter "device"
-
-			# Print all devices in JSON format
-			%[1]s mac-bare-metal device list --format json
-		`, commands.Name)), // TODO
+      # Print all devices
+      %[1]s mac-bare-metal device list
+      
+      # Print all devices containing the name "device"
+      %[1]s mac-bare-metal device list --filter "device"
+      
+      # Print all devices in JSON format
+      %[1]s mac-bare-metal device list --format json
+		`, app.Name)), // TODO
 		ValidArgsFunction: d.CompleteArg,
 		RunE:              d.Run,
 	}
@@ -117,18 +128,18 @@ func (d *deviceVNCCommand) CompleteArg(cmd *cobra.Command, args []string, toComp
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (d *deviceVNCCommand) Build() *cobra.Command {
+func (d *deviceVNCCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "vnc DEVICE",
 		Short: "Get VNC of device",
 		Long:  "Prints the VNC url of the device.",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-			# Print the VNC url of the device "my-device"
-			%[1]s mac-bare-metal device vnc my-device
-
-			# Open the VNC url of the device "my-device" in the browser
-			%[1]s mac-bare-metal device vnc my-device --open
-		`, commands.Name)),
+      # Print the VNC url of the device "my-device"
+      %[1]s mac-bare-metal device vnc my-device
+      
+      # Open the VNC url of the device "my-device" in the browser
+      %[1]s mac-bare-metal device vnc my-device --open
+		`, app.Name)),
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: d.CompleteArg,
 		RunE:              d.Run,
@@ -201,7 +212,7 @@ func (d *deviceCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toC
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (d *deviceCreateCommand) Build() *cobra.Command {
+func (d *deviceCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "create",
 		Aliases:           []string{"add", "new"},
@@ -263,7 +274,7 @@ func (d *deviceUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toC
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (d *deviceUpdateCommand) Build() *cobra.Command {
+func (d *deviceUpdateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "update DEVICE",
 		Short:             "Update device",
@@ -319,19 +330,19 @@ func (d *deviceDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toC
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (d *deviceDeleteCommand) Build() *cobra.Command {
+func (d *deviceDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete DEVICE",
 		Aliases: []string{"del", "remove", "rm"},
 		Short:   "Delete device",
 		Long:    "Deletes a mac bare metal device.",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-			# Delete a device
-			%[1]s mac-bare-metal device delete my-device
-
-			# Force the deletion of a device (without confirmation)
-			%[1]s mac-bare-metal device delete my-device --force
-		`, commands.Name)),
+      # Delete a device
+      %[1]s mac-bare-metal device delete my-device
+      
+      # Force the deletion of a device (without confirmation)
+      %[1]s mac-bare-metal device delete my-device --force
+		`, app.Name)),
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: d.CompleteArg,
 		RunE:              d.Run,

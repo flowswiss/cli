@@ -12,16 +12,27 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func LoadBalancerCommand() *cobra.Command {
+func LoadBalancerCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "load-balancer",
 		Aliases: []string{"load-balancers", "loadbalancer", "loadbalancers"},
 		Short:   "Manage compute load balancer",
 	}
 
-	commands.Add(cmd, &loadBalancerListCommand{}, &loadBalancerCreateCommand{}, &loadBalancerUpdateCommand{}, &loadBalancerDeleteCommand{})
-	commands.Add(cmd, &loadBalancerProtocolListCommand{}, &loadBalancerAlgorithmListCommand{}, &loadBalancerHealthCheckTypeListCommand{})
-	cmd.AddCommand(LoadBalancerPoolCommand(), LoadBalancerMemberCommand())
+	commands.Add(app, cmd,
+		&loadBalancerListCommand{},
+		&loadBalancerCreateCommand{},
+		&loadBalancerUpdateCommand{},
+		&loadBalancerDeleteCommand{},
+	)
+
+	commands.Add(app, cmd,
+		&loadBalancerProtocolListCommand{},
+		&loadBalancerAlgorithmListCommand{},
+		&loadBalancerHealthCheckTypeListCommand{},
+	)
+
+	cmd.AddCommand(LoadBalancerPoolCommand(app), LoadBalancerMemberCommand(app))
 
 	return cmd
 }
@@ -47,7 +58,7 @@ func (l *loadBalancerListCommand) CompleteArg(cmd *cobra.Command, args []string,
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (l *loadBalancerListCommand) Build() *cobra.Command {
+func (l *loadBalancerListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list",
 		Aliases:           []string{"show", "ls", "get"},
@@ -110,7 +121,7 @@ func (l *loadBalancerCreateCommand) CompleteArg(cmd *cobra.Command, args []strin
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (l *loadBalancerCreateCommand) Build() *cobra.Command {
+func (l *loadBalancerCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "create",
 		Short:             "Create a load balancer",
@@ -160,7 +171,7 @@ func (l *loadBalancerUpdateCommand) CompleteArg(cmd *cobra.Command, args []strin
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (l *loadBalancerUpdateCommand) Build() *cobra.Command {
+func (l *loadBalancerUpdateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "update LOAD-BALANCER",
 		Short:             "Update load balancer",
@@ -206,7 +217,7 @@ func (l *loadBalancerDeleteCommand) CompleteArg(cmd *cobra.Command, args []strin
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (l *loadBalancerDeleteCommand) Build() *cobra.Command {
+func (l *loadBalancerDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "delete LOAD-BALANCER",
 		Short:             "Delete load balancer",
@@ -242,7 +253,7 @@ func (l *loadBalancerProtocolListCommand) CompleteArg(cmd *cobra.Command, args [
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (l *loadBalancerProtocolListCommand) Build() *cobra.Command {
+func (l *loadBalancerProtocolListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "protocol",
 		Aliases:           []string{"protocols"},
@@ -278,7 +289,7 @@ func (l *loadBalancerAlgorithmListCommand) CompleteArg(cmd *cobra.Command, args 
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (l *loadBalancerAlgorithmListCommand) Build() *cobra.Command {
+func (l *loadBalancerAlgorithmListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "algorithm",
 		Aliases:           []string{"algorithms"},
@@ -314,7 +325,7 @@ func (l *loadBalancerHealthCheckTypeListCommand) CompleteArg(cmd *cobra.Command,
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (l *loadBalancerHealthCheckTypeListCommand) Build() *cobra.Command {
+func (l *loadBalancerHealthCheckTypeListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "health-check-type",
 		Aliases:           []string{"health-check-types"},

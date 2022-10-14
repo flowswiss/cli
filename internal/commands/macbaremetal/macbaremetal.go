@@ -1,4 +1,4 @@
-package compute
+package macbaremetal
 
 import (
 	"github.com/spf13/cobra"
@@ -6,7 +6,7 @@ import (
 	"github.com/flowswiss/cli/v2/internal/commands"
 )
 
-func AddCommands(parent *cobra.Command) {
+func Module(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "mac-bare-metal",
 		Aliases: []string{"macbaremetal"},
@@ -14,16 +14,12 @@ func AddCommands(parent *cobra.Command) {
 	}
 
 	cmd.AddCommand(
-		NetworkCommand(),
-		RouterCommand(),
-		ElasticIPCommand(),
-		SecurityGroupCommand(),
-		DeviceCommand(),
+		NetworkCommand(app),
+		RouterCommand(app),
+		ElasticIPCommand(app),
+		SecurityGroupCommand(app),
+		DeviceCommand(app),
 	)
 
-	parent.AddCommand(cmd)
-}
-
-func init() {
-	AddCommands(&commands.Root)
+	return cmd
 }

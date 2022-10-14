@@ -1,4 +1,4 @@
-package compute
+package macbaremetal
 
 import (
 	"context"
@@ -12,21 +12,26 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func NetworkCommand() *cobra.Command {
+func NetworkCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "network",
 		Aliases: []string{"networks"},
 		Short:   "Manage mac bare metal networks",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-			# List all networks
-			%[1]s mac-bare-metal network list
-
-			# Create a new network
-			%[1]s mac-bare-metal network create --name my-network --location ZRH1
-		`, commands.Name)),
+      # List all networks
+      %[1]s mac-bare-metal network list
+      
+      # Create a new network
+      %[1]s mac-bare-metal network create --name my-network --location ZRH1
+		`, app.Name)),
 	}
 
-	commands.Add(cmd, &networkListCommand{}, &networkCreateCommand{}, &networkUpdateCommand{}, &networkDeleteCommand{})
+	commands.Add(app, cmd,
+		&networkListCommand{},
+		&networkCreateCommand{},
+		&networkUpdateCommand{},
+		&networkDeleteCommand{},
+	)
 
 	return cmd
 }
@@ -52,7 +57,7 @@ func (n *networkListCommand) CompleteArg(cmd *cobra.Command, args []string, toCo
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (n *networkListCommand) Build() *cobra.Command {
+func (n *networkListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list",
 		Aliases:           []string{"show", "ls", "get"},
@@ -97,7 +102,7 @@ func (n *networkCreateCommand) CompleteArg(cmd *cobra.Command, args []string, to
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (n *networkCreateCommand) Build() *cobra.Command {
+func (n *networkCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "create",
 		Aliases:           []string{"add", "new"},
@@ -160,7 +165,7 @@ func (n *networkUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, to
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (n *networkUpdateCommand) Build() *cobra.Command {
+func (n *networkUpdateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "update NETWORK",
 		Short:             "Update network",
@@ -216,7 +221,7 @@ func (n *networkDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, to
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (n *networkDeleteCommand) Build() *cobra.Command {
+func (n *networkDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "delete NETWORK",
 		Aliases:           []string{"del", "remove", "rm"},

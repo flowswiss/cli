@@ -10,14 +10,14 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func ServerVolumeCommand() *cobra.Command {
+func ServerVolumeCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "volume",
 		Aliases: []string{"volumes"},
 		Short:   "Manage server volumes",
 	}
 
-	commands.Add(cmd,
+	commands.Add(app, cmd,
 		&serverVolumeListCommand{},
 		&serverVolumeCreateCommand{},
 		&serverVolumeAttachCommand{},
@@ -65,7 +65,7 @@ func (s *serverVolumeListCommand) CompleteArg(cmd *cobra.Command, args []string,
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *serverVolumeListCommand) Build() *cobra.Command {
+func (s *serverVolumeListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list SERVER",
 		Aliases:           []string{"show", "ls", "get"},
@@ -129,7 +129,7 @@ func (s *serverVolumeCreateCommand) CompleteArg(cmd *cobra.Command, args []strin
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *serverVolumeCreateCommand) Build() *cobra.Command {
+func (s *serverVolumeCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "create SERVER",
 		Aliases:           []string{"add", "new"},
@@ -198,7 +198,7 @@ func (s *serverVolumeAttachCommand) CompleteArg(cmd *cobra.Command, args []strin
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *serverVolumeAttachCommand) Build() *cobra.Command {
+func (s *serverVolumeAttachCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "attach SERVER VOLUME",
 		Short:             "Attach a volume to a server",
@@ -262,7 +262,7 @@ func (s *serverVolumeDetachCommand) CompleteArg(cmd *cobra.Command, args []strin
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *serverVolumeDetachCommand) Build() *cobra.Command {
+func (s *serverVolumeDetachCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "detach SERVER VOLUME",
 		Short:             "Detach a volume from a server",
@@ -335,7 +335,7 @@ func (s *serverVolumeDeleteCommand) CompleteArg(cmd *cobra.Command, args []strin
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *serverVolumeDeleteCommand) Build() *cobra.Command {
+func (s *serverVolumeDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "delete SERVER VOLUME",
 		Short:             "Delete a volume from a server",

@@ -14,13 +14,17 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func CertificateCommand() *cobra.Command {
+func CertificateCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "certificate",
 		Short: "Manage compute certificates",
 	}
 
-	commands.Add(cmd, &certificateListCommand{}, &certificateCreateCommand{}, &certificateDeleteCommand{})
+	commands.Add(app, cmd,
+		&certificateListCommand{},
+		&certificateCreateCommand{},
+		&certificateDeleteCommand{},
+	)
 
 	return cmd
 }
@@ -46,7 +50,7 @@ func (c *certificateListCommand) CompleteArg(cmd *cobra.Command, args []string, 
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (c *certificateListCommand) Build() *cobra.Command {
+func (c *certificateListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list",
 		Aliases:           []string{"show", "ls", "get"},
@@ -103,7 +107,7 @@ func (c *certificateCreateCommand) CompleteArg(cmd *cobra.Command, args []string
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (c *certificateCreateCommand) Build() *cobra.Command {
+func (c *certificateCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "create",
 		Short:             "Create a certificate",
@@ -159,7 +163,7 @@ func (c *certificateDeleteCommand) CompleteArg(cmd *cobra.Command, args []string
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (c *certificateDeleteCommand) Build() *cobra.Command {
+func (c *certificateDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "delete CERTIFICATE",
 		Short:             "Delete certificate",

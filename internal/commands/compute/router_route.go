@@ -12,13 +12,17 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func RouterRouteCommand() *cobra.Command {
+func RouterRouteCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "route",
 		Short: "Manage compute router routes",
 	}
 
-	commands.Add(cmd, &routeListCommand{}, &routeCreateCommand{}, &routeDeleteCommand{})
+	commands.Add(app, cmd,
+		&routeListCommand{},
+		&routeCreateCommand{},
+		&routeDeleteCommand{},
+	)
 
 	return cmd
 }
@@ -53,7 +57,7 @@ func (r *routeListCommand) CompleteArg(cmd *cobra.Command, args []string, toComp
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (r *routeListCommand) Build() *cobra.Command {
+func (r *routeListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list ROUTER",
 		Aliases:           []string{"show", "ls", "get"},
@@ -101,7 +105,7 @@ func (r *routeCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toCo
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (r *routeCreateCommand) Build() *cobra.Command {
+func (r *routeCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "create ROUTER",
 		Short:             "Create a route",
@@ -170,7 +174,7 @@ func (r *routeDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toCo
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (r *routeDeleteCommand) Build() *cobra.Command {
+func (r *routeDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "delete ROUTER ROUTE",
 		Short:             "Delete route",

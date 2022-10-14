@@ -12,24 +12,30 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func ElasticIPCommand() *cobra.Command {
+func ElasticIPCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "elastic-ip",
 		Aliases: []string{"elastic-ips", "elasticip", "elasticips"},
 		Short:   "Manage compute elastic ips",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-  			# List all compute elastic ips
-	  		%[1]s compute elastic-ip list	
-
-			# Create a new compute elastic ip
-			%[1]s compute elastic-ip create --location=ZRH1
-
-			# Attach a compute elastic ip to a server
-			%[1]s compute elastic-ip attach 1.1.1.1 my-server
-		`, commands.Name)),
+      # List all compute elastic ips
+      %[1]s compute elastic-ip list	
+      
+      # Create a new compute elastic ip
+      %[1]s compute elastic-ip create --location=ZRH1
+      
+      # Attach a compute elastic ip to a server
+      %[1]s compute elastic-ip attach 1.1.1.1 my-server
+		`, app.Name)),
 	}
 
-	commands.Add(cmd, &elasticIPListCommand{}, &elasticIPCreateCommand{}, &elasticIPDeleteCommand{}, &elasticIPAttachCommand{}, &elasticIPDetachCommand{})
+	commands.Add(app, cmd,
+		&elasticIPListCommand{},
+		&elasticIPCreateCommand{},
+		&elasticIPDeleteCommand{},
+		&elasticIPAttachCommand{},
+		&elasticIPDetachCommand{},
+	)
 
 	return cmd
 }
@@ -55,7 +61,7 @@ func (e *elasticIPListCommand) CompleteArg(cmd *cobra.Command, args []string, to
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (e *elasticIPListCommand) Build() *cobra.Command {
+func (e *elasticIPListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list",
 		Aliases:           []string{"show", "ls", "get"},
@@ -96,7 +102,7 @@ func (e *elasticIPCreateCommand) CompleteArg(cmd *cobra.Command, args []string, 
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (e *elasticIPCreateCommand) Build() *cobra.Command {
+func (e *elasticIPCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "create",
 		Aliases:           []string{"add", "new"},
@@ -161,19 +167,19 @@ func (e *elasticIPDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, 
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (e *elasticIPDeleteCommand) Build() *cobra.Command {
+func (e *elasticIPDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete ELASTIC-IP",
 		Aliases: []string{"del", "remove", "rm"},
 		Short:   "Delete elastic ip",
 		Long:    "Deletes a compute elastic ip.",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-	  		# Delete a compute elastic ip
-			%[1]s compute elastic-ip delete 1.1.1.1
-
-			# Force the deletion a compute elastic ip without confirmation
-			%[1]s compute elastic-ip delete 1.1.1.1 --force
-		`, commands.Name)),
+      # Delete a compute elastic ip
+      %[1]s compute elastic-ip delete 1.1.1.1
+      
+      # Force the deletion a compute elastic ip without confirmation
+      %[1]s compute elastic-ip delete 1.1.1.1 --force
+		`, app.Name)),
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: e.CompleteArg,
 		RunE:              e.Run,
@@ -252,7 +258,7 @@ func (e *elasticIPAttachCommand) CompleteArg(cmd *cobra.Command, args []string, 
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (e *elasticIPAttachCommand) Build() *cobra.Command {
+func (e *elasticIPAttachCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "attach ELASTIC-IP SERVER",
 		Short:             "Attach elastic ip to server",
@@ -316,7 +322,7 @@ func (e *elasticIPDetachCommand) CompleteArg(cmd *cobra.Command, args []string, 
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (e *elasticIPDetachCommand) Build() *cobra.Command {
+func (e *elasticIPDetachCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "detach ELASTIC-IP SERVER",
 		Short:             "Detach elastic ip from server",

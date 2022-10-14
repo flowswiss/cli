@@ -6,29 +6,25 @@ import (
 	"github.com/flowswiss/cli/v2/internal/commands"
 )
 
-func AddCommands(parent *cobra.Command) {
+func Module(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "compute",
 		Short: "Manage your compute server and networking",
 	}
 
 	cmd.AddCommand(
-		CertificateCommand(),
-		ElasticIPCommand(),
-		ImageCommand(),
-		KeyPairCommand(),
-		LoadBalancerCommand(),
-		NetworkCommand(),
-		RouterCommand(),
-		SecurityGroupCommand(),
-		ServerCommand(),
-		SnapshotCommand(),
-		VolumeCommand(),
+		CertificateCommand(app),
+		ElasticIPCommand(app),
+		ImageCommand(app),
+		KeyPairCommand(app),
+		LoadBalancerCommand(app),
+		NetworkCommand(app),
+		RouterCommand(app),
+		SecurityGroupCommand(app),
+		ServerCommand(app),
+		SnapshotCommand(app),
+		VolumeCommand(app),
 	)
 
-	parent.AddCommand(cmd)
-}
-
-func init() {
-	AddCommands(&commands.Root)
+	return cmd
 }

@@ -12,14 +12,18 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func KeyPairCommand() *cobra.Command {
+func KeyPairCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "key-pair",
 		Aliases: []string{"key-pairs"},
 		Short:   "Manage compute key pairs",
 	}
 
-	commands.Add(cmd, &keyPairListCommand{}, &keyPairCreateCommand{}, &keyPairDeleteCommand{})
+	commands.Add(app, cmd,
+		&keyPairListCommand{},
+		&keyPairCreateCommand{},
+		&keyPairDeleteCommand{},
+	)
 
 	return cmd
 }
@@ -45,7 +49,7 @@ func (k *keyPairListCommand) CompleteArg(cmd *cobra.Command, args []string, toCo
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (k *keyPairListCommand) Build() *cobra.Command {
+func (k *keyPairListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list",
 		Aliases:           []string{"show", "ls", "get"},
@@ -88,7 +92,7 @@ func (k *keyPairCreateCommand) CompleteArg(cmd *cobra.Command, args []string, to
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (k *keyPairCreateCommand) Build() *cobra.Command {
+func (k *keyPairCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "create",
 		Aliases:           []string{"add", "new"},
@@ -139,7 +143,7 @@ func (k *keyPairDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, to
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (k *keyPairDeleteCommand) Build() *cobra.Command {
+func (k *keyPairDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "delete KEY-PAIR",
 		Aliases:           []string{"del", "remove", "rm"},

@@ -1,4 +1,4 @@
-package compute
+package macbaremetal
 
 import (
 	"context"
@@ -11,20 +11,23 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func DeviceActionCommand() *cobra.Command {
+func DeviceActionCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "action",
 		Short: "Manage mac bare metal device actions",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-			# List all available actions for a specific device
-			%[1]s mac-bare-metal device action list my-device
-
-			# Run an action on a device
-			%[1]s mac-bare-metal device action run my-device power-off
-		`, commands.Name)),
+      # List all available actions for a specific device
+      %[1]s mac-bare-metal device action list my-device
+      
+      # Run an action on a device
+      %[1]s mac-bare-metal device action run my-device power-off
+		`, app.Name)),
 	}
 
-	commands.Add(cmd, &deviceActionListCommand{}, &deviceActionRunCommand{})
+	commands.Add(app, cmd,
+		&deviceActionListCommand{},
+		&deviceActionRunCommand{},
+	)
 
 	return cmd
 }
@@ -54,7 +57,7 @@ func (d *deviceActionListCommand) CompleteArg(cmd *cobra.Command, args []string,
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (d *deviceActionListCommand) Build() *cobra.Command {
+func (d *deviceActionListCommand) Build(app commands.Application) *cobra.Command {
 	return &cobra.Command{
 		Use:               "list DEVICE",
 		Aliases:           []string{"show", "ls", "get"},
@@ -90,7 +93,7 @@ func (d *deviceActionRunCommand) CompleteArg(cmd *cobra.Command, args []string, 
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (d *deviceActionRunCommand) Build() *cobra.Command {
+func (d *deviceActionRunCommand) Build(app commands.Application) *cobra.Command {
 	return &cobra.Command{
 		Use:   "run DEVICE ACTION",
 		Short: "Run action on device",
@@ -98,15 +101,15 @@ func (d *deviceActionRunCommand) Build() *cobra.Command {
 			Runs the specified action on the specified device.
 
 			To get a list of all available actions for a specific device, run "%[1]s mac-bare-metal device action list DEVICE".
-		`, commands.Name)),
+		`, app.Name)),
 		Example: commands.FormatExamples(fmt.Sprintf(`
-			# Shutdown a device
-			%[1]s device action run my-device power-off
-
-			# Use the predefined action aliases
-			%[1]s device power-off my-device
-			%[1]s device power-on my-device
-		`, commands.Name)),
+      # Shutdown a device
+      %[1]s device action run my-device power-off
+      
+      # Use the predefined action aliases
+      %[1]s device power-off my-device
+      %[1]s device power-on my-device
+		`, app.Name)),
 		Args:              cobra.ExactArgs(2),
 		ValidArgsFunction: d.CompleteArg,
 		RunE:              d.Run,
@@ -127,7 +130,7 @@ func (d *deviceActionRunCommandPreset) CompleteArg(cmd *cobra.Command, args []st
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (d deviceActionRunCommandPreset) Build() *cobra.Command {
+func (d deviceActionRunCommandPreset) Build(app commands.Application) *cobra.Command {
 	return &cobra.Command{
 		Use:   string(d) + " DEVICE",
 		Short: "Run " + string(d) + " action on device",
@@ -135,27 +138,30 @@ func (d deviceActionRunCommandPreset) Build() *cobra.Command {
 			Runs the %[2]s action on the specified device.
 
 			This is a shortcut for "%[1]s mac-bare-metal device action run DEVICE %[2]s".
-		`, commands.Name, string(d))),
+		`, app.Name, string(d))),
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: d.CompleteArg,
 		RunE:              d.Run,
 	}
 }
 
-func DeviceWorkflowCommand() *cobra.Command {
+func DeviceWorkflowCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "workflow",
 		Short: "Manage mac bare metal device workflows",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-			# List all available workflows for a specific device
-			%[1]s mac-bare-metal device workflow list my-device
-
-			# Run the create snaphot workflow on a device
-			%[1]s mac-bare-metal device workflow run my-device create_snapshot
-		`, commands.Name)),
+      # List all available workflows for a specific device
+      %[1]s mac-bare-metal device workflow list my-device
+      
+      # Run the create snaphot workflow on a device
+      %[1]s mac-bare-metal device workflow run my-device create_snapshot
+		`, app.Name)),
 	}
 
-	commands.Add(cmd, &deviceWorkflowListCommand{}, &deviceWorkflowRunCommand{})
+	commands.Add(app, cmd,
+		&deviceWorkflowListCommand{},
+		&deviceWorkflowRunCommand{},
+	)
 
 	return cmd
 }
@@ -187,7 +193,7 @@ func (d *deviceWorkflowListCommand) CompleteArg(cmd *cobra.Command, args []strin
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (d *deviceWorkflowListCommand) Build() *cobra.Command {
+func (d *deviceWorkflowListCommand) Build(app commands.Application) *cobra.Command {
 	return &cobra.Command{
 		Use:               "list DEVICE",
 		Short:             "List device workflows",
@@ -248,7 +254,7 @@ func (d *deviceWorkflowRunCommand) CompleteArg(cmd *cobra.Command, args []string
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (d *deviceWorkflowRunCommand) Build() *cobra.Command {
+func (d *deviceWorkflowRunCommand) Build(app commands.Application) *cobra.Command {
 	return &cobra.Command{
 		Use:               "run DEVICE WORKFLOW",
 		Short:             "Run workflow on device",

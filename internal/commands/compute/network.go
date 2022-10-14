@@ -14,20 +14,25 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func NetworkCommand() *cobra.Command {
+func NetworkCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "network",
 		Short: "Manage compute networks",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-	  		# List all networks
-			%[1]s compute network list
-
-			# Create a new network
-			%[1]s compute network create --name my-network --location ALP1
-		`, commands.Name)),
+      # List all networks
+      %[1]s compute network list
+      
+      # Create a new network
+      %[1]s compute network create --name my-network --location ALP1
+		`, app.Name)),
 	}
 
-	commands.Add(cmd, &networkListCommand{}, &networkCreateCommand{}, &networkUpdateCommand{}, &networkDeleteCommand{})
+	commands.Add(app, cmd,
+		&networkListCommand{},
+		&networkCreateCommand{},
+		&networkUpdateCommand{},
+		&networkDeleteCommand{},
+	)
 
 	return cmd
 }
@@ -53,7 +58,7 @@ func (n *networkListCommand) CompleteArg(cmd *cobra.Command, args []string, toCo
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (n *networkListCommand) Build() *cobra.Command {
+func (n *networkListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list",
 		Aliases:           []string{"show", "ls", "get"},
@@ -144,21 +149,21 @@ func (n *networkCreateCommand) CompleteArg(cmd *cobra.Command, args []string, to
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (n *networkCreateCommand) Build() *cobra.Command {
+func (n *networkCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a network",
 		Long:  "Creates a new network",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-			# Create a new network using default cidr
-			%[1]s compute network create --name my-network --location ALP1
-
-			# Create a new network using custom cidr
-			%[1]s compute network create --name my-network --location ALP1 --cidr 10.0.0.0/24
-
-			# Create a new network using custom allocation pool
-			%[1]s compute network create --name my-network --location ALP1 --cidr 10.0.0.0/16 --allocation-pool-start 10.0.1.0 --allocation-pool-end 10.0.1.255
-		`, commands.Name)),
+      # Create a new network using default cidr
+      %[1]s compute network create --name my-network --location ALP1
+      
+      # Create a new network using custom cidr
+      %[1]s compute network create --name my-network --location ALP1 --cidr 10.0.0.0/24
+      
+      # Create a new network using custom allocation pool
+      %[1]s compute network create --name my-network --location ALP1 --cidr 10.0.0.0/16 --allocation-pool-start 10.0.1.0 --allocation-pool-end 10.0.1.255
+		`, app.Name)),
 		ValidArgsFunction: n.CompleteArg,
 		RunE:              n.Run,
 	}
@@ -265,7 +270,7 @@ func (n *networkUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, to
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (n *networkUpdateCommand) Build() *cobra.Command {
+func (n *networkUpdateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "update NETWORK",
 		Short:             "Update network",
@@ -316,7 +321,7 @@ func (n *networkDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, to
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (n *networkDeleteCommand) Build() *cobra.Command {
+func (n *networkDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "delete NETWORK",
 		Short:             "Delete network",

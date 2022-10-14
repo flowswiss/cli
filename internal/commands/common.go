@@ -13,12 +13,12 @@ import (
 )
 
 type CommandBuilder interface {
-	Build() *cobra.Command
+	Build(app Application) *cobra.Command
 }
 
-func Add(parent *cobra.Command, builder ...CommandBuilder) {
+func Add(app Application, parent *cobra.Command, builder ...CommandBuilder) {
 	for _, b := range builder {
-		parent.AddCommand(b.Build())
+		parent.AddCommand(b.Build(app))
 	}
 }
 

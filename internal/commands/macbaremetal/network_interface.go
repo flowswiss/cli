@@ -1,4 +1,4 @@
-package compute
+package macbaremetal
 
 import (
 	"context"
@@ -11,21 +11,24 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func NetworkInterfaceCommands() *cobra.Command {
+func NetworkInterfaceCommands(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "interface",
 		Aliases: []string{"interfaces", "networkinterface", "networkinterfaces", "network-interface", "network-interfaces"},
 		Short:   "Manage network interfaces",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-  			# List network interfaces of a device
-	  		%[1]s mac-bare-metal device interface list my-device
-
-			# Update security group of a network interface
-			%[1]s mac-bare-metal device interface update my-device 1.1.1.1 --security-group default
-		`, commands.Name)),
+      # List network interfaces of a device
+      %[1]s mac-bare-metal device interface list my-device
+      
+      # Update security group of a network interface
+      %[1]s mac-bare-metal device interface update my-device 1.1.1.1 --security-group default
+		`, app.Name)),
 	}
 
-	commands.Add(cmd, &networkInterfaceListCommand{}, &networkInterfaceUpdateCommand{})
+	commands.Add(app, cmd,
+		&networkInterfaceListCommand{},
+		&networkInterfaceUpdateCommand{},
+	)
 
 	return cmd
 }
@@ -55,7 +58,7 @@ func (n *networkInterfaceListCommand) CompleteArg(cmd *cobra.Command, args []str
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (n *networkInterfaceListCommand) Build() *cobra.Command {
+func (n *networkInterfaceListCommand) Build(app commands.Application) *cobra.Command {
 	return &cobra.Command{
 		Use:               "list DEVICE",
 		Aliases:           []string{"show", "ls", "get"},
@@ -123,7 +126,7 @@ func (n *networkInterfaceUpdateCommand) CompleteArg(cmd *cobra.Command, args []s
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (n *networkInterfaceUpdateCommand) Build() *cobra.Command {
+func (n *networkInterfaceUpdateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "update DEVICE INTERFACE",
 		Short:             "Update network interface",

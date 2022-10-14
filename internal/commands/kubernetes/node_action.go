@@ -1,4 +1,4 @@
-package compute
+package kubernetes
 
 import (
 	"fmt"
@@ -10,14 +10,14 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func NodeActionCommand() *cobra.Command {
+func NodeActionCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "action",
 		Aliases: []string{"actions"},
 		Short:   "Manage your kubernetes node actions",
 	}
 
-	commands.Add(cmd,
+	commands.Add(app, cmd,
 		&nodeActionListCommand{},
 		&nodeActionRunCommand{},
 	)
@@ -69,7 +69,7 @@ func (n *nodeActionListCommand) CompleteArg(cmd *cobra.Command, args []string, t
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (n *nodeActionListCommand) Build() *cobra.Command {
+func (n *nodeActionListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list CLUSTER NODE",
 		Aliases:           []string{"show", "ls", "get"},
@@ -163,7 +163,7 @@ func (n *nodeActionRunCommand) CompleteArg(cmd *cobra.Command, args []string, to
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (n *nodeActionRunCommand) Build() *cobra.Command {
+func (n *nodeActionRunCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "run CLUSTER NODE ACTION",
 		Short:             "Run action",

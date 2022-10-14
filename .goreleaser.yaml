@@ -7,20 +7,7 @@ builds:
     main: ./cmd/flow
     binary: flow
     ldflags:
-      - '-X github.com/flowswiss/cli/v2/internal/commands.Version={{.Version}}'
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-      - windows
-      - darwin
-  - id: cloudbit
-    main: ./cmd/flow
-    binary: cloudbit
-    ldflags:
-      - '-X github.com/flowswiss/cli/v2/internal/commands.Version={{.Version}}'
-    tags:
-      - cloudbit
+      - '-X main.Version={{.Version}}'
     env:
       - CGO_ENABLED=0
     goos:
@@ -32,25 +19,12 @@ universal_binaries:
   - id: flow
     replace: false
     name_template: flow
-  - id: cloudbit
-    replace: false
-    name_template: flow
 
 archives:
   - id: flow
     builds:
       - flow
     name_template: flow-{{.Version}}-{{.Os}}-{{.Arch}}
-    replacements:
-      all: universal
-      386: i386
-    format_overrides:
-      - goos: windows
-        format: zip
-  - id: cloudbit
-    builds:
-      - cloudbit
-    name_template: cloudbit-{{.Version}}-{{.Os}}-{{.Arch}}
     replacements:
       all: universal
       386: i386

@@ -1,4 +1,4 @@
-package compute
+package kubernetes
 
 import (
 	"github.com/spf13/cobra"
@@ -6,19 +6,15 @@ import (
 	"github.com/flowswiss/cli/v2/internal/commands"
 )
 
-func AddCommands(parent *cobra.Command) {
+func Module(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "kubernetes",
 		Short: "Manage your kubernetes clusters",
 	}
 
 	cmd.AddCommand(
-		ClusterCommand(),
+		ClusterCommand(app),
 	)
 
-	parent.AddCommand(cmd)
-}
-
-func init() {
-	AddCommands(&commands.Root)
+	return cmd
 }

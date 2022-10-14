@@ -11,21 +11,21 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func ServerActionCommand() *cobra.Command {
+func ServerActionCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "action",
 		Aliases: []string{"actions"},
 		Short:   "Manage compute server actions",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-			# List all available actions for a specific server
-			%[1]s compute server action list my-server
-
-			# Run an action on a server
-			%[1]s compute server action run my-server stop
-		`, commands.Name)),
+      # List all available actions for a specific server
+      %[1]s compute server action list my-server
+      
+      # Run an action on a server
+      %[1]s compute server action run my-server stop
+		`, app.Name)),
 	}
 
-	commands.Add(cmd, &serverActionListCommand{}, &serverActionRunCommand{})
+	commands.Add(app, cmd, &serverActionListCommand{}, &serverActionRunCommand{})
 
 	return cmd
 }
@@ -55,7 +55,7 @@ func (s *serverActionListCommand) CompleteArg(cmd *cobra.Command, args []string,
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *serverActionListCommand) Build() *cobra.Command {
+func (s *serverActionListCommand) Build(app commands.Application) *cobra.Command {
 	return &cobra.Command{
 		Use:               "list SERVER",
 		Aliases:           []string{"show", "ls", "get"},
@@ -91,7 +91,7 @@ func (s *serverActionRunCommand) CompleteArg(cmd *cobra.Command, args []string, 
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *serverActionRunCommand) Build() *cobra.Command {
+func (s *serverActionRunCommand) Build(app commands.Application) *cobra.Command {
 	return &cobra.Command{
 		Use:   "run SERVER ACTION",
 		Short: "Run action on server",
@@ -99,15 +99,15 @@ func (s *serverActionRunCommand) Build() *cobra.Command {
 			Runs the specified action on the specified server.
 
 			To get a list of all available actions for a specific server, run "%[1]s compute server action list SERVER".
-		`, commands.Name)),
+		`, app.Name)),
 		Example: commands.FormatExamples(fmt.Sprintf(`
-			# Shutdown a server
-			%[1]s server action run my-server stop
-
-			# Use the predefined action aliases
-			%[1]s server stop my-server
-			%[1]s server start my-server
-		`, commands.Name)), // TODO
+      # Shutdown a server
+      %[1]s server action run my-server stop
+      
+      # Use the predefined action aliases
+      %[1]s server stop my-server
+      %[1]s server start my-server
+		`, app.Name)), // TODO
 		Args:              cobra.ExactArgs(2),
 		ValidArgsFunction: s.CompleteArg,
 		RunE:              s.Run,
@@ -128,7 +128,7 @@ func (s *serverActionRunCommandPreset) CompleteArg(cmd *cobra.Command, args []st
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s serverActionRunCommandPreset) Build() *cobra.Command {
+func (s serverActionRunCommandPreset) Build(app commands.Application) *cobra.Command {
 	return &cobra.Command{
 		Use:   string(s) + " SERVER",
 		Short: "Run " + string(s) + " action on the server",
@@ -136,7 +136,7 @@ func (s serverActionRunCommandPreset) Build() *cobra.Command {
 			Runs the %[2]s action on the specified server.
 
 			This is a shortcut for "%[1]s compute server action run SERVER %[2]s".
-		`, commands.Name, string(s))),
+		`, app.Name, string(s))),
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: s.CompleteArg,
 		RunE:              s.Run,

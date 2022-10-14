@@ -12,14 +12,14 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func LoadBalancerPoolCommand() *cobra.Command {
+func LoadBalancerPoolCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "pool",
 		Aliases: []string{"pools"},
 		Short:   "Manage load balancer pools",
 	}
 
-	commands.Add(cmd,
+	commands.Add(app, cmd,
 		&loadBalancerPoolListCommand{},
 		&loadBalancerPoolCreateCommand{},
 		&loadBalancerPoolUpdateCommand{},
@@ -59,7 +59,7 @@ func (l *loadBalancerPoolListCommand) CompleteArg(cmd *cobra.Command, args []str
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (l *loadBalancerPoolListCommand) Build() *cobra.Command {
+func (l *loadBalancerPoolListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list LOAD-BALANCER",
 		Aliases:           []string{"show", "ls", "get"},
@@ -176,7 +176,7 @@ func (l *loadBalancerPoolCreateCommand) CompleteArg(cmd *cobra.Command, args []s
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (l *loadBalancerPoolCreateCommand) Build() *cobra.Command {
+func (l *loadBalancerPoolCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "create LOAD-BALANCER",
 		Short:             "Create a load balancer pool",
@@ -308,7 +308,7 @@ func (l *loadBalancerPoolUpdateCommand) CompleteArg(cmd *cobra.Command, args []s
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (l *loadBalancerPoolUpdateCommand) Build() *cobra.Command {
+func (l *loadBalancerPoolUpdateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update LOAD-BALANCER POOL",
 		Short: "Update load balancer pool",
@@ -377,7 +377,7 @@ func (l *loadBalancerPoolDeleteCommand) CompleteArg(cmd *cobra.Command, args []s
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (l *loadBalancerPoolDeleteCommand) Build() *cobra.Command {
+func (l *loadBalancerPoolDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "delete LOAD-BALANCER POOL",
 		Short:             "Delete load balancer pool",

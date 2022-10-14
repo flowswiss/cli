@@ -11,14 +11,14 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func SnapshotCommand() *cobra.Command {
+func SnapshotCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "snapshot",
 		Aliases: []string{"snapshots"},
 		Short:   "Manage compute snapshots",
 	}
 
-	commands.Add(cmd,
+	commands.Add(app, cmd,
 		&snapshotListCommand{},
 		&snapshotCreateCommand{},
 		&snapshotUpdateCommand{},
@@ -49,7 +49,7 @@ func (s *snapshotListCommand) CompleteArg(cmd *cobra.Command, args []string, toC
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *snapshotListCommand) Build() *cobra.Command {
+func (s *snapshotListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list",
 		Aliases:           []string{"show", "ls", "get"},
@@ -92,7 +92,7 @@ func (s *snapshotCreateCommand) CompleteArg(cmd *cobra.Command, args []string, t
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *snapshotCreateCommand) Build() *cobra.Command {
+func (s *snapshotCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "create",
 		Aliases:           []string{"add", "new"},
@@ -141,7 +141,7 @@ func (s *snapshotUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, t
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *snapshotUpdateCommand) Build() *cobra.Command {
+func (s *snapshotUpdateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "update SNAPSHOT",
 		Short:             "Update snapshot",
@@ -186,7 +186,7 @@ func (s *snapshotDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, t
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *snapshotDeleteCommand) Build() *cobra.Command {
+func (s *snapshotDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "delete SNAPSHOT",
 		Short:             "Delete a snapshot",

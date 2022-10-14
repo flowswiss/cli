@@ -1,4 +1,4 @@
-package compute
+package kubernetes
 
 import (
 	"context"
@@ -14,14 +14,14 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func ClusterCommand() *cobra.Command {
+func ClusterCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "cluster",
 		Aliases: []string{"clusters"},
 		Short:   "Manage your kubernetes cluster",
 	}
 
-	commands.Add(cmd,
+	commands.Add(app, cmd,
 		&clusterListCommand{},
 		&clusterCreateCommand{},
 		&clusterUpdateCommand{},
@@ -31,10 +31,10 @@ func ClusterCommand() *cobra.Command {
 	)
 
 	cmd.AddCommand(
-		ClusterActionCommand(),
-		LoadBalancerCommand(),
-		NodeCommand(),
-		VolumeCommand(),
+		ClusterActionCommand(app),
+		LoadBalancerCommand(app),
+		NodeCommand(app),
+		VolumeCommand(app),
 	)
 
 	return cmd
@@ -61,7 +61,7 @@ func (c *clusterListCommand) CompleteArg(cmd *cobra.Command, args []string, toCo
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (c *clusterListCommand) Build() *cobra.Command {
+func (c *clusterListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list",
 		Aliases:           []string{"show", "ls", "get"},
@@ -155,15 +155,15 @@ func (c *clusterCreateCommand) CompleteArg(cmd *cobra.Command, args []string, to
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (c *clusterCreateCommand) Build() *cobra.Command {
+func (c *clusterCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create new cluster",
 		Long:  "Creates a new kubernetes cluster.",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-			# Create a new cluster
+      # Create a new cluster
       %[1]s kubernetes cluster create --name my-cluster --location ALP1 --worker-count 3 --worker-product k1.1x2
-		`, commands.Name)),
+		`, app.Name)),
 		ValidArgsFunction: c.CompleteArg,
 		RunE:              c.Run,
 	}
@@ -212,7 +212,7 @@ func (c *clusterUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, to
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (c *clusterUpdateCommand) Build() *cobra.Command {
+func (c *clusterUpdateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "update CLUSTER",
 		Short:             "Update cluster",
@@ -258,7 +258,7 @@ func (c *clusterDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, to
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (c *clusterDeleteCommand) Build() *cobra.Command {
+func (c *clusterDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "delete CLUSTER",
 		Short:             "Delete cluster",
@@ -317,7 +317,7 @@ func (c *clusterUpgradeCommand) CompleteArg(cmd *cobra.Command, args []string, t
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (c *clusterUpgradeCommand) Build() *cobra.Command {
+func (c *clusterUpgradeCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "upgrade CLUSTER",
 		Short:             "Upgrade cluster",
@@ -367,7 +367,7 @@ func (c *clusterKubeConfigCommand) CompleteArg(cmd *cobra.Command, args []string
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (c *clusterKubeConfigCommand) Build() *cobra.Command {
+func (c *clusterKubeConfigCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "kube-config CLUSTER",
 		Short:             "Display kube config",

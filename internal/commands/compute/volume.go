@@ -12,14 +12,14 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func VolumeCommand() *cobra.Command {
+func VolumeCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "volume",
 		Aliases: []string{"volumes"},
 		Short:   "Manage compute volumes",
 	}
 
-	commands.Add(cmd,
+	commands.Add(app, cmd,
 		&volumeListCommand{},
 		&volumeCreateCommand{},
 		&volumeAttachCommand{},
@@ -53,7 +53,7 @@ func (v *volumeListCommand) CompleteArg(cmd *cobra.Command, args []string, toCom
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (v *volumeListCommand) Build() *cobra.Command {
+func (v *volumeListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list",
 		Aliases:           []string{"show", "ls", "get"},
@@ -137,7 +137,7 @@ func (v *volumeCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toC
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (v *volumeCreateCommand) Build() *cobra.Command {
+func (v *volumeCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "create",
 		Aliases:           []string{"add", "new"},
@@ -198,7 +198,7 @@ func (v *volumeAttachCommand) CompleteArg(cmd *cobra.Command, args []string, toC
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (v *volumeAttachCommand) Build() *cobra.Command {
+func (v *volumeAttachCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "attach VOLUME SERVER",
 		Short:             "Attach a volume to a server",
@@ -262,7 +262,7 @@ func (v *volumeDetachCommand) CompleteArg(cmd *cobra.Command, args []string, toC
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (v *volumeDetachCommand) Build() *cobra.Command {
+func (v *volumeDetachCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "detach VOLUME SERVER",
 		Short:             "Detach a volume from a server",
@@ -320,7 +320,7 @@ func (v *volumeRevertCommand) CompleteArg(cmd *cobra.Command, args []string, toC
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (v *volumeRevertCommand) Build() *cobra.Command {
+func (v *volumeRevertCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "revert VOLUME SNAPSHOT",
 		Short:             "Revert a volume to a snapshot",
@@ -363,7 +363,7 @@ func (v *volumeExpandCommand) CompleteArg(cmd *cobra.Command, args []string, toC
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (v *volumeExpandCommand) Build() *cobra.Command {
+func (v *volumeExpandCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "expand VOLUME",
 		Short:             "Expand a volume",
@@ -411,7 +411,7 @@ func (v *volumeDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toC
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (v *volumeDeleteCommand) Build() *cobra.Command {
+func (v *volumeDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "delete VOLUME",
 		Short:             "Delete a volume",

@@ -1,4 +1,4 @@
-package compute
+package objectstorage
 
 import (
 	"fmt"
@@ -11,14 +11,19 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func InstanceCommand() *cobra.Command {
+func InstanceCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "instance",
 		Aliases: []string{"instances"},
 		Short:   "Manage object storage instances",
 	}
 
-	commands.Add(cmd, &instanceListCommand{}, &instanceCreateCommand{}, &instanceDeleteCommand{}, &credentialsCommand{})
+	commands.Add(app, cmd,
+		&instanceListCommand{},
+		&instanceCreateCommand{},
+		&instanceDeleteCommand{},
+		&credentialsCommand{},
+	)
 
 	return cmd
 }
@@ -40,7 +45,7 @@ func (i *instanceListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
-func (i *instanceListCommand) Build() *cobra.Command {
+func (i *instanceListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"show", "ls", "get"},
@@ -76,7 +81,7 @@ func (i *instanceCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(instance)
 }
 
-func (i *instanceCreateCommand) Build() *cobra.Command {
+func (i *instanceCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "create",
 		Aliases: []string{"add", "new"},
@@ -122,7 +127,7 @@ func (i *instanceDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (i *instanceDeleteCommand) Build() *cobra.Command {
+func (i *instanceDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete INSTANCE",
 		Aliases: []string{"del", "remove", "rm"},
@@ -154,7 +159,7 @@ func (c *credentialsCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(credentials)
 }
 
-func (c *credentialsCommand) Build() *cobra.Command {
+func (c *credentialsCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "credentials",
 		Short: "Show object storage credentials",

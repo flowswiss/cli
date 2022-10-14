@@ -76,8 +76,13 @@ func PrintStdout(val interface{}) error {
 	return Print(Stdout, val)
 }
 
-func load() {
-	cfg, err := loadConfig()
+func loadConfig(app Application) {
+	if err := initViper(app); err != nil {
+		Stderr.Errorf("%v\n", err)
+		os.Exit(1)
+	}
+
+	cfg, err := buildConfig(app)
 	if err != nil {
 		Stderr.Errorf("%v\n", err)
 		os.Exit(1)
@@ -86,11 +91,7 @@ func load() {
 	Config = cfg
 }
 
-func loadConfig() (config, error) {
-	if err := initViper(); err != nil {
-		return config{}, err
-	}
-
+func buildConfig(app Application) (config, error) {
 	endpoint := viper.GetString(FlagEndpoint)
 	token := viper.GetString(FlagToken)
 
@@ -101,7 +102,7 @@ func loadConfig() (config, error) {
 	opts := []goclient.Option{
 		goclient.WithBase(endpoint),
 		goclient.WithToken(token),
-		goclient.WithUserAgent(fmt.Sprintf("%s-cli/%s", Name, Version)),
+		goclient.WithUserAgent(fmt.Sprintf("%s-cli/%s", app.Name, app.Version)),
 	}
 
 	if viper.GetBool(FlagDump) {
@@ -126,14 +127,28 @@ func loadConfig() (config, error) {
 	}, nil
 }
 
-func initViper() error {
+func setupFlags(app Application, root *cobra.Command) {
+	baseFlagSet = pflag.NewFlagSet("base", pflag.ContinueOnError)
+	baseFlagSet.String(FlagEndpoint, app.Endpoint, "base endpoint to use for all api requests")
+	baseFlagSet.String(FlagToken, "", "authentication token to use for all api requests")
+	baseFlagSet.Bool(FlagDump, false, "dump all requests and responses to stderr")
+	baseFlagSet.Bool(FlagDryRun, false, "dry run mode, print requests to stdout instead of sending them to the server")
+	baseFlagSet.StringP(FlagFormat, "o", "table", fmt.Sprintf("output format to use. allowed values: %s, %s or %s", FormatTable, FormatCSV, FormatJSON))
+
+	_ = baseFlagSet.MarkHidden(FlagToken)
+
+	root.PersistentFlags().StringVar(&configFile, "config", "", fmt.Sprintf("config file (default is $HOME/.%s/config.json", app.Name))
+	root.PersistentFlags().AddFlagSet(baseFlagSet)
+}
+
+func initViper(app Application) error {
 	if configDir == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return err
 		}
 
-		configDir = filepath.Join(home, ".flow")
+		configDir = filepath.Join(home, "."+app.Name)
 	}
 
 	if err := os.Mkdir(configDir, 0755); err != nil && !errors.Is(err, os.ErrExist) {
@@ -150,7 +165,7 @@ func initViper() error {
 		viper.SetConfigFile(configFile)
 	}
 
-	viper.SetEnvPrefix("flow")
+	viper.SetEnvPrefix(app.Name)
 	viper.AutomaticEnv()
 
 	if err := viper.BindPFlags(baseFlagSet); err != nil {
@@ -165,20 +180,4 @@ func initViper() error {
 	}
 
 	return nil
-}
-
-func init() {
-	baseFlagSet = pflag.NewFlagSet("base", pflag.ContinueOnError)
-	baseFlagSet.String(FlagEndpoint, DefaultEndpoint, "base endpoint to use for all api requests")
-	baseFlagSet.String(FlagToken, "", "authentication token to use for all api requests")
-	baseFlagSet.Bool(FlagDump, false, "dump all requests and responses to stderr")
-	baseFlagSet.Bool(FlagDryRun, false, "dry run mode, print requests to stdout instead of sending them to the server")
-	baseFlagSet.StringP(FlagFormat, "o", "table", fmt.Sprintf("output format to use. allowed values: %s, %s or %s", FormatTable, FormatCSV, FormatJSON))
-
-	_ = baseFlagSet.MarkHidden(FlagToken)
-
-	Root.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.flow/config.json")
-	Root.PersistentFlags().AddFlagSet(baseFlagSet)
-
-	cobra.OnInitialize(load)
 }

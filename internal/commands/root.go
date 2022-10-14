@@ -6,14 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/flowswiss/cli/v2/internal/commands/build"
 	"github.com/flowswiss/cli/v2/pkg/console"
-)
-
-var (
-	Name            = build.Name
-	Version         = "dev"
-	DefaultEndpoint = build.DefaultEndpoint
 )
 
 var (
@@ -21,15 +14,38 @@ var (
 	Stderr = console.NewConsoleOutput(os.Stderr)
 )
 
-var Root = cobra.Command{
-	Use:           Name,
-	Short:         build.Description,
-	Version:       Version,
-	SilenceErrors: true,
+var Root = cobra.Command{}
+
+type ModuleFactory func(app Application) *cobra.Command
+
+type Application struct {
+	Name        string
+	Description string
+	Version     string
+	Endpoint    string
+
+	Modules []ModuleFactory
 }
 
-func Run() {
-	err := Root.ExecuteContext(context.Background())
+func Run(app Application) {
+	root := cobra.Command{
+		Use:           app.Name,
+		Short:         app.Description,
+		Version:       app.Version,
+		SilenceErrors: true,
+	}
+
+	for _, module := range app.Modules {
+		cmd := module(app)
+		root.AddCommand(cmd)
+	}
+
+	setupFlags(app, &root)
+	cobra.OnInitialize(func() {
+		loadConfig(app)
+	})
+
+	err := root.ExecuteContext(context.Background())
 	if err != nil {
 		Stderr.Errorf("%v\n", err)
 		os.Exit(1)

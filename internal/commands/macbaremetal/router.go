@@ -1,4 +1,4 @@
-package compute
+package macbaremetal
 
 import (
 	"context"
@@ -11,14 +11,17 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func RouterCommand() *cobra.Command {
+func RouterCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "router",
 		Aliases: []string{"routers"},
 		Short:   "Manage mac bare metal routers",
 	}
 
-	commands.Add(cmd, &routerListCommand{}, &routerUpdateCommand{})
+	commands.Add(app, cmd,
+		&routerListCommand{},
+		&routerUpdateCommand{},
+	)
 
 	return cmd
 }
@@ -44,7 +47,7 @@ func (r *routerListCommand) CompleteArg(cmd *cobra.Command, args []string, toCom
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (r *routerListCommand) Build() *cobra.Command {
+func (r *routerListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list",
 		Aliases:           []string{"show", "ls", "get"},
@@ -98,7 +101,7 @@ func (r *routerUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toC
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (r *routerUpdateCommand) Build() *cobra.Command {
+func (r *routerUpdateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "update ROUTER",
 		Short:             "Update router",

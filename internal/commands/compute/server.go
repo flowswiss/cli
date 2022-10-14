@@ -18,24 +18,24 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func ServerCommand() *cobra.Command {
+func ServerCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "server",
 		Aliases: []string{"servers"},
 		Short:   "Manage your compute server",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-			# List all servers
-			%[1]s compute server list
-
-			# Create a new server
-			%[1]s compute server create --name my-server --location ALP1 --image linux-ubuntu-20.04-lts --product b1.4x8 --key-pair my-keypair
-
-			# Delete a server
-			%[1]s compute server delete my-server
-		`, commands.Name)),
+      # List all servers
+      %[1]s compute server list
+      
+      # Create a new server
+      %[1]s compute server create --name my-server --location ALP1 --image linux-ubuntu-20.04-lts --product b1.4x8 --key-pair my-keypair
+      
+      # Delete a server
+      %[1]s compute server delete my-server
+		`, app.Name)),
 	}
 
-	commands.Add(cmd,
+	commands.Add(app, cmd,
 		&serverListCommand{},
 		&serverCreateCommand{},
 		&serverUpdateCommand{},
@@ -43,13 +43,13 @@ func ServerCommand() *cobra.Command {
 		&serverDeleteCommand{},
 	)
 
-	commands.Add(cmd,
+	commands.Add(app, cmd,
 		serverActionRunCommandPreset("start"),
 		serverActionRunCommandPreset("stop"),
 		serverActionRunCommandPreset("restart"),
 	)
 
-	cmd.AddCommand(NetworkInterfaceCommand(), ServerActionCommand(), ServerVolumeCommand())
+	cmd.AddCommand(NetworkInterfaceCommand(app), ServerActionCommand(app), ServerVolumeCommand(app))
 
 	return cmd
 }
@@ -75,7 +75,7 @@ func (s *serverListCommand) CompleteArg(cmd *cobra.Command, args []string, toCom
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *serverListCommand) Build() *cobra.Command {
+func (s *serverListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list",
 		Aliases:           []string{"show", "ls", "get"},
@@ -246,18 +246,18 @@ func (s *serverCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toC
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *serverCreateCommand) Build() *cobra.Command {
+func (s *serverCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create new server",
 		Long:  "Creates a new compute server.",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-			# Create a new ubuntu server
-	  		%[1]s compute server create --name my-server --location ALP1 --image linux-ubuntu-20.04-lts --product b1.4x8 --key-pair my-keypair
-
-			# Create a new windows server
-	  		%[1]s compute server create --name my-server --location ALP1 --image microsoft-windows-server-2019 --product b1.2x8
-		`, commands.Name)), // TODO select correct image names
+      # Create a new ubuntu server
+      %[1]s compute server create --name my-server --location ALP1 --image linux-ubuntu-20.04-lts --product b1.4x8 --key-pair my-keypair
+      
+      # Create a new windows server
+      %[1]s compute server create --name my-server --location ALP1 --image microsoft-windows-server-2019 --product b1.2x8
+		`, app.Name)), // TODO select correct image names
 		ValidArgsFunction: s.CompleteArg,
 		RunE:              s.Run,
 	}
@@ -312,7 +312,7 @@ func (s *serverUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toC
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *serverUpdateCommand) Build() *cobra.Command {
+func (s *serverUpdateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "update SERVER",
 		Short:             "Update server",
@@ -379,7 +379,7 @@ func (s *serverUpgradeCommand) CompleteArg(cmd *cobra.Command, args []string, to
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *serverUpgradeCommand) Build() *cobra.Command {
+func (s *serverUpgradeCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "upgrade SERVER",
 		Short:             "Upgrade server",
@@ -428,18 +428,18 @@ func (s *serverDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toC
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *serverDeleteCommand) Build() *cobra.Command {
+func (s *serverDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete SERVER",
 		Short: "Delete server",
 		Long:  "Deletes a compute server.",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-			# Delete a server and elastic ips attached to it
-			%[1]s compute server delete my-server
-
-			# Delete a server, but keep elastic ips
-			%[1]s compute server delete my-server --detach-only
-		`, commands.Name)),
+      # Delete a server and elastic ips attached to it
+      %[1]s compute server delete my-server
+      
+      # Delete a server, but keep elastic ips
+      %[1]s compute server delete my-server --detach-only
+		`, app.Name)),
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: s.CompleteArg,
 		RunE:              s.Run,

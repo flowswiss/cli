@@ -1,4 +1,4 @@
-package compute
+package kubernetes
 
 import (
 	"github.com/spf13/cobra"
@@ -8,14 +8,14 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func LoadBalancerCommand() *cobra.Command {
+func LoadBalancerCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "load-balancer",
 		Aliases: []string{"load-balancers"},
 		Short:   "Manage your cluster load-balancer",
 	}
 
-	commands.Add(cmd,
+	commands.Add(app, cmd,
 		&loadBalancerListCommand{},
 	)
 
@@ -52,7 +52,7 @@ func (l *loadBalancerListCommand) CompleteArg(cmd *cobra.Command, args []string,
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (l *loadBalancerListCommand) Build() *cobra.Command {
+func (l *loadBalancerListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list CLUSTER",
 		Aliases:           []string{"show", "ls", "get"},

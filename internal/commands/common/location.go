@@ -8,13 +8,13 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func LocationCommand() *cobra.Command {
+func Location(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "location",
 		Short: "Manage datacenter locations",
 	}
 
-	commands.Add(cmd, &locationListCommand{})
+	commands.Add(app, cmd, &locationListCommand{})
 
 	return cmd
 }
@@ -40,7 +40,7 @@ func (l *locationListCommand) CompleteArg(cmd *cobra.Command, args []string, toC
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (l *locationListCommand) Build() *cobra.Command {
+func (l *locationListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list",
 		Short:             "List datacenter locations",

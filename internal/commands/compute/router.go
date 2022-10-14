@@ -12,21 +12,27 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func RouterCommand() *cobra.Command {
+func RouterCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "router",
 		Short: "Manage compute routers",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-	  		# List all routers
-			%[1]s compute router list
-
-			# Create a new router
-			%[1]s compute router create --name my-router --location ALP1
-		`, commands.Name)),
+      # List all routers
+      %[1]s compute router list
+      
+      # Create a new router
+      %[1]s compute router create --name my-router --location ALP1
+		`, app.Name)),
 	}
 
-	commands.Add(cmd, &routerListCommand{}, &routerCreateCommand{}, &routerUpdateCommand{}, &routerDeleteCommand{})
-	cmd.AddCommand(RouterInterfaceCommand(), RouterRouteCommand())
+	commands.Add(app, cmd,
+		&routerListCommand{},
+		&routerCreateCommand{},
+		&routerUpdateCommand{},
+		&routerDeleteCommand{},
+	)
+
+	cmd.AddCommand(RouterInterfaceCommand(app), RouterRouteCommand(app))
 
 	return cmd
 }
@@ -52,7 +58,7 @@ func (r *routerListCommand) CompleteArg(cmd *cobra.Command, args []string, toCom
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (r *routerListCommand) Build() *cobra.Command {
+func (r *routerListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list",
 		Aliases:           []string{"show", "ls", "get"},
@@ -99,7 +105,7 @@ func (r *routerCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toC
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (r *routerCreateCommand) Build() *cobra.Command {
+func (r *routerCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "create",
 		Short:             "Create a router",
@@ -161,7 +167,7 @@ func (r *routerUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toC
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (r *routerUpdateCommand) Build() *cobra.Command {
+func (r *routerUpdateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "update ROUTER",
 		Short:             "Update router",
@@ -212,7 +218,7 @@ func (r *routerDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toC
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (r *routerDeleteCommand) Build() *cobra.Command {
+func (r *routerDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "delete ROUTER",
 		Short:             "Delete router",

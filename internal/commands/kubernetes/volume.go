@@ -1,4 +1,4 @@
-package compute
+package kubernetes
 
 import (
 	"context"
@@ -11,14 +11,14 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func VolumeCommand() *cobra.Command {
+func VolumeCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "volume",
 		Aliases: []string{"volumes"},
 		Short:   "Manage your cluster volumes",
 	}
 
-	commands.Add(cmd,
+	commands.Add(app, cmd,
 		&volumeListCommand{},
 		&volumeDeleteCommand{},
 	)
@@ -56,7 +56,7 @@ func (v *volumeListCommand) CompleteArg(cmd *cobra.Command, args []string, toCom
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (v *volumeListCommand) Build() *cobra.Command {
+func (v *volumeListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list CLUSTER",
 		Aliases:           []string{"show", "ls", "get"},
@@ -117,7 +117,7 @@ func (v *volumeDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toC
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (v *volumeDeleteCommand) Build() *cobra.Command {
+func (v *volumeDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "delete CLUSTER VOLUME",
 		Short:             "Delete volume",

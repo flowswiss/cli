@@ -12,14 +12,19 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func NetworkInterfaceCommand() *cobra.Command {
+func NetworkInterfaceCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "network-interface",
 		Aliases: []string{"network-interfaces"},
 		Short:   "Manage network interfaces",
 	}
 
-	commands.Add(cmd, &networkInterfaceListCommand{}, &networkInterfaceCreateCommand{}, &networkInterfaceUpdateCommand{}, &networkInterfaceDeleteCommand{})
+	commands.Add(app, cmd,
+		&networkInterfaceListCommand{},
+		&networkInterfaceCreateCommand{},
+		&networkInterfaceUpdateCommand{},
+		&networkInterfaceDeleteCommand{},
+	)
 
 	return cmd
 }
@@ -56,7 +61,7 @@ func (n *networkInterfaceListCommand) CompleteArg(cmd *cobra.Command, args []str
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (n networkInterfaceListCommand) Build() *cobra.Command {
+func (n networkInterfaceListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list SERVER",
 		Aliases:           []string{"show", "ls", "get"},
@@ -123,7 +128,7 @@ func (n *networkInterfaceCreateCommand) CompleteArg(cmd *cobra.Command, args []s
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (n *networkInterfaceCreateCommand) Build() *cobra.Command {
+func (n *networkInterfaceCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "create SERVER",
 		Aliases:           []string{"add", "new"},
@@ -217,7 +222,7 @@ func (n *networkInterfaceUpdateCommand) CompleteArg(cmd *cobra.Command, args []s
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (n *networkInterfaceUpdateCommand) Build() *cobra.Command {
+func (n *networkInterfaceUpdateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "update SERVER NETWORK-INTERFACE",
 		Short:             "Update a network interface",
@@ -285,7 +290,7 @@ func (n *networkInterfaceDeleteCommand) CompleteArg(cmd *cobra.Command, args []s
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (n *networkInterfaceDeleteCommand) Build() *cobra.Command {
+func (n *networkInterfaceDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "delete SERVER NETWORK-INTERFACE",
 		Aliases:           []string{"remove", "rm", "delete", "del"},

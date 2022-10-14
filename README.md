@@ -1,8 +1,8 @@
 # Flow Swiss CLI
 
-This command line interface serves as an additional frontend for the [Flow Swiss](https://my.flow.swiss) and [Cloudbit](https://my.cloudbit.ch) Platforms.
+This command line interface serves as an additional frontend for the [Flow Swiss](https://my.flow.swiss) platforms.
 
-![Build](https://github.com/flowswiss/cli/workflows/Build/badge.svg)
+![Test](https://github.com/flowswiss/cli/workflows/test/badge.svg)
 
 ## Installation
 
@@ -18,9 +18,8 @@ release section in the github repository.
 ## Usage
 
 After downloading you first need to authenticate the cli with using application
-token. You can get a new token by creating one in the 
-[Flow Swiss](https://my.flow.swiss/#/organization/applications) or 
-[Cloudbit](https://my.cloudbit.ch/#/organization/applications) portals.
+token. You can get a new token by creating one in the [Flow Swiss](https://my.flow.swiss/#/organization/applications) 
+portal.
 
 Once you have a token, you need to set it up in the cli. You can do this by
 creating a `.flow/config.json` file in your home directory with the following

@@ -10,20 +10,20 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func ProductCommand() *cobra.Command {
+func Product(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "product",
 		Short: "Manage products",
 	}
 
-	commands.Add(cmd, &productListCommand{})
+	commands.Add(app, cmd, &productListCommand{})
 
 	categoryCmd := &cobra.Command{
 		Use:   "category",
 		Short: "Manage product categories",
 	}
 
-	commands.Add(categoryCmd, &productCategoryListCommand{})
+	commands.Add(app, categoryCmd, &productCategoryListCommand{})
 	cmd.AddCommand(categoryCmd)
 
 	return cmd
@@ -63,7 +63,7 @@ func (p *productListCommand) CompleteArg(cmd *cobra.Command, args []string, toCo
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (p *productListCommand) Build() *cobra.Command {
+func (p *productListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list [CATEGORY]",
 		Short:             "List products",
@@ -99,7 +99,7 @@ func (p *productCategoryListCommand) CompleteArg(cmd *cobra.Command, args []stri
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (p *productCategoryListCommand) Build() *cobra.Command {
+func (p *productCategoryListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list",
 		Short:             "List product categories",

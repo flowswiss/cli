@@ -12,13 +12,17 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func RouterInterfaceCommand() *cobra.Command {
+func RouterInterfaceCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "interface",
 		Short: "Manage compute router interfaces",
 	}
 
-	commands.Add(cmd, &routerInterfaceListCommand{}, &routerInterfaceCreateCommand{}, &routerInterfaceDeleteCommand{})
+	commands.Add(app, cmd,
+		&routerInterfaceListCommand{},
+		&routerInterfaceCreateCommand{},
+		&routerInterfaceDeleteCommand{},
+	)
 
 	return cmd
 }
@@ -53,7 +57,7 @@ func (r *routerInterfaceListCommand) CompleteArg(cmd *cobra.Command, args []stri
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (r *routerInterfaceListCommand) Build() *cobra.Command {
+func (r *routerInterfaceListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list ROUTER",
 		Aliases:           []string{"show", "ls", "get"},
@@ -118,7 +122,7 @@ func (r *routerInterfaceCreateCommand) CompleteArg(cmd *cobra.Command, args []st
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (r *routerInterfaceCreateCommand) Build() *cobra.Command {
+func (r *routerInterfaceCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "create ROUTER",
 		Short:             "Create a router interface",
@@ -186,7 +190,7 @@ func (r *routerInterfaceDeleteCommand) CompleteArg(cmd *cobra.Command, args []st
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (r *routerInterfaceDeleteCommand) Build() *cobra.Command {
+func (r *routerInterfaceDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "delete ROUTER INTERFACE",
 		Short:             "Delete router interface",

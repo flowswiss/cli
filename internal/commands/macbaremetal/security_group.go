@@ -1,4 +1,4 @@
-package compute
+package macbaremetal
 
 import (
 	"context"
@@ -11,15 +11,21 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func SecurityGroupCommand() *cobra.Command {
+func SecurityGroupCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "security-group",
 		Aliases: []string{"security-groups", "securitygroup", "securitygroups"},
 		Short:   "Manage mac bare metal security groups",
 	}
 
-	commands.Add(cmd, &securityGroupListCommand{}, &securityGroupCreateCommand{}, &securityGroupUpdateCommand{}, &securityGroupDeleteCommand{})
-	cmd.AddCommand(SecurityGroupRuleCommand())
+	commands.Add(app, cmd,
+		&securityGroupListCommand{},
+		&securityGroupCreateCommand{},
+		&securityGroupUpdateCommand{},
+		&securityGroupDeleteCommand{},
+	)
+
+	cmd.AddCommand(SecurityGroupRuleCommand(app))
 
 	return cmd
 }
@@ -45,7 +51,7 @@ func (s *securityGroupListCommand) CompleteArg(cmd *cobra.Command, args []string
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *securityGroupListCommand) Build() *cobra.Command {
+func (s *securityGroupListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list",
 		Aliases:           []string{"show", "ls", "get"},
@@ -95,7 +101,7 @@ func (s *securityGroupCreateCommand) CompleteArg(cmd *cobra.Command, args []stri
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *securityGroupCreateCommand) Build() *cobra.Command {
+func (s *securityGroupCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "create",
 		Aliases:           []string{"add", "new"},
@@ -154,7 +160,7 @@ func (s *securityGroupUpdateCommand) CompleteArg(cmd *cobra.Command, args []stri
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *securityGroupUpdateCommand) Build() *cobra.Command {
+func (s *securityGroupUpdateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "update SECURITY-GROUP",
 		Short:             "Update security group",
@@ -208,7 +214,7 @@ func (s *securityGroupDeleteCommand) CompleteArg(cmd *cobra.Command, args []stri
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *securityGroupDeleteCommand) Build() *cobra.Command {
+func (s *securityGroupDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "delete SECURITY-GROUP",
 		Aliases:           []string{"del", "remove", "rm"},

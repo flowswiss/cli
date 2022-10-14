@@ -1,4 +1,4 @@
-package compute
+package macbaremetal
 
 import (
 	"context"
@@ -13,21 +13,26 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func SecurityGroupRuleCommand() *cobra.Command {
+func SecurityGroupRuleCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "rule",
 		Aliases: []string{"rules"},
 		Short:   "Manage mac bare metal security group rules",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-			# List all security group rules
-			%[1]s mac-bare-metal security-group rule list default
-
-			# Create new security group rule to allow tcp traffic on port 80 (HTTP) from any source IP
-			%[1]s mac-bare-metal security-group rule create default --direction ingress --protocol tcp --from-port 80 --to-port 80
-		`, commands.Name)),
+      # List all security group rules
+      %[1]s mac-bare-metal security-group rule list default
+      
+      # Create new security group rule to allow tcp traffic on port 80 (HTTP) from any source IP
+      %[1]s mac-bare-metal security-group rule create default --direction ingress --protocol tcp --from-port 80 --to-port 80
+		`, app.Name)),
 	}
 
-	commands.Add(cmd, &securityGroupRuleListCommand{}, &securityGroupRuleCreateCommand{}, &securityGroupRuleUpdateCommand{}, &securityGroupRuleDeleteCommand{})
+	commands.Add(app, cmd,
+		&securityGroupRuleListCommand{},
+		&securityGroupRuleCreateCommand{},
+		&securityGroupRuleUpdateCommand{},
+		&securityGroupRuleDeleteCommand{},
+	)
 
 	return cmd
 }
@@ -64,7 +69,7 @@ func (s *securityGroupRuleListCommand) CompleteArg(cmd *cobra.Command, args []st
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *securityGroupRuleListCommand) Build() *cobra.Command {
+func (s *securityGroupRuleListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list SECURITY-GROUP",
 		Aliases:           []string{"show", "ls", "get"},
@@ -129,19 +134,19 @@ func (s *securityGroupRuleCreateCommand) CompleteArg(cmd *cobra.Command, args []
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *securityGroupRuleCreateCommand) Build() *cobra.Command {
+func (s *securityGroupRuleCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "create SECURITY-GROUP",
 		Aliases: []string{"add", "new"},
 		Short:   "Create new security group",
 		Long:    "Creates a new mac bare metal security group.",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-			# Create rule to allow tcp traffic on port 80 (HTTP) from any source IP
-			%[1]s mac-bare-metal security-group rule create default --direction ingress --protocol tcp --from-port 80 --to-port 80
-
-			# Create rule to allow tcp traffic on port 22 (SSH) only from subnet 1.1.1.0/24
-			%[1]s mac-bare-metal security-group rule create default --direction ingress --protocol tcp --from-port 22 --to-port 22 --ip-range 1.1.1.0/24
-		`, commands.Name)),
+      # Create rule to allow tcp traffic on port 80 (HTTP) from any source IP
+      %[1]s mac-bare-metal security-group rule create default --direction ingress --protocol tcp --from-port 80 --to-port 80
+      
+      # Create rule to allow tcp traffic on port 22 (SSH) only from subnet 1.1.1.0/24
+      %[1]s mac-bare-metal security-group rule create default --direction ingress --protocol tcp --from-port 22 --to-port 22 --ip-range 1.1.1.0/24
+		`, app.Name)),
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: s.CompleteArg,
 		RunE:              s.Run,
@@ -229,15 +234,15 @@ func (s *securityGroupRuleUpdateCommand) CompleteArg(cmd *cobra.Command, args []
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *securityGroupRuleUpdateCommand) Build() *cobra.Command {
+func (s *securityGroupRuleUpdateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update SECURITY-GROUP RULE",
 		Short: "Update security group rule",
 		Long:  "Updates a mac bare metal security group rule.",
 		Example: commands.FormatExamples(fmt.Sprintf(`
-			# Update SSH rule to allow tcp traffic from broader subnet 1.1.0.0/16
-			%[1]s mac-bare-metal security-group rule update default 1234 --direction ingress --protocol tcp --from-port 22 --to-port 22 --ip-range 1.1.0.0/16
-		`, commands.Name)), // TODO
+      # Update SSH rule to allow tcp traffic from broader subnet 1.1.0.0/16
+      %[1]s mac-bare-metal security-group rule update default 1234 --direction ingress --protocol tcp --from-port 22 --to-port 22 --ip-range 1.1.0.0/16
+		`, app.Name)), // TODO
 		Args:              cobra.ExactArgs(2),
 		ValidArgsFunction: s.CompleteArg,
 		RunE:              s.Run,
@@ -309,7 +314,7 @@ func (s *securityGroupRuleDeleteCommand) CompleteArg(cmd *cobra.Command, args []
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (s *securityGroupRuleDeleteCommand) Build() *cobra.Command {
+func (s *securityGroupRuleDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "delete SECURITY-GROUP RULE",
 		Aliases:           []string{"del", "remove", "rm"},

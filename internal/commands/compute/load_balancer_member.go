@@ -12,14 +12,14 @@ import (
 	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
-func LoadBalancerMemberCommand() *cobra.Command {
+func LoadBalancerMemberCommand(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "member",
 		Aliases: []string{"members"},
 		Short:   "Manage load balancer members",
 	}
 
-	commands.Add(cmd,
+	commands.Add(app, cmd,
 		&loadBalancerMemberListCommand{},
 		&loadBalancerMemberCreateCommand{},
 		&loadBalancerMemberDeleteCommand{},
@@ -74,7 +74,7 @@ func (l *loadBalancerMemberListCommand) CompleteArg(cmd *cobra.Command, args []s
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (l *loadBalancerMemberListCommand) Build() *cobra.Command {
+func (l *loadBalancerMemberListCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "list LOAD-BALANCER POOL",
 		Aliases:           []string{"show", "ls", "get"},
@@ -140,7 +140,7 @@ func (l *loadBalancerMemberCreateCommand) CompleteArg(cmd *cobra.Command, args [
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (l *loadBalancerMemberCreateCommand) Build() *cobra.Command {
+func (l *loadBalancerMemberCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "create LOAD-BALANCER POOL",
 		Short:             "Create a load balancer member",
@@ -232,7 +232,7 @@ func (l *loadBalancerMemberDeleteCommand) CompleteArg(cmd *cobra.Command, args [
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
-func (l *loadBalancerMemberDeleteCommand) Build() *cobra.Command {
+func (l *loadBalancerMemberDeleteCommand) Build(app commands.Application) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "delete LOAD-BALANCER POOL MEMBER",
 		Short:             "Delete load balancer member",
