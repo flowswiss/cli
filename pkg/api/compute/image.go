@@ -7,8 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/compute"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/goclient/v2/compute"
+	"github.com/flowswiss/goclient/v2/core"
 
 	"github.com/flowswiss/cli/v2/pkg/api/common"
 )
@@ -55,7 +56,7 @@ func (i Image) Columns() []string {
 	return []string{"id", "operating system", "version", "key", "type", "availability", "license"}
 }
 
-func (i Image) Values() map[string]interface{} {
+func (i Image) Values() map[string]any {
 	availabilityBuf := &strings.Builder{}
 	for idx, location := range i.Availability {
 		if idx != 0 {
@@ -82,7 +83,7 @@ func (i Image) Values() map[string]interface{} {
 		return strings.ToUpper(s)
 	})
 
-	return map[string]interface{}{
+	return map[string]any{
 		"id":               i.ID,
 		"operating system": i.OperatingSystem,
 		"version":          i.Version,
@@ -93,13 +94,13 @@ func (i Image) Values() map[string]interface{} {
 	}
 }
 
-func Images(ctx context.Context, client goclient.Client) ([]Image, error) {
-	locations, err := common.Locations(ctx, client)
+func Images(ctx context.Context) ([]Image, error) {
+	locations, err := common.Locations(ctx, commands.Client)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := compute.NewImageService(client).List(ctx, goclient.Cursor{NoFilter: 1})
+	res, err := commands.Client.Compute.Image.List(ctx, core.Cursor{NoFilter: 1})
 	if err != nil {
 		return nil, err
 	}

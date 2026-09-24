@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/flowswiss/cli/v2/pkg/optional"
 	"github.com/spf13/cobra"
+
+	"github.com/flowswiss/goclient/v2/core"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/macbaremetal"
@@ -31,7 +34,7 @@ type routerListCommand struct {
 }
 
 func (r *routerListCommand) Run(cmd *cobra.Command, args []string) error {
-	items, err := macbaremetal.NewRouterService(commands.Config.Client).List(cmd.Context())
+	items, err := macbaremetal.RouterService().List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return fmt.Errorf("fetch routers: %w", err)
 	}
@@ -43,7 +46,10 @@ func (r *routerListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
-func (r *routerListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (r *routerListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -63,14 +69,14 @@ func (r *routerListCommand) Build(app commands.Application) *cobra.Command {
 }
 
 type routerUpdateCommand struct {
-	name        string
-	description string
+	name        optional.Optional[string]
+	description optional.Optional[string]
 }
 
 func (r *routerUpdateCommand) Run(cmd *cobra.Command, args []string) error {
-	service := macbaremetal.NewRouterService(commands.Config.Client)
+	service := macbaremetal.RouterService()
 
-	routers, err := service.List(cmd.Context())
+	routers, err := service.List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return fmt.Errorf("fetch routers: %w", err)
 	}
@@ -80,12 +86,12 @@ func (r *routerUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("find router: %w", err)
 	}
 
-	update := macbaremetal.RouterUpdate{
-		Name:        r.name,
-		Description: r.description,
+	update := macbaremetal.RouterUpdate{ID: uint(router.ID),
+		Name:        r.name.Value(),
+		Description: r.description.Value(),
 	}
 
-	router, err = service.Update(cmd.Context(), router.ID, update)
+	router, err = service.Update(cmd.Context(), update)
 	if err != nil {
 		return fmt.Errorf("update router: %w", err)
 	}
@@ -93,7 +99,10 @@ func (r *routerUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(router)
 }
 
-func (r *routerUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (r *routerUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeRouter(cmd.Context(), toComplete)
 	}
@@ -111,14 +120,14 @@ func (r *routerUpdateCommand) Build(app commands.Application) *cobra.Command {
 		RunE:              r.Run,
 	}
 
-	cmd.Flags().StringVar(&r.name, "name", "", "name to be applied to the router")
-	cmd.Flags().StringVar(&r.description, "description", "", "description to be applied to the router")
+	cmd.Flags().StringVar(r.name.Configure(cmd, "name", "name to be applied to the router"))
+	cmd.Flags().StringVar(r.description.Configure(cmd, "description", "description to be applied to the router"))
 
 	return cmd
 }
 
 func completeRouter(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
-	routers, err := macbaremetal.NewRouterService(commands.Config.Client).List(ctx)
+	routers, err := macbaremetal.RouterService().List(ctx, core.CursorAll)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}

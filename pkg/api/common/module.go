@@ -5,8 +5,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/common"
+	"github.com/flowswiss/goclient/v2"
+	"github.com/flowswiss/goclient/v2/common"
+	"github.com/flowswiss/goclient/v2/core"
 
 	"github.com/flowswiss/cli/v2/pkg/console"
 	"github.com/flowswiss/cli/v2/pkg/filter"
@@ -31,7 +32,7 @@ func (m Module) Columns() []string {
 	return []string{"id", "name", "parent", "locations"}
 }
 
-func (m Module) Values() map[string]interface{} {
+func (m Module) Values() map[string]any {
 	parent := ""
 	if m.Parent != nil {
 		parent = m.Parent.Name
@@ -46,7 +47,7 @@ func (m Module) Values() map[string]interface{} {
 		}
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"id":        m.ID,
 		"name":      m.Name,
 		"parent":    parent,
@@ -63,8 +64,8 @@ func (m Module) AvailableAt(location Location) bool {
 	return false
 }
 
-func Modules(ctx context.Context, client goclient.Client) ([]Module, error) {
-	res, err := common.NewModuleService(client).List(ctx, goclient.Cursor{NoFilter: 1})
+func Modules(ctx context.Context, client *goclient.Client) ([]Module, error) {
+	res, err := client.Common.Module.List(ctx, core.CursorAll)
 	if err != nil {
 		return nil, err
 	}

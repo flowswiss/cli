@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/flowswiss/cli/v2/pkg/optional"
 	"github.com/spf13/cobra"
+
+	"github.com/flowswiss/goclient/v2/core"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/macbaremetal"
@@ -35,7 +38,7 @@ type securityGroupListCommand struct {
 }
 
 func (s *securityGroupListCommand) Run(cmd *cobra.Command, args []string) error {
-	items, err := macbaremetal.NewSecurityGroupService(commands.Config.Client).List(cmd.Context())
+	items, err := macbaremetal.SecurityGroupService().List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return fmt.Errorf("fetch security groups: %w", err)
 	}
@@ -47,7 +50,10 @@ func (s *securityGroupListCommand) Run(cmd *cobra.Command, args []string) error 
 	return commands.PrintStdout(items)
 }
 
-func (s *securityGroupListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *securityGroupListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -73,7 +79,7 @@ type securityGroupCreateCommand struct {
 }
 
 func (s *securityGroupCreateCommand) Run(cmd *cobra.Command, args []string) error {
-	networks, err := macbaremetal.NewNetworkService(commands.Config.Client).List(cmd.Context())
+	networks, err := macbaremetal.NetworkService().List(cmd.Context(), macbaremetal.NetworkList{})
 	if err != nil {
 		return fmt.Errorf("fetch networks: %w", err)
 	}
@@ -89,7 +95,7 @@ func (s *securityGroupCreateCommand) Run(cmd *cobra.Command, args []string) erro
 		NetworkID:   network.ID,
 	}
 
-	item, err := macbaremetal.NewSecurityGroupService(commands.Config.Client).Create(cmd.Context(), data)
+	item, err := macbaremetal.SecurityGroupService().Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create security group: %w", err)
 	}
@@ -97,7 +103,10 @@ func (s *securityGroupCreateCommand) Run(cmd *cobra.Command, args []string) erro
 	return commands.PrintStdout(item)
 }
 
-func (s *securityGroupCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *securityGroupCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -122,14 +131,14 @@ func (s *securityGroupCreateCommand) Build(app commands.Application) *cobra.Comm
 }
 
 type securityGroupUpdateCommand struct {
-	name        string
-	description string
+	name        optional.Optional[string]
+	description optional.Optional[string]
 }
 
 func (s *securityGroupUpdateCommand) Run(cmd *cobra.Command, args []string) error {
-	service := macbaremetal.NewSecurityGroupService(commands.Config.Client)
+	service := macbaremetal.SecurityGroupService()
 
-	securityGroups, err := service.List(cmd.Context())
+	securityGroups, err := service.List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return fmt.Errorf("fetch security groups: %w", err)
 	}
@@ -139,12 +148,12 @@ func (s *securityGroupUpdateCommand) Run(cmd *cobra.Command, args []string) erro
 		return fmt.Errorf("find security group: %w", err)
 	}
 
-	update := macbaremetal.SecurityGroupUpdate{
-		Name:        s.name,
-		Description: s.description,
+	update := macbaremetal.SecurityGroupUpdate{ID: uint(securityGroup.ID),
+		Name:        s.name.Value(),
+		Description: s.description.Value(),
 	}
 
-	securityGroup, err = service.Update(cmd.Context(), securityGroup.ID, update)
+	securityGroup, err = service.Update(cmd.Context(), update)
 	if err != nil {
 		return fmt.Errorf("update security group: %w", err)
 	}
@@ -152,7 +161,10 @@ func (s *securityGroupUpdateCommand) Run(cmd *cobra.Command, args []string) erro
 	return commands.PrintStdout(securityGroup)
 }
 
-func (s *securityGroupUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *securityGroupUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeSecurityGroup(cmd.Context(), toComplete)
 	}
@@ -170,8 +182,8 @@ func (s *securityGroupUpdateCommand) Build(app commands.Application) *cobra.Comm
 		RunE:              s.Run,
 	}
 
-	cmd.Flags().StringVar(&s.name, "name", "", "name to be applied to the security group")
-	cmd.Flags().StringVar(&s.description, "description", "", "description to be applied to the security group")
+	cmd.Flags().StringVar(s.name.Configure(cmd, "name", "name to be applied to the security group"))
+	cmd.Flags().StringVar(s.description.Configure(cmd, "description", "description to be applied to the security group"))
 
 	return cmd
 }
@@ -181,9 +193,9 @@ type securityGroupDeleteCommand struct {
 }
 
 func (s *securityGroupDeleteCommand) Run(cmd *cobra.Command, args []string) error {
-	service := macbaremetal.NewSecurityGroupService(commands.Config.Client)
+	service := macbaremetal.SecurityGroupService()
 
-	securityGroups, err := service.List(cmd.Context())
+	securityGroups, err := service.List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return fmt.Errorf("fetch security groups: %w", err)
 	}
@@ -198,7 +210,7 @@ func (s *securityGroupDeleteCommand) Run(cmd *cobra.Command, args []string) erro
 		return nil
 	}
 
-	err = service.Delete(cmd.Context(), securityGroup.ID)
+	err = service.Delete(cmd.Context(), macbaremetal.SecurityGroupDelete{ID: uint(securityGroup.ID)})
 	if err != nil {
 		return fmt.Errorf("delete security group: %w", err)
 	}
@@ -206,7 +218,10 @@ func (s *securityGroupDeleteCommand) Run(cmd *cobra.Command, args []string) erro
 	return nil
 }
 
-func (s *securityGroupDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *securityGroupDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeSecurityGroup(cmd.Context(), toComplete)
 	}
@@ -231,7 +246,7 @@ func (s *securityGroupDeleteCommand) Build(app commands.Application) *cobra.Comm
 }
 
 func completeSecurityGroup(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
-	securityGroups, err := macbaremetal.NewSecurityGroupService(commands.Config.Client).List(ctx)
+	securityGroups, err := macbaremetal.SecurityGroupService().List(ctx, core.CursorAll)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -247,7 +262,7 @@ func completeSecurityGroup(ctx context.Context, term string) ([]string, cobra.Sh
 }
 
 func findSecurityGroup(ctx context.Context, term string) (macbaremetal.SecurityGroup, error) {
-	securityGroups, err := macbaremetal.NewSecurityGroupService(commands.Config.Client).List(ctx)
+	securityGroups, err := macbaremetal.SecurityGroupService().List(ctx, core.CursorAll)
 	if err != nil {
 		return macbaremetal.SecurityGroup{}, fmt.Errorf("fetch security groups: %w", err)
 	}

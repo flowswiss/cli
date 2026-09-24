@@ -5,16 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 
-	"github.com/flowswiss/goclient"
+	"github.com/flowswiss/cli/v2/pkg/console"
+	"github.com/flowswiss/goclient/v2"
+	"github.com/flowswiss/goclient/v2/core"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"golang.org/x/term"
-
-	"github.com/flowswiss/cli/v2/pkg/console"
 )
 
 const (
@@ -38,14 +38,9 @@ var (
 	baseFlagSet *pflag.FlagSet
 )
 
-var Config config
+var Client *goclient.Client
 
-type config struct {
-	Client   goclient.Client
-	Terminal bool
-}
-
-func Print(out console.Writer, val interface{}) error {
+func Print(out console.Writer, val any) error {
 	format := viper.GetString(FlagFormat)
 	if format == FormatJSON {
 		return json.NewEncoder(out).Encode(val)
@@ -72,7 +67,7 @@ func Print(out console.Writer, val interface{}) error {
 	return nil
 }
 
-func PrintStdout(val interface{}) error {
+func PrintStdout(val any) error {
 	return Print(Stdout, val)
 }
 
@@ -82,49 +77,49 @@ func loadConfig(app Application) {
 		os.Exit(1)
 	}
 
-	cfg, err := buildConfig(app)
+	client, err := buildClient(app)
 	if err != nil {
 		Stderr.Errorf("%v\n", err)
 		os.Exit(1)
 	}
 
-	Config = cfg
+	Client = client
 }
 
-func buildConfig(app Application) (config, error) {
+func buildClient(app Application) (*goclient.Client, error) {
 	endpoint := viper.GetString(FlagEndpoint)
+	baseURL, err := url.Parse(endpoint)
+	if err != nil {
+		return nil, err
+	}
+
 	token := viper.GetString(FlagToken)
-
 	if len(token) == 0 {
-		return config{}, fmt.Errorf("missing authentication token")
+		return nil, fmt.Errorf("missing authentication token")
 	}
 
-	opts := []goclient.Option{
-		goclient.WithBase(endpoint),
-		goclient.WithToken(token),
-		goclient.WithUserAgent(fmt.Sprintf("%s-cli/%s", app.Name, app.Version)),
-	}
+	httpClient := http.DefaultClient
 
 	if viper.GetBool(FlagDump) {
-		opts = append(opts, goclient.WithHTTPClientOption(func(client *http.Client) {
-			client.Transport = dumpRequestTransport{
-				delegate: client.Transport,
-			}
-		}))
+		httpClient.Transport = dumpRequestTransport{
+			delegate: httpClient.Transport,
+		}
 	}
 
 	if viper.GetBool(FlagDryRun) {
-		opts = append(opts, goclient.WithHTTPClientOption(func(client *http.Client) {
-			client.Transport = dryRunTransport{
-				delegate: client.Transport,
-			}
-		}))
+		httpClient.Transport = dryRunTransport{
+			delegate: httpClient.Transport,
+		}
 	}
 
-	return config{
-		Client:   goclient.NewClient(opts...),
-		Terminal: term.IsTerminal(int(os.Stdin.Fd())),
-	}, nil
+	coreClient := core.NewClient(core.ClientOpts{
+		BaseURL:    baseURL,
+		HTTPClient: httpClient,
+		UserAgent:  fmt.Sprintf("%s-cli/%s", app.Name, app.Version),
+		Token:      token,
+	})
+
+	return goclient.WithClient(coreClient), nil
 }
 
 func setupFlags(app Application, root *cobra.Command) {

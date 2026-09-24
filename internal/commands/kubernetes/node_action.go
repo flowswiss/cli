@@ -108,11 +108,13 @@ func (n *nodeActionRunCommand) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("find action: %w", err)
 	}
 
-	data := kubernetes.NodePerformAction{
-		Action: action.Command,
+	data := kubernetes.NodeRunAction{
+		ClusterID: uint(cluster.ID),
+		NodeID:    uint(node.ID),
+		Action:    action.Command,
 	}
 
-	node, err = kubernetes.NewNodeService(commands.Config.Client, cluster.ID).PerformAction(cmd.Context(), node.ID, data)
+	node, err = kubernetes.NodeService().Perform(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("run node action: %w", err)
 	}

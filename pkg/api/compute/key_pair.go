@@ -1,12 +1,39 @@
 package compute
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/compute"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/compute"
+	"github.com/flowswiss/goclient/v2/core"
 )
+
+type (
+	KeyPairCreate = compute.KeyPairCreateReq
+	KeyPairList   = core.Cursor
+	KeyPairDelete = compute.KeyPairDeleteReq
+)
+
+type GenericKeyPairService = generic.CFD[
+	compute.KeyPair,
+	KeyPair,
+	KeyPairCreate,
+	KeyPairList,
+	KeyPairDelete,
+]
+
+func KeyPairService() GenericKeyPairService {
+	return generic.NewCFD[
+		compute.KeyPair,
+		KeyPair,
+		KeyPairCreate,
+		KeyPairList,
+		KeyPairDelete,
+	](commands.Client.Compute.KeyPair, func(pair compute.KeyPair) KeyPair {
+		return KeyPair(pair)
+	})
+}
 
 type KeyPair compute.KeyPair
 
@@ -22,49 +49,10 @@ func (k KeyPair) Columns() []string {
 	return []string{"id", "name", "fingerprint"}
 }
 
-func (k KeyPair) Values() map[string]interface{} {
-	return map[string]interface{}{
+func (k KeyPair) Values() map[string]any {
+	return map[string]any{
 		"id":          k.ID,
 		"name":        k.Name,
 		"fingerprint": k.Fingerprint,
 	}
-}
-
-type KeyPairService struct {
-	delegate compute.KeyPairService
-}
-
-func NewKeyPairService(client goclient.Client) KeyPairService {
-	return KeyPairService{
-		delegate: compute.NewKeyPairService(client),
-	}
-}
-
-func (k KeyPairService) List(ctx context.Context) ([]KeyPair, error) {
-	res, err := k.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]KeyPair, len(res.Items))
-	for i, item := range res.Items {
-		items[i] = KeyPair(item)
-	}
-
-	return items, nil
-}
-
-type KeyPairCreate = compute.KeyPairCreate
-
-func (k KeyPairService) Create(ctx context.Context, data KeyPairCreate) (KeyPair, error) {
-	res, err := k.delegate.Create(ctx, data)
-	if err != nil {
-		return KeyPair{}, err
-	}
-
-	return KeyPair(res), nil
-}
-
-func (k KeyPairService) Delete(ctx context.Context, id int) error {
-	return k.delegate.Delete(ctx, id)
 }

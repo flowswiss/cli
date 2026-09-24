@@ -1,14 +1,30 @@
 package objectstorage
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/objectstorage"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/core"
+	"github.com/flowswiss/goclient/v2/objectstorage"
 
 	"github.com/flowswiss/cli/v2/pkg/api/common"
 )
+
+type (
+	CredentialList = core.Cursor
+)
+
+type GenericCredentialService = generic.ListService[CredentialList, objectstorage.Credential, Credential]
+
+func CredentialService() GenericCredentialService {
+	client := commands.Client.ObjectStorage.Credential
+	cast := func(credential objectstorage.Credential) Credential {
+		return Credential(credential)
+	}
+
+	return generic.NewList[CredentialList, objectstorage.Credential, Credential](client, cast)
+}
 
 type Credential objectstorage.Credential
 
@@ -26,36 +42,12 @@ func (c Credential) Columns() []string {
 	return []string{"id", "location", "endpoint", "access key", "secret key"}
 }
 
-func (c Credential) Values() map[string]interface{} {
-	return map[string]interface{}{
+func (c Credential) Values() map[string]any {
+	return map[string]any{
 		"id":         c.ID,
 		"location":   common.Location(c.Location),
 		"endpoint":   c.Endpoint,
 		"access key": c.AccessKey,
 		"secret key": c.SecretKey,
 	}
-}
-
-type CredentialService struct {
-	delegate objectstorage.CredentialService
-}
-
-func NewCredentialService(client goclient.Client) CredentialService {
-	return CredentialService{
-		delegate: objectstorage.NewCredentialService(client),
-	}
-}
-
-func (c CredentialService) List(ctx context.Context) ([]Credential, error) {
-	res, err := c.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]Credential, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = Credential(item)
-	}
-
-	return items, nil
 }

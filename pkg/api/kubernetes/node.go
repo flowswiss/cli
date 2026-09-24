@@ -1,15 +1,40 @@
 package kubernetes
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/kubernetes"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/kubernetes"
 
 	"github.com/flowswiss/cli/v2/pkg/api/common"
 )
+
+type (
+	NodeList      = kubernetes.NodeListReq
+	NodeDelete    = kubernetes.NodeDeleteReq
+	NodeRunAction = kubernetes.NodePerformReq
+)
+
+type GenericNodeService struct {
+	generic.ListService[NodeList, kubernetes.Node, Node]
+	generic.PerformActionService[NodeRunAction, kubernetes.Node, Node]
+	generic.DeleteService[NodeDelete]
+}
+
+func NodeService() GenericNodeService {
+	client := commands.Client.Kubernetes.Node
+	cast := func(node kubernetes.Node) Node {
+		return Node(node)
+	}
+
+	return GenericNodeService{
+		generic.NewList[NodeList, kubernetes.Node, Node](client, cast),
+		generic.NewPerformAction[NodeRunAction, kubernetes.Node, Node](client, cast),
+		generic.NewDelete[NodeDelete](client),
+	}
+}
 
 type Node kubernetes.Node
 
@@ -25,7 +50,7 @@ func (n Node) Columns() []string {
 	return []string{"id", "name", "status", "roles", "product", "network"}
 }
 
-func (n Node) Values() map[string]interface{} {
+func (n Node) Values() map[string]any {
 	networkBuffer := strings.Builder{}
 
 	networkBuffer.WriteString(fmt.Sprintf("%s (", n.Network.Name))
@@ -47,7 +72,7 @@ func (n Node) Values() map[string]interface{} {
 		roleBuffer.WriteString(role.Name)
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"id":      n.ID,
 		"name":    n.Name,
 		"status":  n.Status.Name,
@@ -67,49 +92,10 @@ func (c NodeAction) Columns() []string {
 	return []string{"id", "name", "command"}
 }
 
-func (c NodeAction) Values() map[string]interface{} {
-	return map[string]interface{}{
+func (c NodeAction) Values() map[string]any {
+	return map[string]any{
 		"id":      c.ID,
 		"name":    c.Name,
 		"command": c.Command,
 	}
-}
-
-type NodeService struct {
-	delegate kubernetes.NodeService
-}
-
-func NewNodeService(client goclient.Client, clusterID int) NodeService {
-	return NodeService{
-		delegate: kubernetes.NewNodeService(client, clusterID),
-	}
-}
-
-func (n NodeService) List(ctx context.Context) ([]Node, error) {
-	res, err := n.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]Node, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = Node(item)
-	}
-
-	return items, nil
-}
-
-func (n NodeService) Delete(ctx context.Context, id int) error {
-	return n.delegate.Delete(ctx, id)
-}
-
-type NodePerformAction = kubernetes.NodePerformAction
-
-func (n NodeService) PerformAction(ctx context.Context, id int, data NodePerformAction) (Node, error) {
-	cluster, err := n.delegate.PerformAction(ctx, id, data)
-	if err != nil {
-		return Node{}, err
-	}
-
-	return Node(cluster), nil
 }

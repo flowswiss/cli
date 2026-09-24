@@ -7,6 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/flowswiss/goclient/v2/core"
+
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/compute"
 	"github.com/flowswiss/cli/v2/pkg/filter"
@@ -39,9 +41,9 @@ func (n *networkInterfaceListCommand) Run(cmd *cobra.Command, args []string) err
 		return err
 	}
 
-	service := compute.NewNetworkInterfaceService(commands.Config.Client, server.ID)
+	service := compute.NetworkInterfaceService()
 
-	items, err := service.List(cmd.Context())
+	items, err := service.List(cmd.Context(), compute.NetworkInterfaceList{ServerID: uint(server.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return fmt.Errorf("fetch network interfaces: %w", err)
 	}
@@ -53,7 +55,10 @@ func (n *networkInterfaceListCommand) Run(cmd *cobra.Command, args []string) err
 	return commands.PrintStdout(items)
 }
 
-func (n *networkInterfaceListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (n *networkInterfaceListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeServer(cmd.Context(), toComplete)
 	}
@@ -107,12 +112,12 @@ func (n *networkInterfaceCreateCommand) Run(cmd *cobra.Command, args []string) e
 		privateIP = n.privateIP.String()
 	}
 
-	data := compute.NetworkInterfaceCreate{
+	data := compute.NetworkInterfaceCreate{ServerID: uint(server.ID),
 		NetworkID: network.ID,
 		PrivateIP: privateIP,
 	}
 
-	iface, err := compute.NewNetworkInterfaceService(commands.Config.Client, server.ID).Create(cmd.Context(), data)
+	iface, err := compute.NetworkInterfaceService().Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create network interface: %w", err)
 	}
@@ -120,7 +125,10 @@ func (n *networkInterfaceCreateCommand) Run(cmd *cobra.Command, args []string) e
 	return commands.PrintStdout(iface)
 }
 
-func (n *networkInterfaceCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (n *networkInterfaceCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeServer(cmd.Context(), toComplete)
 	}
@@ -164,14 +172,13 @@ func (n *networkInterfaceUpdateCommand) Run(cmd *cobra.Command, args []string) e
 		return err
 	}
 
-	service := compute.NewNetworkInterfaceService(commands.Config.Client, server.ID)
-
 	if n.disableSecurity || n.enableSecurity {
-		data := compute.NetworkInterfaceSecurityUpdate{
+		data := compute.NetworkInterfaceSecurityUpdate{ServerID: uint(server.ID), NetworkInterfaceID: uint(iface.ID),
 			Security: n.enableSecurity,
 		}
 
-		iface, err = service.UpdateSecurity(cmd.Context(), iface.ID, data)
+		res, err := commands.Client.Compute.NetworkInterface.UpdateSecurity(cmd.Context(), data)
+		iface = compute.NetworkInterface(res)
 		if err != nil {
 			return fmt.Errorf("update network interface security: %w", err)
 		}
@@ -192,11 +199,12 @@ func (n *networkInterfaceUpdateCommand) Run(cmd *cobra.Command, args []string) e
 			securityGroupIDs[idx] = securityGroup.ID
 		}
 
-		data := compute.NetworkInterfaceSecurityGroupUpdate{
+		data := compute.NetworkInterfaceSecurityGroupUpdate{ServerID: uint(server.ID), NetworkInterfaceID: uint(iface.ID),
 			SecurityGroupIDs: securityGroupIDs,
 		}
 
-		iface, err = service.UpdateSecurityGroups(cmd.Context(), iface.ID, data)
+		res, err := commands.Client.Compute.NetworkInterface.UpdateSecurityGroups(cmd.Context(), data)
+		iface = compute.NetworkInterface(res)
 		if err != nil {
 			return fmt.Errorf("update network interface security groups: %w", err)
 		}
@@ -205,7 +213,10 @@ func (n *networkInterfaceUpdateCommand) Run(cmd *cobra.Command, args []string) e
 	return commands.PrintStdout(iface)
 }
 
-func (n *networkInterfaceUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (n *networkInterfaceUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeServer(cmd.Context(), toComplete)
 	}
@@ -265,7 +276,7 @@ func (n *networkInterfaceDeleteCommand) Run(cmd *cobra.Command, args []string) e
 		return nil
 	}
 
-	err = compute.NewNetworkInterfaceService(commands.Config.Client, server.ID).Delete(cmd.Context(), iface.ID)
+	err = compute.NetworkInterfaceService().Delete(cmd.Context(), compute.NetworkInterfaceDelete{ServerID: uint(server.ID), NetworkInterfaceID: uint(iface.ID)})
 	if err != nil {
 		return fmt.Errorf("delete network interface: %w", err)
 	}
@@ -273,7 +284,10 @@ func (n *networkInterfaceDeleteCommand) Run(cmd *cobra.Command, args []string) e
 	return nil
 }
 
-func (n *networkInterfaceDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (n *networkInterfaceDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeServer(cmd.Context(), toComplete)
 	}
@@ -306,8 +320,11 @@ func (n *networkInterfaceDeleteCommand) Build(app commands.Application) *cobra.C
 	return cmd
 }
 
-func completeNetworkInterface(ctx context.Context, server compute.Server, term string) ([]string, cobra.ShellCompDirective) {
-	interfaces, err := compute.NewNetworkInterfaceService(commands.Config.Client, server.ID).List(ctx)
+func completeNetworkInterface(ctx context.Context, server compute.Server, term string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
+	interfaces, err := compute.NetworkInterfaceService().List(ctx, compute.NetworkInterfaceList{ServerID: uint(server.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -323,7 +340,7 @@ func completeNetworkInterface(ctx context.Context, server compute.Server, term s
 }
 
 func findNetworkInterface(ctx context.Context, serverID int, term string) (compute.NetworkInterface, error) {
-	ifaces, err := compute.NewNetworkInterfaceService(commands.Config.Client, serverID).List(ctx)
+	ifaces, err := compute.NetworkInterfaceService().List(ctx, compute.NetworkInterfaceList{ServerID: uint(serverID), Cursor: core.CursorAll})
 	if err != nil {
 		return compute.NetworkInterface{}, fmt.Errorf("fetch network interfaces: %w", err)
 	}

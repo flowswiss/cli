@@ -7,6 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/flowswiss/goclient/v2/core"
+
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/compute"
 	"github.com/flowswiss/cli/v2/pkg/filter"
@@ -37,7 +39,7 @@ func (r *routerInterfaceListCommand) Run(cmd *cobra.Command, args []string) erro
 		return err
 	}
 
-	items, err := compute.NewRouterInterfaceService(commands.Config.Client, router.ID).List(cmd.Context())
+	items, err := compute.RouterInterfaceService().List(cmd.Context(), compute.RouterInterfaceList{RouterID: uint(router.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return fmt.Errorf("fetch routers: %w", err)
 	}
@@ -49,7 +51,10 @@ func (r *routerInterfaceListCommand) Run(cmd *cobra.Command, args []string) erro
 	return commands.PrintStdout(items)
 }
 
-func (r *routerInterfaceListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (r *routerInterfaceListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeRouter(cmd.Context(), toComplete)
 	}
@@ -89,7 +94,7 @@ func (r *routerInterfaceCreateCommand) Run(cmd *cobra.Command, args []string) er
 		return err
 	}
 
-	data := compute.RouterInterfaceCreate{
+	data := compute.RouterInterfaceCreate{RouterID: uint(router.ID),
 		NetworkID: network.ID,
 	}
 
@@ -106,7 +111,7 @@ func (r *routerInterfaceCreateCommand) Run(cmd *cobra.Command, args []string) er
 		data.PrivateIP = r.privateIP.String()
 	}
 
-	item, err := compute.NewRouterInterfaceService(commands.Config.Client, router.ID).Create(cmd.Context(), data)
+	item, err := compute.RouterInterfaceService().Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create router interface: %w", err)
 	}
@@ -114,7 +119,10 @@ func (r *routerInterfaceCreateCommand) Run(cmd *cobra.Command, args []string) er
 	return commands.PrintStdout(item)
 }
 
-func (r *routerInterfaceCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (r *routerInterfaceCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeRouter(cmd.Context(), toComplete)
 	}
@@ -150,7 +158,7 @@ func (r *routerInterfaceDeleteCommand) Run(cmd *cobra.Command, args []string) er
 		return err
 	}
 
-	routerInterfaces, err := compute.NewRouterInterfaceService(commands.Config.Client, router.ID).List(cmd.Context())
+	routerInterfaces, err := compute.RouterInterfaceService().List(cmd.Context(), compute.RouterInterfaceList{RouterID: uint(router.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return fmt.Errorf("fetch router interfaces: %w", err)
 	}
@@ -165,7 +173,7 @@ func (r *routerInterfaceDeleteCommand) Run(cmd *cobra.Command, args []string) er
 		return nil
 	}
 
-	err = compute.NewRouterInterfaceService(commands.Config.Client, router.ID).Delete(cmd.Context(), routerInterface.ID)
+	err = compute.RouterInterfaceService().Delete(cmd.Context(), compute.RouterInterfaceDelete{RouterID: uint(router.ID), RouterInterfaceID: uint(routerInterface.ID)})
 	if err != nil {
 		return fmt.Errorf("delete router interface: %w", err)
 	}
@@ -173,7 +181,10 @@ func (r *routerInterfaceDeleteCommand) Run(cmd *cobra.Command, args []string) er
 	return nil
 }
 
-func (r *routerInterfaceDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (r *routerInterfaceDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeRouter(cmd.Context(), toComplete)
 	}
@@ -205,8 +216,11 @@ func (r *routerInterfaceDeleteCommand) Build(app commands.Application) *cobra.Co
 	return cmd
 }
 
-func completeRouterInterface(ctx context.Context, router compute.Router, term string) ([]string, cobra.ShellCompDirective) {
-	interfaces, err := compute.NewRouterInterfaceService(commands.Config.Client, router.ID).List(ctx)
+func completeRouterInterface(ctx context.Context, router compute.Router, term string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
+	interfaces, err := compute.RouterInterfaceService().List(ctx, compute.RouterInterfaceList{RouterID: uint(router.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}

@@ -5,8 +5,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/common"
+	"github.com/flowswiss/goclient/v2"
+	"github.com/flowswiss/goclient/v2/common"
+	"github.com/flowswiss/goclient/v2/core"
 
 	"github.com/flowswiss/cli/v2/pkg/console"
 	"github.com/flowswiss/cli/v2/pkg/filter"
@@ -43,7 +44,7 @@ func (p Product) Columns() []string {
 	return []string{"id", "name", "type", "configuration", "price", "availability"}
 }
 
-func (p Product) Values() map[string]interface{} {
+func (p Product) Values() map[string]any {
 	configurationBuf := &bytes.Buffer{}
 	for idx, item := range p.Items {
 		if item.Description == "" {
@@ -66,7 +67,7 @@ func (p Product) Values() map[string]interface{} {
 		}
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"id":            p.ID,
 		"name":          p.Name,
 		"type":          p.Type.Name,
@@ -76,8 +77,8 @@ func (p Product) Values() map[string]interface{} {
 	}
 }
 
-func Products(ctx context.Context, client goclient.Client) ([]Product, error) {
-	res, err := common.NewProductService(client).List(ctx, goclient.Cursor{NoFilter: 1})
+func Products(ctx context.Context, client *goclient.Client) ([]Product, error) {
+	res, err := client.Common.Product.List(ctx, core.CursorAll)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +91,7 @@ func Products(ctx context.Context, client goclient.Client) ([]Product, error) {
 	return items, nil
 }
 
-func ProductsByType(ctx context.Context, client goclient.Client, productTypeFilter string) ([]Product, error) {
+func ProductsByType(ctx context.Context, client *goclient.Client, productTypeFilter string) ([]Product, error) {
 	productTypes, err := ProductTypes(ctx, client)
 	if err != nil {
 		return nil, err
@@ -101,7 +102,10 @@ func ProductsByType(ctx context.Context, client goclient.Client, productTypeFilt
 		return nil, err
 	}
 
-	res, err := common.NewProductService(client).ListByType(ctx, productType.Key, goclient.Cursor{NoFilter: 1})
+	res, err := client.Common.Product.ListByType(ctx, common.ProductListByTypeReq{
+		ProductType: productType.Key,
+		Cursor:      core.CursorAll,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -129,16 +133,16 @@ func (p ProductType) Columns() []string {
 	return []string{"id", "name", "key"}
 }
 
-func (p ProductType) Values() map[string]interface{} {
-	return map[string]interface{}{
+func (p ProductType) Values() map[string]any {
+	return map[string]any{
 		"id":   p.ID,
 		"name": p.Name,
 		"key":  p.Key,
 	}
 }
 
-func ProductTypes(ctx context.Context, client goclient.Client) ([]ProductType, error) {
-	res, err := common.NewProductService(client).ListTypes(ctx, goclient.Cursor{NoFilter: 1})
+func ProductTypes(ctx context.Context, client *goclient.Client) ([]ProductType, error) {
+	res, err := client.Common.Product.ListTypes(ctx, core.CursorAll)
 	if err != nil {
 		return nil, err
 	}

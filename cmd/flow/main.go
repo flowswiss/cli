@@ -22,6 +22,8 @@ func main() {
 			common.Location,
 			common.Module,
 			common.Product,
+			common.Commitment,
+			common.Quota,
 
 			compute.Module,
 			kubernetes.Module,

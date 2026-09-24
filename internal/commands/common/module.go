@@ -24,7 +24,7 @@ type moduleListCommand struct {
 }
 
 func (m *moduleListCommand) Run(cmd *cobra.Command, args []string) error {
-	items, err := common.Modules(cmd.Context(), commands.Config.Client)
+	items, err := common.Modules(cmd.Context(), commands.Client)
 	if err != nil {
 		return err
 	}
@@ -36,7 +36,10 @@ func (m *moduleListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
-func (m *moduleListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (m *moduleListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 

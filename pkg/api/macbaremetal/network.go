@@ -1,12 +1,37 @@
 package macbaremetal
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/macbaremetal"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/core"
+	"github.com/flowswiss/goclient/v2/macbaremetal"
 )
+
+type (
+	NetworkCreate = macbaremetal.NetworkCreateReq
+	NetworkGet    = macbaremetal.NetworkGetReq
+	NetworkList   = core.Cursor
+	NetworkUpdate = macbaremetal.NetworkUpdateReq
+	NetworkDelete = macbaremetal.NetworkDeleteReq
+)
+
+type GenericNetworkService = generic.CRUD[macbaremetal.Network, Network, NetworkCreate, NetworkGet, NetworkList, NetworkUpdate, NetworkDelete]
+
+func NetworkService() GenericNetworkService {
+	return generic.NewCRUD[
+		macbaremetal.Network,
+		Network,
+		NetworkCreate,
+		NetworkGet,
+		NetworkList,
+		NetworkUpdate,
+		NetworkDelete,
+	](commands.Client.MacBareMetal.Network, func(network macbaremetal.Network) Network {
+		return Network(network)
+	})
+}
 
 type Network macbaremetal.Network
 
@@ -22,61 +47,12 @@ func (n Network) Columns() []string {
 	return []string{"id", "name", "location", "subnet", "usage"}
 }
 
-func (n Network) Values() map[string]interface{} {
-	return map[string]interface{}{
+func (n Network) Values() map[string]any {
+	return map[string]any{
 		"id":       n.ID,
 		"name":     n.Name,
 		"location": n.Location.Name,
 		"subnet":   n.Subnet,
 		"usage":    fmt.Sprintf("%d/%d", n.UsedIPs, n.TotalIPs),
 	}
-}
-
-type NetworkService struct {
-	delegate macbaremetal.NetworkService
-}
-
-func NewNetworkService(client goclient.Client) NetworkService {
-	return NetworkService{
-		delegate: macbaremetal.NewNetworkService(client),
-	}
-}
-
-func (n NetworkService) List(ctx context.Context) ([]Network, error) {
-	res, err := n.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]Network, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = Network(item)
-	}
-
-	return items, nil
-}
-
-type NetworkCreate = macbaremetal.NetworkCreate
-type NetworkUpdate = macbaremetal.NetworkUpdate
-
-func (n NetworkService) Create(ctx context.Context, data NetworkCreate) (Network, error) {
-	res, err := n.delegate.Create(ctx, data)
-	if err != nil {
-		return Network{}, err
-	}
-
-	return Network(res), nil
-}
-
-func (n NetworkService) Update(ctx context.Context, id int, data NetworkUpdate) (Network, error) {
-	res, err := n.delegate.Update(ctx, id, data)
-	if err != nil {
-		return Network{}, err
-	}
-
-	return Network(res), nil
-}
-
-func (n NetworkService) Delete(ctx context.Context, id int) error {
-	return n.delegate.Delete(ctx, id)
 }

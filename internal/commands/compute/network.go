@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/flowswiss/cli/v2/pkg/optional"
 	"github.com/spf13/cobra"
+
+	"github.com/flowswiss/goclient/v2/core"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/common"
@@ -42,7 +45,7 @@ type networkListCommand struct {
 }
 
 func (n *networkListCommand) Run(cmd *cobra.Command, args []string) error {
-	items, err := compute.NewNetworkService(commands.Config.Client).List(cmd.Context())
+	items, err := compute.NetworkService().List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return fmt.Errorf("fetch networks: %w", err)
 	}
@@ -54,7 +57,10 @@ func (n *networkListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
-func (n *networkListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (n *networkListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -75,17 +81,17 @@ func (n *networkListCommand) Build(app commands.Application) *cobra.Command {
 
 type networkCreateCommand struct {
 	name                string
-	description         string
+	description         optional.Optional[string]
 	location            string
 	domainNameServers   []net.IP
 	cidr                net.IPNet
-	allocationPoolStart net.IP
-	allocationPoolEnd   net.IP
-	gateway             net.IP
+	allocationPoolStart optional.Optional[net.IP]
+	allocationPoolEnd   optional.Optional[net.IP]
+	gateway             optional.Optional[net.IP]
 }
 
 func (n *networkCreateCommand) Run(cmd *cobra.Command, args []string) error {
-	location, err := common.FindLocation(cmd.Context(), commands.Config.Client, n.location)
+	location, err := common.FindLocation(cmd.Context(), commands.Client, n.location)
 	if err != nil {
 		return err
 	}
@@ -95,49 +101,49 @@ func (n *networkCreateCommand) Run(cmd *cobra.Command, args []string) error {
 		domainNameServers[i] = dns.String()
 	}
 
-	allocationPoolStart := ""
-	if len(n.allocationPoolStart) != 0 {
-		if !n.cidr.Contains(n.allocationPoolStart) {
+	var allocationPoolStart *string
+	if poolStart := n.allocationPoolStart.Value(); poolStart != nil {
+		if !n.cidr.Contains(*poolStart) {
 			return fmt.Errorf("start address of the allocation pool is not within the network cidr")
 		}
 
-		allocationPoolStart = n.allocationPoolStart.String()
+		allocationPoolStart = new(poolStart.String())
 	}
 
-	allocationPoolEnd := ""
-	if len(n.allocationPoolEnd) != 0 {
-		if !n.cidr.Contains(n.allocationPoolEnd) {
+	var allocationPoolEnd *string
+	if poolEnd := n.allocationPoolEnd.Value(); poolEnd != nil {
+		if !n.cidr.Contains(*poolEnd) {
 			return fmt.Errorf("end address of the allocation pool is not within the network cidr")
 		}
 
-		if bytes.Compare(n.allocationPoolStart, n.allocationPoolEnd) > 0 {
+		if bytes.Compare(*n.allocationPoolStart.Value(), *poolEnd) > 0 {
 			return fmt.Errorf("start address of the allocation pool is greater than the end address of the allocation pool")
 		}
 
-		allocationPoolEnd = n.allocationPoolEnd.String()
+		allocationPoolEnd = new(poolEnd.String())
 	}
 
-	gateway := ""
-	if len(n.gateway) != 0 {
-		if !n.cidr.Contains(n.gateway) {
+	var gateway *string
+	if g := n.gateway.Value(); g != nil {
+		if !n.cidr.Contains(*g) {
 			return fmt.Errorf("gateway address is not within the network cidr")
 		}
 
-		gateway = n.gateway.String()
+		gateway = new(g.String())
 	}
 
 	data := compute.NetworkCreate{
-		Name:                n.name,
-		Description:         n.description,
-		LocationID:          location.ID,
+		Name:                &n.name,
+		Description:         n.description.Value(),
+		LocationID:          &location.ID,
 		DomainNameServers:   domainNameServers,
-		CIDR:                n.cidr.String(),
+		CIDR:                new(n.cidr.String()),
 		AllocationPoolStart: allocationPoolStart,
 		AllocationPoolEnd:   allocationPoolEnd,
 		GatewayIP:           gateway,
 	}
 
-	item, err := compute.NewNetworkService(commands.Config.Client).Create(cmd.Context(), data)
+	item, err := compute.NetworkService().Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create network: %w", err)
 	}
@@ -145,7 +151,10 @@ func (n *networkCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(item)
 }
 
-func (n *networkCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (n *networkCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -174,13 +183,13 @@ func (n *networkCreateCommand) Build(app commands.Application) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&n.name, "name", "", "name of the new network")
-	cmd.Flags().StringVar(&n.description, "description", "", "description of the network")
+	cmd.Flags().StringVar(n.description.Configure(cmd, "description", "description of the network"))
 	cmd.Flags().StringVar(&n.location, "location", "", "location where the network will be created")
 	cmd.Flags().IPSliceVar(&n.domainNameServers, "domain-name-server", []net.IP{net.IPv4(1, 1, 1, 1), net.IPv4(8, 8, 8, 8)}, "domain name servers of the network")
 	cmd.Flags().IPNetVar(&n.cidr, "cidr", defaultNet, "subnet cidr for the network")
-	cmd.Flags().IPVar(&n.allocationPoolStart, "allocation-pool-start", nil, "start address of the dhcp allocation pool")
-	cmd.Flags().IPVar(&n.allocationPoolEnd, "allocation-pool-end", nil, "end address of the dhcp allocation pool")
-	cmd.Flags().IPVar(&n.gateway, "gateway", nil, "gateway address of the network")
+	cmd.Flags().IPVar(n.allocationPoolStart.Configure(cmd, "allocation-pool-start", "start address of the dhcp allocation pool"))
+	cmd.Flags().IPVar(n.allocationPoolEnd.Configure(cmd, "allocation-pool-end", "end address of the dhcp allocation pool"))
+	cmd.Flags().IPVar(n.gateway.Configure(cmd, "gateway", "gateway address of the network"))
 
 	_ = cmd.MarkFlagRequired("name")
 	_ = cmd.MarkFlagRequired("location")
@@ -190,12 +199,12 @@ func (n *networkCreateCommand) Build(app commands.Application) *cobra.Command {
 }
 
 type networkUpdateCommand struct {
-	name                string
-	description         string
+	name                optional.Optional[string]
+	description         optional.Optional[string]
 	domainNameServers   []net.IP
-	allocationPoolStart net.IP
-	allocationPoolEnd   net.IP
-	gateway             net.IP
+	allocationPoolStart optional.Optional[net.IP]
+	allocationPoolEnd   optional.Optional[net.IP]
+	gateway             optional.Optional[net.IP]
 }
 
 func (n *networkUpdateCommand) Run(cmd *cobra.Command, args []string) error {
@@ -214,47 +223,47 @@ func (n *networkUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 		domainNameServers[i] = dns.String()
 	}
 
-	allocationPoolStart := ""
-	if len(n.allocationPoolStart) != 0 {
-		if !cidr.Contains(n.allocationPoolStart) {
+	var allocationPoolStart *string
+	if poolStart := n.allocationPoolStart.Value(); poolStart != nil {
+		if !cidr.Contains(*poolStart) {
 			return fmt.Errorf("start address of the allocation pool is not within the network cidr")
 		}
 
-		allocationPoolStart = n.allocationPoolStart.String()
+		allocationPoolStart = new(poolStart.String())
 	}
 
-	allocationPoolEnd := ""
-	if len(n.allocationPoolEnd) != 0 {
-		if !cidr.Contains(n.allocationPoolEnd) {
+	var allocationPoolEnd *string
+	if poolEnd := n.allocationPoolEnd.Value(); poolEnd != nil {
+		if !cidr.Contains(*poolEnd) {
 			return fmt.Errorf("end address of the allocation pool is not within the network cidr")
 		}
 
-		if bytes.Compare(n.allocationPoolStart, n.allocationPoolEnd) > 0 {
+		if poolStart := n.allocationPoolStart.Value(); poolStart != nil && bytes.Compare(*poolStart, *poolEnd) > 0 {
 			return fmt.Errorf("start address of the allocation pool is greater than the end address of the allocation pool")
 		}
 
-		allocationPoolEnd = n.allocationPoolEnd.String()
+		allocationPoolEnd = new(poolEnd.String())
 	}
 
-	gateway := ""
-	if len(n.gateway) != 0 {
-		if !cidr.Contains(n.gateway) {
+	var gateway *string
+	if g := n.gateway.Value(); g != nil {
+		if !cidr.Contains(*g) {
 			return fmt.Errorf("gateway address is not within the network cidr")
 		}
 
-		gateway = n.gateway.String()
+		gateway = new(g.String())
 	}
 
-	data := compute.NetworkUpdate{
-		Name:                n.name,
-		Description:         n.description,
+	data := compute.NetworkUpdate{ID: uint(network.ID),
+		Name:                n.name.Value(),
+		Description:         n.description.Value(),
 		DomainNameServers:   domainNameServers,
 		AllocationPoolStart: allocationPoolStart,
 		AllocationPoolEnd:   allocationPoolEnd,
 		GatewayIP:           gateway,
 	}
 
-	network, err = compute.NewNetworkService(commands.Config.Client).Update(cmd.Context(), network.ID, data)
+	network, err = compute.NetworkService().Update(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("update network: %w", err)
 	}
@@ -262,7 +271,10 @@ func (n *networkUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(network)
 }
 
-func (n *networkUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (n *networkUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeNetwork(cmd.Context(), toComplete)
 	}
@@ -280,12 +292,12 @@ func (n *networkUpdateCommand) Build(app commands.Application) *cobra.Command {
 		RunE:              n.Run,
 	}
 
-	cmd.Flags().StringVar(&n.name, "name", "", "name of the network")
-	cmd.Flags().StringVar(&n.description, "description", "", "description of the network")
+	cmd.Flags().StringVar(n.name.Configure(cmd, "name", "name of the network"))
+	cmd.Flags().StringVar(n.description.Configure(cmd, "description", "description of the network"))
 	cmd.Flags().IPSliceVar(&n.domainNameServers, "domain-name-server", nil, "domain name servers of the network")
-	cmd.Flags().IPVar(&n.allocationPoolStart, "allocation-pool-start", nil, "start address of the dhcp allocation pool")
-	cmd.Flags().IPVar(&n.allocationPoolEnd, "allocation-pool-end", nil, "end address of the dhcp allocation pool")
-	cmd.Flags().IPVar(&n.gateway, "gateway", nil, "gateway address of the network")
+	cmd.Flags().IPVar(n.allocationPoolStart.Configure(cmd, "allocation-pool-start", "start address of the dhcp allocation pool"))
+	cmd.Flags().IPVar(n.allocationPoolEnd.Configure(cmd, "allocation-pool-end", "end address of the dhcp allocation pool"))
+	cmd.Flags().IPVar(n.gateway.Configure(cmd, "gateway", "gateway address of the network"))
 
 	return cmd
 }
@@ -305,7 +317,7 @@ func (n *networkDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err = compute.NewNetworkService(commands.Config.Client).Delete(cmd.Context(), network.ID)
+	err = compute.NetworkService().Delete(cmd.Context(), compute.NetworkDelete{ID: uint(network.ID)})
 	if err != nil {
 		return fmt.Errorf("delete network: %w", err)
 	}
@@ -313,7 +325,10 @@ func (n *networkDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (n *networkDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (n *networkDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeNetwork(cmd.Context(), toComplete)
 	}
@@ -337,7 +352,7 @@ func (n *networkDeleteCommand) Build(app commands.Application) *cobra.Command {
 }
 
 func completeNetwork(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
-	networks, err := compute.NewNetworkService(commands.Config.Client).List(ctx)
+	networks, err := compute.NetworkService().List(ctx, core.CursorAll)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -353,7 +368,7 @@ func completeNetwork(ctx context.Context, term string) ([]string, cobra.ShellCom
 }
 
 func findNetwork(ctx context.Context, term string) (compute.Network, error) {
-	networks, err := compute.NewNetworkService(commands.Config.Client).List(ctx)
+	networks, err := compute.NetworkService().List(ctx, core.CursorAll)
 	if err != nil {
 		return compute.Network{}, fmt.Errorf("fetch networks: %w", err)
 	}

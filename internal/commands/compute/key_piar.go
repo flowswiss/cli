@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/flowswiss/goclient/v2/core"
 	"github.com/spf13/cobra"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
@@ -33,7 +34,7 @@ type keyPairListCommand struct {
 }
 
 func (k *keyPairListCommand) Run(cmd *cobra.Command, args []string) error {
-	keyPairs, err := compute.NewKeyPairService(commands.Config.Client).List(cmd.Context())
+	keyPairs, err := compute.KeyPairService().List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return fmt.Errorf("fetch key pairs: %w", err)
 	}
@@ -45,7 +46,10 @@ func (k *keyPairListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(keyPairs)
 }
 
-func (k *keyPairListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (k *keyPairListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -80,7 +84,7 @@ func (k *keyPairCreateCommand) Run(cmd *cobra.Command, args []string) error {
 		PublicKey: string(publicKey),
 	}
 
-	keyPair, err := compute.NewKeyPairService(commands.Config.Client).Create(cmd.Context(), data)
+	keyPair, err := compute.KeyPairService().Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create key pair: %w", err)
 	}
@@ -88,7 +92,10 @@ func (k *keyPairCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(keyPair)
 }
 
-func (k *keyPairCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (k *keyPairCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -127,7 +134,9 @@ func (k *keyPairDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err = compute.NewKeyPairService(commands.Config.Client).Delete(cmd.Context(), keyPair.ID)
+	err = compute.KeyPairService().Delete(cmd.Context(), compute.KeyPairDelete{
+		ID: uint(keyPair.ID),
+	})
 	if err != nil {
 		return fmt.Errorf("delete key pair: %w", err)
 	}
@@ -135,7 +144,10 @@ func (k *keyPairDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (k *keyPairDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (k *keyPairDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeKeyPair(cmd.Context(), toComplete)
 	}
@@ -160,7 +172,7 @@ func (k *keyPairDeleteCommand) Build(app commands.Application) *cobra.Command {
 }
 
 func completeKeyPair(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
-	keyPairs, err := compute.NewKeyPairService(commands.Config.Client).List(ctx)
+	keyPairs, err := compute.KeyPairService().List(ctx, core.CursorAll)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -176,7 +188,7 @@ func completeKeyPair(ctx context.Context, term string) ([]string, cobra.ShellCom
 }
 
 func findKeyPair(ctx context.Context, term string) (compute.KeyPair, error) {
-	keyPairs, err := compute.NewKeyPairService(commands.Config.Client).List(ctx)
+	keyPairs, err := compute.KeyPairService().List(ctx, core.CursorAll)
 	if err != nil {
 		return compute.KeyPair{}, fmt.Errorf("fetch key pairs: %w", err)
 	}

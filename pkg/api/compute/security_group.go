@@ -1,14 +1,47 @@
 package compute
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/compute"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/compute"
+	"github.com/flowswiss/goclient/v2/core"
 
 	"github.com/flowswiss/cli/v2/pkg/api/common"
 )
+
+type (
+	SecurityGroupCreate = compute.SecurityGroupCreateReq
+	SecurityGroupGet    = compute.SecurityGroupGetReq
+	SecurityGroupList   = core.Cursor
+	SecurityGroupUpdate = compute.SecurityGroupUpdateReq
+	SecurityGroupDelete = compute.SecurityGroupDeleteReq
+)
+
+type GenericSecurityGroupService = generic.CRUD[
+	compute.SecurityGroup,
+	SecurityGroup,
+	SecurityGroupCreate,
+	SecurityGroupGet,
+	SecurityGroupList,
+	SecurityGroupUpdate,
+	SecurityGroupDelete,
+]
+
+func SecurityGroupService() GenericSecurityGroupService {
+	return generic.NewCRUD[
+		compute.SecurityGroup,
+		SecurityGroup,
+		SecurityGroupCreate,
+		SecurityGroupGet,
+		SecurityGroupList,
+		SecurityGroupUpdate,
+		SecurityGroupDelete,
+	](commands.Client.Compute.SecurityGroup, func(group compute.SecurityGroup) SecurityGroup {
+		return SecurityGroup(group)
+	})
+}
 
 type SecurityGroup compute.SecurityGroup
 
@@ -24,60 +57,10 @@ func (s SecurityGroup) Columns() []string {
 	return []string{"id", "name", "location"}
 }
 
-func (s SecurityGroup) Values() map[string]interface{} {
-	return map[string]interface{}{
+func (s SecurityGroup) Values() map[string]any {
+	return map[string]any{
 		"id":       s.ID,
 		"name":     s.Name,
 		"location": common.Location(s.Location),
 	}
-}
-
-type SecurityGroupService struct {
-	delegate compute.SecurityGroupService
-}
-
-func NewSecurityGroupService(client goclient.Client) SecurityGroupService {
-	return SecurityGroupService{
-		delegate: compute.NewSecurityGroupService(client),
-	}
-}
-
-func (s SecurityGroupService) List(ctx context.Context) ([]SecurityGroup, error) {
-	res, err := s.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]SecurityGroup, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = SecurityGroup(item)
-	}
-
-	return items, nil
-}
-
-type SecurityGroupCreate = compute.SecurityGroupCreate
-
-func (s SecurityGroupService) Create(ctx context.Context, data SecurityGroupCreate) (SecurityGroup, error) {
-	res, err := s.delegate.Create(ctx, data)
-	if err != nil {
-		return SecurityGroup{}, err
-	}
-
-	return SecurityGroup(res), nil
-}
-
-type SecurityGroupUpdate = compute.SecurityGroupUpdate
-
-func (s SecurityGroupService) Update(ctx context.Context, id int, data SecurityGroupUpdate) (SecurityGroup, error) {
-	res, err := s.delegate.Update(ctx, id, data)
-	if err != nil {
-		return SecurityGroup{}, err
-	}
-
-	return SecurityGroup(res), nil
-}
-
-func (s SecurityGroupService) Delete(ctx context.Context, id int) error {
-	return s.delegate.Delete(ctx, id)
 }

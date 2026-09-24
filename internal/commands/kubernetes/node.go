@@ -6,6 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/flowswiss/goclient/v2/core"
+
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/kubernetes"
 	"github.com/flowswiss/cli/v2/pkg/filter"
@@ -40,7 +42,7 @@ func (n *nodeListCommand) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	items, err := kubernetes.NewNodeService(commands.Config.Client, cluster.ID).List(cmd.Context())
+	items, err := kubernetes.NodeService().List(cmd.Context(), kubernetes.NodeList{ClusterID: uint(cluster.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return err
 	}
@@ -52,7 +54,10 @@ func (n *nodeListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
-func (n *nodeListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (n *nodeListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeCluster(cmd.Context(), toComplete)
 	}
@@ -96,7 +101,7 @@ func (n *nodeDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err = kubernetes.NewNodeService(commands.Config.Client, cluster.ID).Delete(cmd.Context(), node.ID)
+	err = kubernetes.NodeService().Delete(cmd.Context(), kubernetes.NodeDelete{NodeID: uint(node.ID)})
 	if err != nil {
 		return fmt.Errorf("delete node: %w", err)
 	}
@@ -104,7 +109,10 @@ func (n *nodeDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (n *nodeDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (n *nodeDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeCluster(cmd.Context(), toComplete)
 	}
@@ -137,7 +145,7 @@ func (n *nodeDeleteCommand) Build(app commands.Application) *cobra.Command {
 }
 
 func completeNode(ctx context.Context, cluster kubernetes.Cluster, term string) ([]string, cobra.ShellCompDirective) {
-	nodes, err := kubernetes.NewNodeService(commands.Config.Client, cluster.ID).List(ctx)
+	nodes, err := kubernetes.NodeService().List(ctx, kubernetes.NodeList{ClusterID: uint(cluster.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -153,7 +161,7 @@ func completeNode(ctx context.Context, cluster kubernetes.Cluster, term string) 
 }
 
 func findNode(ctx context.Context, clusterID int, term string) (kubernetes.Node, error) {
-	nodes, err := kubernetes.NewNodeService(commands.Config.Client, clusterID).List(ctx)
+	nodes, err := kubernetes.NodeService().List(ctx, kubernetes.NodeList{ClusterID: uint(clusterID), Cursor: core.CursorAll})
 	if err != nil {
 		return kubernetes.Node{}, fmt.Errorf("fetch nodes: %w", err)
 	}

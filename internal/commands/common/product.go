@@ -37,12 +37,12 @@ func (p *productListCommand) Run(cmd *cobra.Command, args []string) (err error) 
 	var items []common.Product
 
 	if len(args) != 0 {
-		items, err = common.ProductsByType(cmd.Context(), commands.Config.Client, args[0])
+		items, err = common.ProductsByType(cmd.Context(), commands.Client, args[0])
 		if err != nil {
 			return err
 		}
 	} else {
-		items, err = common.Products(cmd.Context(), commands.Config.Client)
+		items, err = common.Products(cmd.Context(), commands.Client)
 		if err != nil {
 			return err
 		}
@@ -55,7 +55,10 @@ func (p *productListCommand) Run(cmd *cobra.Command, args []string) (err error) 
 	return commands.PrintStdout(items)
 }
 
-func (p *productListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (p *productListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeProductCategory(cmd.Context(), toComplete)
 	}
@@ -83,7 +86,7 @@ type productCategoryListCommand struct {
 }
 
 func (p *productCategoryListCommand) Run(cmd *cobra.Command, args []string) error {
-	items, err := common.ProductTypes(cmd.Context(), commands.Config.Client)
+	items, err := common.ProductTypes(cmd.Context(), commands.Client)
 	if err != nil {
 		return err
 	}
@@ -95,7 +98,10 @@ func (p *productCategoryListCommand) Run(cmd *cobra.Command, args []string) erro
 	return commands.PrintStdout(items)
 }
 
-func (p *productCategoryListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (p *productCategoryListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -115,7 +121,7 @@ func (p *productCategoryListCommand) Build(app commands.Application) *cobra.Comm
 }
 
 func completeProductCategory(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
-	categories, err := common.ProductTypes(ctx, commands.Config.Client)
+	categories, err := common.ProductTypes(ctx, commands.Client)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}

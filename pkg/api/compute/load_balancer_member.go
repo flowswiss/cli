@@ -1,12 +1,38 @@
 package compute
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/compute"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/compute"
 )
+
+type (
+	LoadBalancerMemberCreate = compute.LoadBalancerMemberCreateReq
+	LoadBalancerMemberList   = compute.LoadBalancerMemberListReq
+	LoadBalancerMemberDelete = compute.LoadBalancerMemberDeleteReq
+)
+
+type GenericLoadBalancerMemberService = generic.CFD[
+	compute.LoadBalancerMember,
+	LoadBalancerMember,
+	LoadBalancerMemberCreate,
+	LoadBalancerMemberList,
+	LoadBalancerMemberDelete,
+]
+
+func LoadBalancerMemberService() GenericLoadBalancerMemberService {
+	return generic.NewCFD[
+		compute.LoadBalancerMember,
+		LoadBalancerMember,
+		LoadBalancerMemberCreate,
+		LoadBalancerMemberList,
+		LoadBalancerMemberDelete,
+	](commands.Client.Compute.LoadBalancerMember, func(member compute.LoadBalancerMember) LoadBalancerMember {
+		return LoadBalancerMember(member)
+	})
+}
 
 type LoadBalancerMember compute.LoadBalancerMember
 
@@ -26,50 +52,11 @@ func (l LoadBalancerMember) Columns() []string {
 	return []string{"id", "name", "address", "status"}
 }
 
-func (l LoadBalancerMember) Values() map[string]interface{} {
-	return map[string]interface{}{
+func (l LoadBalancerMember) Values() map[string]any {
+	return map[string]any{
 		"id":      l.ID,
 		"name":    l.Name,
 		"address": l.Host(),
 		"status":  l.Status.Name,
 	}
-}
-
-type LoadBalancerMemberService struct {
-	delegate compute.LoadBalancerMemberService
-}
-
-func NewLoadBalancerMemberService(client goclient.Client, loadBalancerID, poolID int) LoadBalancerMemberService {
-	return LoadBalancerMemberService{
-		delegate: compute.NewLoadBalancerMemberService(client, loadBalancerID, poolID),
-	}
-}
-
-func (l LoadBalancerMemberService) List(ctx context.Context) ([]LoadBalancerMember, error) {
-	res, err := l.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]LoadBalancerMember, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = LoadBalancerMember(item)
-	}
-
-	return items, nil
-}
-
-type LoadBalancerMemberCreate = compute.LoadBalancerMemberCreate
-
-func (l LoadBalancerMemberService) Create(ctx context.Context, data LoadBalancerMemberCreate) (LoadBalancerMember, error) {
-	res, err := l.delegate.Create(ctx, data)
-	if err != nil {
-		return LoadBalancerMember{}, err
-	}
-
-	return LoadBalancerMember(res), nil
-}
-
-func (l LoadBalancerMemberService) Delete(ctx context.Context, id int) error {
-	return l.delegate.Delete(ctx, id)
 }

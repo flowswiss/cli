@@ -38,11 +38,11 @@ type Writer interface {
 	Bold() Writer
 	Reset() Writer
 
-	Printf(format string, a ...interface{}) Writer
-	Print(a ...interface{}) Writer
-	Println(a ...interface{}) Writer
+	Printf(format string, a ...any) Writer
+	Print(a ...any) Writer
+	Println(a ...any) Writer
 
-	Errorf(format string, a ...interface{}) Writer
+	Errorf(format string, a ...any) Writer
 }
 
 func NewConsoleOutput(file *os.File) Writer {
@@ -61,22 +61,22 @@ func (w plainWriter) Color(Color) Writer { return w }
 func (w plainWriter) Bold() Writer       { return w }
 func (w plainWriter) Reset() Writer      { return w }
 
-func (w plainWriter) Printf(format string, a ...interface{}) Writer {
+func (w plainWriter) Printf(format string, a ...any) Writer {
 	_, _ = fmt.Fprintf(w.File, format, a...)
 	return w
 }
 
-func (w plainWriter) Print(a ...interface{}) Writer {
+func (w plainWriter) Print(a ...any) Writer {
 	_, _ = fmt.Fprint(w.File, a...)
 	return w
 }
 
-func (w plainWriter) Println(a ...interface{}) Writer {
+func (w plainWriter) Println(a ...any) Writer {
 	_, _ = fmt.Fprintln(w.File, a...)
 	return w
 }
 
-func (w plainWriter) Errorf(format string, a ...interface{}) Writer { return w.Printf(format, a...) }
+func (w plainWriter) Errorf(format string, a ...any) Writer { return w.Printf(format, a...) }
 
 type ansiWriter struct {
 	*os.File
@@ -94,22 +94,22 @@ func (w ansiWriter) Reset() Writer {
 	return w.Print(Reset)
 }
 
-func (w ansiWriter) Printf(format string, a ...interface{}) Writer {
+func (w ansiWriter) Printf(format string, a ...any) Writer {
 	_, _ = fmt.Fprintf(w.File, format, a...)
 	return w
 }
 
-func (w ansiWriter) Print(a ...interface{}) Writer {
+func (w ansiWriter) Print(a ...any) Writer {
 	_, _ = fmt.Fprint(w.File, a...)
 	return w
 }
 
-func (w ansiWriter) Println(a ...interface{}) Writer {
+func (w ansiWriter) Println(a ...any) Writer {
 	_, _ = fmt.Fprintln(w.File, a...)
 	return w
 }
 
-func (w ansiWriter) Errorf(format string, a ...interface{}) Writer {
+func (w ansiWriter) Errorf(format string, a ...any) Writer {
 	return w.Color(Red).
 		Printf(format, a...).
 		Reset()

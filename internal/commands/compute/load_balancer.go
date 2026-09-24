@@ -7,6 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/flowswiss/goclient/v2/core"
+
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/compute"
 	"github.com/flowswiss/cli/v2/pkg/filter"
@@ -42,7 +44,7 @@ type loadBalancerListCommand struct {
 }
 
 func (l *loadBalancerListCommand) Run(cmd *cobra.Command, args []string) error {
-	items, err := compute.NewLoadBalancerService(commands.Config.Client).List(cmd.Context())
+	items, err := compute.LoadBalancerService().List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return fmt.Errorf("fetch loadBalancers: %w", err)
 	}
@@ -54,7 +56,10 @@ func (l *loadBalancerListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
-func (l *loadBalancerListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (l *loadBalancerListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -97,7 +102,7 @@ func (l *loadBalancerCreateCommand) Run(cmd *cobra.Command, args []string) error
 		data.PrivateIP = l.privateIP.String()
 	}
 
-	service := compute.NewLoadBalancerService(commands.Config.Client)
+	service := compute.LoadBalancerService()
 
 	ordering, err := service.Create(cmd.Context(), data)
 	if err != nil {
@@ -109,7 +114,7 @@ func (l *loadBalancerCreateCommand) Run(cmd *cobra.Command, args []string) error
 		return fmt.Errorf("wait for order: %w", err)
 	}
 
-	loadBalancer, err := service.Get(cmd.Context(), order.Product.ID)
+	loadBalancer, err := service.Get(cmd.Context(), compute.LoadBalancerGet{ID: uint(order.Product.ID)})
 	if err != nil {
 		return fmt.Errorf("fetch load balancer: %w", err)
 	}
@@ -117,7 +122,10 @@ func (l *loadBalancerCreateCommand) Run(cmd *cobra.Command, args []string) error
 	return commands.PrintStdout(loadBalancer)
 }
 
-func (l *loadBalancerCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (l *loadBalancerCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -151,11 +159,11 @@ func (l *loadBalancerUpdateCommand) Run(cmd *cobra.Command, args []string) error
 		return err
 	}
 
-	data := compute.LoadBalancerUpdate{
-		Name: l.name,
+	data := compute.LoadBalancerUpdate{ID: uint(loadBalancer.ID),
+		Name: &l.name,
 	}
 
-	loadBalancer, err = compute.NewLoadBalancerService(commands.Config.Client).Update(cmd.Context(), loadBalancer.ID, data)
+	loadBalancer, err = compute.LoadBalancerService().Update(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("update load balancer: %w", err)
 	}
@@ -163,7 +171,10 @@ func (l *loadBalancerUpdateCommand) Run(cmd *cobra.Command, args []string) error
 	return commands.PrintStdout(loadBalancer)
 }
 
-func (l *loadBalancerUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (l *loadBalancerUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeLoadBalancer(cmd.Context(), toComplete)
 	}
@@ -201,7 +212,7 @@ func (l *loadBalancerDeleteCommand) Run(cmd *cobra.Command, args []string) error
 		return nil
 	}
 
-	err = compute.NewLoadBalancerService(commands.Config.Client).Delete(cmd.Context(), loadBalancer.ID)
+	err = compute.LoadBalancerService().Delete(cmd.Context(), compute.LoadBalancerDelete{ID: uint(loadBalancer.ID)})
 	if err != nil {
 		return fmt.Errorf("delete load balancer: %w", err)
 	}
@@ -209,7 +220,10 @@ func (l *loadBalancerDeleteCommand) Run(cmd *cobra.Command, args []string) error
 	return nil
 }
 
-func (l *loadBalancerDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (l *loadBalancerDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeLoadBalancer(cmd.Context(), toComplete)
 	}
@@ -237,7 +251,7 @@ type loadBalancerProtocolListCommand struct {
 }
 
 func (l *loadBalancerProtocolListCommand) Run(cmd *cobra.Command, args []string) error {
-	items, err := compute.LoadBalancerProtocols(cmd.Context(), commands.Config.Client)
+	items, err := compute.LoadBalancerProtocols(cmd.Context(), commands.Client)
 	if err != nil {
 		return fmt.Errorf("fetch load balancer protocols: %w", err)
 	}
@@ -249,7 +263,10 @@ func (l *loadBalancerProtocolListCommand) Run(cmd *cobra.Command, args []string)
 	return commands.PrintStdout(items)
 }
 
-func (l *loadBalancerProtocolListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (l *loadBalancerProtocolListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -273,7 +290,7 @@ type loadBalancerAlgorithmListCommand struct {
 }
 
 func (l *loadBalancerAlgorithmListCommand) Run(cmd *cobra.Command, args []string) error {
-	items, err := compute.LoadBalancerAlgorithms(cmd.Context(), commands.Config.Client)
+	items, err := compute.LoadBalancerAlgorithms(cmd.Context(), commands.Client)
 	if err != nil {
 		return fmt.Errorf("fetch load balancer algorithms: %w", err)
 	}
@@ -285,7 +302,10 @@ func (l *loadBalancerAlgorithmListCommand) Run(cmd *cobra.Command, args []string
 	return commands.PrintStdout(items)
 }
 
-func (l *loadBalancerAlgorithmListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (l *loadBalancerAlgorithmListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -309,7 +329,7 @@ type loadBalancerHealthCheckTypeListCommand struct {
 }
 
 func (l *loadBalancerHealthCheckTypeListCommand) Run(cmd *cobra.Command, args []string) error {
-	items, err := compute.LoadBalancerHealthCheckTypes(cmd.Context(), commands.Config.Client)
+	items, err := compute.LoadBalancerHealthCheckTypes(cmd.Context(), commands.Client)
 	if err != nil {
 		return fmt.Errorf("fetch load balancer health check types: %w", err)
 	}
@@ -321,7 +341,11 @@ func (l *loadBalancerHealthCheckTypeListCommand) Run(cmd *cobra.Command, args []
 	return commands.PrintStdout(items)
 }
 
-func (l *loadBalancerHealthCheckTypeListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (l *loadBalancerHealthCheckTypeListCommand) CompleteArg(
+	cmd *cobra.Command,
+	args []string,
+	toComplete string,
+) ([]string, cobra.ShellCompDirective) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -341,7 +365,7 @@ func (l *loadBalancerHealthCheckTypeListCommand) Build(app commands.Application)
 }
 
 func completeLoadBalancer(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
-	loadBalancers, err := compute.NewLoadBalancerService(commands.Config.Client).List(ctx)
+	loadBalancers, err := compute.LoadBalancerService().List(ctx, core.CursorAll)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -357,7 +381,7 @@ func completeLoadBalancer(ctx context.Context, term string) ([]string, cobra.She
 }
 
 func findLoadBalancer(ctx context.Context, term string) (compute.LoadBalancer, error) {
-	loadBalancers, err := compute.NewLoadBalancerService(commands.Config.Client).List(ctx)
+	loadBalancers, err := compute.LoadBalancerService().List(ctx, core.CursorAll)
 	if err != nil {
 		return compute.LoadBalancer{}, fmt.Errorf("fetch load balancers: %w", err)
 	}

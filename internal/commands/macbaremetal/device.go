@@ -7,6 +7,8 @@ import (
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 
+	"github.com/flowswiss/goclient/v2/core"
+
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/common"
 	"github.com/flowswiss/cli/v2/pkg/api/macbaremetal"
@@ -53,7 +55,7 @@ type deviceListCommand struct {
 }
 
 func (d *deviceListCommand) Run(cmd *cobra.Command, args []string) error {
-	items, err := macbaremetal.NewDeviceService(commands.Config.Client).List(cmd.Context())
+	items, err := macbaremetal.DeviceService().List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return fmt.Errorf("fetch devices: %w", err)
 	}
@@ -65,7 +67,10 @@ func (d *deviceListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
-func (d *deviceListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (d *deviceListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -104,7 +109,7 @@ func (d *deviceVNCCommand) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	vnc, err := macbaremetal.NewDeviceService(commands.Config.Client).GetVNC(cmd.Context(), device.ID)
+	vnc, err := macbaremetal.DeviceService().GetVNC(cmd.Context(), macbaremetal.DeviceVNC{ID: uint(device.ID)})
 	if err != nil {
 		return fmt.Errorf("fetch vnc connection: %w", err)
 	}
@@ -120,7 +125,10 @@ func (d *deviceVNCCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (d *deviceVNCCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (d *deviceVNCCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeDevice(cmd.Context(), toComplete)
 	}
@@ -159,7 +167,7 @@ type deviceCreateCommand struct {
 }
 
 func (d *deviceCreateCommand) Run(cmd *cobra.Command, args []string) error {
-	products, err := common.ProductsByType(cmd.Context(), commands.Config.Client, common.ProductTypeMacBareMetalDevice)
+	products, err := common.ProductsByType(cmd.Context(), commands.Client, common.ProductTypeMacBareMetalDevice)
 	if err != nil {
 		return fmt.Errorf("fetch products: %w", err)
 	}
@@ -169,7 +177,7 @@ func (d *deviceCreateCommand) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("find product: %w", err)
 	}
 
-	networks, err := macbaremetal.NewNetworkService(commands.Config.Client).List(cmd.Context())
+	networks, err := macbaremetal.NetworkService().List(cmd.Context(), macbaremetal.NetworkList{})
 	if err != nil {
 		return fmt.Errorf("fetch networks: %w", err)
 	}
@@ -188,7 +196,7 @@ func (d *deviceCreateCommand) Run(cmd *cobra.Command, args []string) error {
 		Password:        d.password,
 	}
 
-	service := macbaremetal.NewDeviceService(commands.Config.Client)
+	service := macbaremetal.DeviceService()
 
 	ordering, err := service.Create(cmd.Context(), data)
 	if err != nil {
@@ -200,7 +208,7 @@ func (d *deviceCreateCommand) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("wait for order: %w", err)
 	}
 
-	device, err := service.Get(cmd.Context(), order.Product.ID)
+	device, err := service.Get(cmd.Context(), macbaremetal.DeviceGet{ID: uint(order.Product.ID)})
 	if err != nil {
 		return fmt.Errorf("fetch order: %w", err)
 	}
@@ -208,7 +216,10 @@ func (d *deviceCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(device)
 }
 
-func (d *deviceCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (d *deviceCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -242,9 +253,9 @@ type deviceUpdateCommand struct {
 }
 
 func (d *deviceUpdateCommand) Run(cmd *cobra.Command, args []string) error {
-	service := macbaremetal.NewDeviceService(commands.Config.Client)
+	service := macbaremetal.DeviceService()
 
-	devices, err := service.List(cmd.Context())
+	devices, err := service.List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return fmt.Errorf("fetch devices: %w", err)
 	}
@@ -254,11 +265,11 @@ func (d *deviceUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("find device: %w", err)
 	}
 
-	update := macbaremetal.DeviceUpdate{
-		Name: d.name,
+	update := macbaremetal.DeviceUpdate{ID: uint(device.ID),
+		Name: &d.name,
 	}
 
-	device, err = service.Update(cmd.Context(), device.ID, update)
+	device, err = service.Update(cmd.Context(), update)
 	if err != nil {
 		return fmt.Errorf("update device: %w", err)
 	}
@@ -266,7 +277,10 @@ func (d *deviceUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(device)
 }
 
-func (d *deviceUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (d *deviceUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeDevice(cmd.Context(), toComplete)
 	}
@@ -297,9 +311,9 @@ type deviceDeleteCommand struct {
 }
 
 func (d *deviceDeleteCommand) Run(cmd *cobra.Command, args []string) error {
-	service := macbaremetal.NewDeviceService(commands.Config.Client)
+	service := macbaremetal.DeviceService()
 
-	devices, err := service.List(cmd.Context())
+	devices, err := service.List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return fmt.Errorf("fetch devices: %w", err)
 	}
@@ -314,7 +328,7 @@ func (d *deviceDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err = service.Delete(cmd.Context(), device.ID)
+	err = service.Delete(cmd.Context(), macbaremetal.DeviceDelete{ID: uint(device.ID)})
 	if err != nil {
 		return fmt.Errorf("delete device: %w", err)
 	}
@@ -322,7 +336,10 @@ func (d *deviceDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (d *deviceDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (d *deviceDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeDevice(cmd.Context(), toComplete)
 	}
@@ -354,7 +371,7 @@ func (d *deviceDeleteCommand) Build(app commands.Application) *cobra.Command {
 }
 
 func completeDevice(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
-	devices, err := macbaremetal.NewDeviceService(commands.Config.Client).List(ctx)
+	devices, err := macbaremetal.DeviceService().List(ctx, core.CursorAll)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -370,7 +387,7 @@ func completeDevice(ctx context.Context, term string) ([]string, cobra.ShellComp
 }
 
 func findDevice(ctx context.Context, term string) (macbaremetal.Device, error) {
-	elasticIPs, err := macbaremetal.NewDeviceService(commands.Config.Client).List(ctx)
+	elasticIPs, err := macbaremetal.DeviceService().List(ctx, core.CursorAll)
 	if err != nil {
 		return macbaremetal.Device{}, fmt.Errorf("fetch devices: %w", err)
 	}

@@ -1,12 +1,38 @@
 package compute
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/compute"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/compute"
 )
+
+type (
+	RouteCreate = compute.RouteCreateReq
+	RouteList   = compute.RouteListReq
+	RouteDelete = compute.RouteDeleteReq
+)
+
+type GenericRouteService = generic.CFD[
+	compute.Route,
+	Route,
+	RouteCreate,
+	RouteList,
+	RouteDelete,
+]
+
+func RouteService() GenericRouteService {
+	return generic.NewCFD[
+		compute.Route,
+		Route,
+		RouteCreate,
+		RouteList,
+		RouteDelete,
+	](commands.Client.Compute.Route, func(route compute.Route) Route {
+		return Route(route)
+	})
+}
 
 type Route compute.Route
 
@@ -22,49 +48,10 @@ func (r Route) Columns() []string {
 	return []string{"id", "destination", "next hop"}
 }
 
-func (r Route) Values() map[string]interface{} {
-	return map[string]interface{}{
+func (r Route) Values() map[string]any {
+	return map[string]any{
 		"id":          r.ID,
 		"destination": r.Destination,
 		"next hop":    r.NextHop,
 	}
-}
-
-type RouteService struct {
-	delegate compute.RouteService
-}
-
-func NewRouteService(client goclient.Client, routerID int) RouteService {
-	return RouteService{
-		delegate: compute.NewRouteService(client, routerID),
-	}
-}
-
-func (r RouteService) List(ctx context.Context) ([]Route, error) {
-	res, err := r.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]Route, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = Route(item)
-	}
-
-	return items, nil
-}
-
-type RouteCreate = compute.RouteCreate
-
-func (r RouteService) Create(ctx context.Context, data RouteCreate) (Route, error) {
-	res, err := r.delegate.Create(ctx, data)
-	if err != nil {
-		return Route{}, err
-	}
-
-	return Route(res), nil
-}
-
-func (r RouteService) Delete(ctx context.Context, id int) error {
-	return r.delegate.Delete(ctx, id)
 }

@@ -7,6 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/flowswiss/goclient/v2/core"
+
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/compute"
 	"github.com/flowswiss/cli/v2/pkg/filter"
@@ -37,7 +39,7 @@ func (r *routeListCommand) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	items, err := compute.NewRouteService(commands.Config.Client, router.ID).List(cmd.Context())
+	items, err := compute.RouteService().List(cmd.Context(), compute.RouteList{RouterID: uint(router.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return fmt.Errorf("fetch routes: %w", err)
 	}
@@ -49,7 +51,10 @@ func (r *routeListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
-func (r *routeListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (r *routeListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeRouter(cmd.Context(), toComplete)
 	}
@@ -84,12 +89,12 @@ func (r *routeCreateCommand) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	data := compute.RouteCreate{
+	data := compute.RouteCreate{RouterID: uint(router.ID),
 		Destination: r.destination.String(),
 		NextHop:     r.nextHop.String(),
 	}
 
-	item, err := compute.NewRouteService(commands.Config.Client, router.ID).Create(cmd.Context(), data)
+	item, err := compute.RouteService().Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create route: %w", err)
 	}
@@ -97,7 +102,10 @@ func (r *routeCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(item)
 }
 
-func (r *routeCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (r *routeCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeRouter(cmd.Context(), toComplete)
 	}
@@ -134,7 +142,7 @@ func (r *routeDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	routes, err := compute.NewRouteService(commands.Config.Client, router.ID).List(cmd.Context())
+	routes, err := compute.RouteService().List(cmd.Context(), compute.RouteList{RouterID: uint(router.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return fmt.Errorf("fetch routes: %w", err)
 	}
@@ -149,7 +157,7 @@ func (r *routeDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err = compute.NewRouteService(commands.Config.Client, router.ID).Delete(cmd.Context(), route.ID)
+	err = compute.RouteService().Delete(cmd.Context(), compute.RouteDelete{RouterID: uint(router.ID), RouteID: uint(route.ID)})
 	if err != nil {
 		return fmt.Errorf("delete route: %w", err)
 	}
@@ -157,7 +165,10 @@ func (r *routeDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (r *routeDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (r *routeDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeRouter(cmd.Context(), toComplete)
 	}
@@ -190,7 +201,7 @@ func (r *routeDeleteCommand) Build(app commands.Application) *cobra.Command {
 }
 
 func completeRouterRoute(ctx context.Context, router compute.Router, term string) ([]string, cobra.ShellCompDirective) {
-	routes, err := compute.NewRouteService(commands.Config.Client, router.ID).List(ctx)
+	routes, err := compute.RouteService().List(ctx, compute.RouteList{RouterID: uint(router.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}

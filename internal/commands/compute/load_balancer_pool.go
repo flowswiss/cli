@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/flowswiss/cli/v2/pkg/optional"
 	"github.com/spf13/cobra"
+
+	"github.com/flowswiss/goclient/v2/core"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/compute"
@@ -39,7 +42,7 @@ func (l *loadBalancerPoolListCommand) Run(cmd *cobra.Command, args []string) err
 		return err
 	}
 
-	items, err := compute.NewLoadBalancerPoolService(commands.Config.Client, loadBalancer.ID).List(cmd.Context())
+	items, err := compute.LoadBalancerPoolService().List(cmd.Context(), compute.LoadBalancerPoolList{LoadBalancerID: uint(loadBalancer.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return fmt.Errorf("fetch load balancer pools: %w", err)
 	}
@@ -51,7 +54,10 @@ func (l *loadBalancerPoolListCommand) Run(cmd *cobra.Command, args []string) err
 	return commands.PrintStdout(items)
 }
 
-func (l *loadBalancerPoolListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (l *loadBalancerPoolListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeLoadBalancer(cmd.Context(), toComplete)
 	}
@@ -78,18 +84,18 @@ func (l *loadBalancerPoolListCommand) Build(app commands.Application) *cobra.Com
 type loadBalancerPoolCreateCommand struct {
 	entryProtocol  string
 	targetProtocol string
-	certificate    string
+	certificate    optional.Optional[string]
 	entryPort      int
 	algorithm      string
 	stickySession  bool
 
 	healthCheckType               string
-	healthCheckHTTPMethod         string
-	healthCheckHTTPPath           string
-	healthCheckInterval           time.Duration
-	healthCheckTimeout            time.Duration
-	healthCheckHealthyThreshold   int
-	healthCheckUnhealthyThreshold int
+	healthCheckHTTPMethod         optional.Optional[string]
+	healthCheckHTTPPath           optional.Optional[string]
+	healthCheckInterval           optional.Optional[time.Duration]
+	healthCheckTimeout            optional.Optional[time.Duration]
+	healthCheckHealthyThreshold   optional.Optional[int]
+	healthCheckUnhealthyThreshold optional.Optional[int]
 }
 
 func (l *loadBalancerPoolCreateCommand) Run(cmd *cobra.Command, args []string) error {
@@ -98,17 +104,17 @@ func (l *loadBalancerPoolCreateCommand) Run(cmd *cobra.Command, args []string) e
 		return err
 	}
 
-	protocols, err := compute.LoadBalancerProtocols(cmd.Context(), commands.Config.Client)
+	protocols, err := compute.LoadBalancerProtocols(cmd.Context(), commands.Client)
 	if err != nil {
 		return fmt.Errorf("fetch load balancer protocols: %w", err)
 	}
 
-	algorithms, err := compute.LoadBalancerAlgorithms(cmd.Context(), commands.Config.Client)
+	algorithms, err := compute.LoadBalancerAlgorithms(cmd.Context(), commands.Client)
 	if err != nil {
 		return fmt.Errorf("fetch load balancer algorithms: %w", err)
 	}
 
-	healthCheckTypes, err := compute.LoadBalancerHealthCheckTypes(cmd.Context(), commands.Config.Client)
+	healthCheckTypes, err := compute.LoadBalancerHealthCheckTypes(cmd.Context(), commands.Client)
 	if err != nil {
 		return fmt.Errorf("fetch load balancer health check types: %w", err)
 	}
@@ -133,34 +139,44 @@ func (l *loadBalancerPoolCreateCommand) Run(cmd *cobra.Command, args []string) e
 		return fmt.Errorf("find health check type: %w", err)
 	}
 
-	data := compute.LoadBalancerPoolCreate{
+	var hcInterval *int
+	if interval := l.healthCheckInterval.Value(); interval != nil {
+		hcInterval = new(int(interval.Seconds()))
+	}
+
+	var hcTimeout *int
+	if timeout := l.healthCheckTimeout.Value(); timeout != nil {
+		hcTimeout = new(int(timeout.Seconds()))
+	}
+
+	data := compute.LoadBalancerPoolCreate{LoadBalancerID: uint(loadBalancer.ID),
 		EntryProtocolID:      entryProtocol.ID,
 		TargetProtocolID:     targetProtocol.ID,
 		EntryPort:            l.entryPort,
 		BalancingAlgorithmID: algorithm.ID,
 		StickySession:        l.stickySession,
 
-		HealthCheck: compute.LoadBalancerHealthCheckOptions{
+		HealthCheck: &compute.LoadBalancerHealthCheckOptions{
 			TypeID:             healthCheckType.ID,
-			HTTPMethod:         l.healthCheckHTTPMethod,
-			HTTPPath:           l.healthCheckHTTPPath,
-			Interval:           int(l.healthCheckInterval.Seconds()),
-			Timeout:            int(l.healthCheckTimeout.Seconds()),
-			HealthyThreshold:   l.healthCheckHealthyThreshold,
-			UnhealthyThreshold: l.healthCheckUnhealthyThreshold,
+			HTTPMethod:         l.healthCheckHTTPMethod.Value(),
+			HTTPPath:           l.healthCheckHTTPPath.Value(),
+			Interval:           hcInterval,
+			Timeout:            hcTimeout,
+			HealthyThreshold:   l.healthCheckHealthyThreshold.Value(),
+			UnhealthyThreshold: l.healthCheckUnhealthyThreshold.Value(),
 		},
 	}
 
-	if l.certificate != "" {
-		certificate, err := findCertificate(cmd.Context(), l.certificate)
+	if certIdentifier := l.certificate.Value(); certIdentifier != nil {
+		certificate, err := findCertificate(cmd.Context(), *certIdentifier)
 		if err != nil {
 			return err
 		}
 
-		data.CertificateID = certificate.ID
+		data.CertificateID = &certificate.ID
 	}
 
-	item, err := compute.NewLoadBalancerPoolService(commands.Config.Client, loadBalancer.ID).Create(cmd.Context(), data)
+	item, err := compute.LoadBalancerPoolService().Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create load balancer pool: %w", err)
 	}
@@ -168,7 +184,10 @@ func (l *loadBalancerPoolCreateCommand) Run(cmd *cobra.Command, args []string) e
 	return commands.PrintStdout(item)
 }
 
-func (l *loadBalancerPoolCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (l *loadBalancerPoolCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeLoadBalancer(cmd.Context(), toComplete)
 	}
@@ -188,39 +207,39 @@ func (l *loadBalancerPoolCreateCommand) Build(app commands.Application) *cobra.C
 
 	cmd.Flags().StringVar(&l.entryProtocol, "entry-protocol", "", "name of the entry protocol to use")
 	cmd.Flags().StringVar(&l.targetProtocol, "target-protocol", "", "name of the target protocol to use")
-	cmd.Flags().StringVar(&l.certificate, "certificate", "", "name of the certificate to use")
+	cmd.Flags().StringVar(l.certificate.Configure(cmd, "certificate", "name of the certificate to use"))
 	cmd.Flags().IntVar(&l.entryPort, "entry-port", 0, "port of the entry protocol")
 	cmd.Flags().StringVar(&l.algorithm, "algorithm", "", "name of the balancing algorithm to use")
 	cmd.Flags().BoolVar(&l.stickySession, "sticky-session", false, "enable sticky session")
 
 	cmd.Flags().StringVar(&l.healthCheckType, "health-check-type", "", "type of the health check")
-	cmd.Flags().StringVar(&l.healthCheckHTTPMethod, "health-check-http-method", "", "HTTP method to use for the health check")
-	cmd.Flags().StringVar(&l.healthCheckHTTPPath, "health-check-http-path", "", "HTTP path to use for the health check")
-	cmd.Flags().DurationVar(&l.healthCheckInterval, "health-check-interval", 0, "interval of the health check")
-	cmd.Flags().DurationVar(&l.healthCheckTimeout, "health-check-timeout", 0, "timeout of the health check")
-	cmd.Flags().IntVar(&l.healthCheckHealthyThreshold, "health-check-healthy-threshold", 0, "healthy threshold of the health check")
-	cmd.Flags().IntVar(&l.healthCheckUnhealthyThreshold, "health-check-unhealthy-threshold", 0, "unhealthy threshold of the health check")
+	cmd.Flags().StringVar(l.healthCheckHTTPMethod.Configure(cmd, "health-check-http-method", "HTTP method to use for the health check"))
+	cmd.Flags().StringVar(l.healthCheckHTTPPath.Configure(cmd, "health-check-http-path", "HTTP path to use for the health check"))
+	cmd.Flags().DurationVar(l.healthCheckInterval.Configure(cmd, "health-check-interval", "interval of the health check"))
+	cmd.Flags().DurationVar(l.healthCheckTimeout.Configure(cmd, "health-check-timeout", "timeout of the health check"))
+	cmd.Flags().IntVar(l.healthCheckHealthyThreshold.Configure(cmd, "health-check-healthy-threshold", "healthy threshold of the health check"))
+	cmd.Flags().IntVar(l.healthCheckUnhealthyThreshold.Configure(cmd, "health-check-unhealthy-threshold", "unhealthy threshold of the health check"))
 
 	_ = cmd.MarkFlagRequired("entry-protocol")
-	_ = cmd.MarkFlagRequired("entry-port")
 	_ = cmd.MarkFlagRequired("target-protocol")
+	_ = cmd.MarkFlagRequired("entry-port")
 	_ = cmd.MarkFlagRequired("algorithm")
 
 	return cmd
 }
 
 type loadBalancerPoolUpdateCommand struct {
-	certificate   string
-	algorithm     string
-	stickySession bool
+	certificate   optional.Optional[string]
+	algorithm     optional.Optional[string]
+	stickySession optional.Optional[bool]
 
-	healthCheckType               string
-	healthCheckHTTPMethod         string
-	healthCheckHTTPPath           string
-	healthCheckInterval           time.Duration
-	healthCheckTimeout            time.Duration
-	healthCheckHealthyThreshold   int
-	healthCheckUnhealthyThreshold int
+	healthCheckType               optional.Optional[string]
+	healthCheckHTTPMethod         optional.Optional[string]
+	healthCheckHTTPPath           optional.Optional[string]
+	healthCheckInterval           optional.Optional[time.Duration]
+	healthCheckTimeout            optional.Optional[time.Duration]
+	healthCheckHealthyThreshold   optional.Optional[int]
+	healthCheckUnhealthyThreshold optional.Optional[int]
 }
 
 func (l *loadBalancerPoolUpdateCommand) Run(cmd *cobra.Command, args []string) error {
@@ -234,48 +253,58 @@ func (l *loadBalancerPoolUpdateCommand) Run(cmd *cobra.Command, args []string) e
 		return err
 	}
 
-	data := compute.LoadBalancerPoolUpdate{
-		StickySession: l.stickySession,
-		HealthCheck: compute.LoadBalancerHealthCheckOptions{
-			HTTPMethod:         l.healthCheckHTTPMethod,
-			HTTPPath:           l.healthCheckHTTPPath,
-			Interval:           int(l.healthCheckInterval.Seconds()),
-			Timeout:            int(l.healthCheckTimeout.Seconds()),
-			HealthyThreshold:   l.healthCheckHealthyThreshold,
-			UnhealthyThreshold: l.healthCheckUnhealthyThreshold,
+	var hcInterval *int
+	if interval := l.healthCheckInterval.Value(); interval != nil {
+		hcInterval = new(int(interval.Seconds()))
+	}
+
+	var hcTimeout *int
+	if timeout := l.healthCheckTimeout.Value(); timeout != nil {
+		hcTimeout = new(int(timeout.Seconds()))
+	}
+
+	data := compute.LoadBalancerPoolUpdate{LoadBalancerID: uint(loadBalancer.ID), LoadBalancerPoolID: uint(loadBalancerPool.ID),
+		StickySession: l.stickySession.Value(),
+		HealthCheck: &compute.LoadBalancerHealthCheckOptions{
+			HTTPMethod:         l.healthCheckHTTPMethod.Value(),
+			HTTPPath:           l.healthCheckHTTPPath.Value(),
+			Interval:           hcInterval,
+			Timeout:            hcTimeout,
+			HealthyThreshold:   l.healthCheckHealthyThreshold.Value(),
+			UnhealthyThreshold: l.healthCheckUnhealthyThreshold.Value(),
 		},
 	}
 
-	if l.certificate != "" {
-		certificate, err := findCertificate(cmd.Context(), l.certificate)
+	if certIdentifier := l.certificate.Value(); certIdentifier != nil {
+		certificate, err := findCertificate(cmd.Context(), *certIdentifier)
 		if err != nil {
 			return err
 		}
 
-		data.CertificateID = certificate.ID
+		data.CertificateID = &certificate.ID
 	}
 
-	if l.algorithm != "" {
-		algorithms, err := compute.LoadBalancerAlgorithms(cmd.Context(), commands.Config.Client)
+	if algIdentifier := l.algorithm.Value(); algIdentifier != nil {
+		algorithms, err := compute.LoadBalancerAlgorithms(cmd.Context(), commands.Client)
 		if err != nil {
 			return fmt.Errorf("fetch load balancer algorithms: %w", err)
 		}
 
-		algorithm, err := filter.FindOne(algorithms, l.algorithm)
+		algorithm, err := filter.FindOne(algorithms, *algIdentifier)
 		if err != nil {
 			return fmt.Errorf("find balancing algorithm: %w", err)
 		}
 
-		data.BalancingAlgorithmID = algorithm.ID
+		data.BalancingAlgorithmID = &algorithm.ID
 	}
 
-	if l.healthCheckType != "" {
-		healthCheckTypes, err := compute.LoadBalancerHealthCheckTypes(cmd.Context(), commands.Config.Client)
+	if hcTypeIdentifier := l.healthCheckType.Value(); hcTypeIdentifier != nil {
+		healthCheckTypes, err := compute.LoadBalancerHealthCheckTypes(cmd.Context(), commands.Client)
 		if err != nil {
 			return fmt.Errorf("fetch load balancer health check types: %w", err)
 		}
 
-		healthCheckType, err := filter.FindOne(healthCheckTypes, l.healthCheckType)
+		healthCheckType, err := filter.FindOne(healthCheckTypes, *hcTypeIdentifier)
 		if err != nil {
 			return fmt.Errorf("find health check type: %w", err)
 		}
@@ -283,7 +312,7 @@ func (l *loadBalancerPoolUpdateCommand) Run(cmd *cobra.Command, args []string) e
 		data.HealthCheck.TypeID = healthCheckType.ID
 	}
 
-	loadBalancerPool, err = compute.NewLoadBalancerPoolService(commands.Config.Client, loadBalancer.ID).Update(cmd.Context(), loadBalancerPool.ID, data)
+	loadBalancerPool, err = compute.LoadBalancerPoolService().Update(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("update load balancer pool: %w", err)
 	}
@@ -291,7 +320,10 @@ func (l *loadBalancerPoolUpdateCommand) Run(cmd *cobra.Command, args []string) e
 	return commands.PrintStdout(loadBalancerPool)
 }
 
-func (l *loadBalancerPoolUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (l *loadBalancerPoolUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeLoadBalancer(cmd.Context(), toComplete)
 	}
@@ -317,17 +349,17 @@ func (l *loadBalancerPoolUpdateCommand) Build(app commands.Application) *cobra.C
 		RunE:  l.Run,
 	}
 
-	cmd.Flags().StringVar(&l.certificate, "certificate", "", "name of the certificate to use")
-	cmd.Flags().StringVar(&l.algorithm, "algorithm", "", "name of the balancing algorithm to use")
-	cmd.Flags().BoolVar(&l.stickySession, "sticky-session", false, "enable sticky session")
+	cmd.Flags().StringVar(l.certificate.Configure(cmd, "certificate", "name of the certificate to use"))
+	cmd.Flags().StringVar(l.algorithm.Configure(cmd, "algorithm", "name of the balancing algorithm to use"))
+	cmd.Flags().BoolVar(l.stickySession.Configure(cmd, "sticky-session", "enable sticky session"))
 
-	cmd.Flags().StringVar(&l.healthCheckType, "health-check-type", "", "type of the health check")
-	cmd.Flags().StringVar(&l.healthCheckHTTPMethod, "health-check-http-method", "", "HTTP method to use for the health check")
-	cmd.Flags().StringVar(&l.healthCheckHTTPPath, "health-check-http-path", "", "HTTP path to use for the health check")
-	cmd.Flags().DurationVar(&l.healthCheckInterval, "health-check-interval", 0, "interval of the health check")
-	cmd.Flags().DurationVar(&l.healthCheckTimeout, "health-check-timeout", 0, "timeout of the health check")
-	cmd.Flags().IntVar(&l.healthCheckHealthyThreshold, "health-check-healthy-threshold", 0, "healthy threshold of the health check")
-	cmd.Flags().IntVar(&l.healthCheckUnhealthyThreshold, "health-check-unhealthy-threshold", 0, "unhealthy threshold of the health check")
+	cmd.Flags().StringVar(l.healthCheckType.Configure(cmd, "health-check-type", "type of the health check"))
+	cmd.Flags().StringVar(l.healthCheckHTTPMethod.Configure(cmd, "health-check-http-method", "HTTP method to use for the health check"))
+	cmd.Flags().StringVar(l.healthCheckHTTPPath.Configure(cmd, "health-check-http-path", "HTTP path to use for the health check"))
+	cmd.Flags().DurationVar(l.healthCheckInterval.Configure(cmd, "health-check-interval", "interval of the health check"))
+	cmd.Flags().DurationVar(l.healthCheckTimeout.Configure(cmd, "health-check-timeout", "timeout of the health check"))
+	cmd.Flags().IntVar(l.healthCheckHealthyThreshold.Configure(cmd, "health-check-healthy-threshold", "healthy threshold of the health check"))
+	cmd.Flags().IntVar(l.healthCheckUnhealthyThreshold.Configure(cmd, "health-check-unhealthy-threshold", "unhealthy threshold of the health check"))
 
 	return cmd
 }
@@ -352,7 +384,7 @@ func (l *loadBalancerPoolDeleteCommand) Run(cmd *cobra.Command, args []string) e
 		return nil
 	}
 
-	err = compute.NewLoadBalancerPoolService(commands.Config.Client, loadBalancer.ID).Delete(cmd.Context(), loadBalancerPool.ID)
+	err = compute.LoadBalancerPoolService().Delete(cmd.Context(), compute.LoadBalancerPoolDelete{LoadBalancerID: uint(loadBalancer.ID), LoadBalancerPoolID: uint(loadBalancerPool.ID)})
 	if err != nil {
 		return fmt.Errorf("delete load balancer pool: %w", err)
 	}
@@ -360,7 +392,10 @@ func (l *loadBalancerPoolDeleteCommand) Run(cmd *cobra.Command, args []string) e
 	return nil
 }
 
-func (l *loadBalancerPoolDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (l *loadBalancerPoolDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeLoadBalancer(cmd.Context(), toComplete)
 	}
@@ -392,8 +427,11 @@ func (l *loadBalancerPoolDeleteCommand) Build(app commands.Application) *cobra.C
 	return cmd
 }
 
-func completeLoadBalancerPool(ctx context.Context, loadBalancer compute.LoadBalancer, term string) ([]string, cobra.ShellCompDirective) {
-	loadBalancerPools, err := compute.NewLoadBalancerPoolService(commands.Config.Client, loadBalancer.ID).List(ctx)
+func completeLoadBalancerPool(ctx context.Context, loadBalancer compute.LoadBalancer, term string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
+	loadBalancerPools, err := compute.LoadBalancerPoolService().List(ctx, compute.LoadBalancerPoolList{LoadBalancerID: uint(loadBalancer.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -409,7 +447,7 @@ func completeLoadBalancerPool(ctx context.Context, loadBalancer compute.LoadBala
 }
 
 func findLoadBalancerPool(ctx context.Context, loadBalancerID int, term string) (compute.LoadBalancerPool, error) {
-	loadBalancerPools, err := compute.NewLoadBalancerPoolService(commands.Config.Client, loadBalancerID).List(ctx)
+	loadBalancerPools, err := compute.LoadBalancerPoolService().List(ctx, compute.LoadBalancerPoolList{LoadBalancerID: uint(loadBalancerID), Cursor: core.CursorAll})
 	if err != nil {
 		return compute.LoadBalancerPool{}, fmt.Errorf("fetch load balancer pools: %w", err)
 	}

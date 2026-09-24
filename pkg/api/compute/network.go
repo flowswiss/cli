@@ -1,14 +1,47 @@
 package compute
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/compute"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/compute"
+	"github.com/flowswiss/goclient/v2/core"
 
 	"github.com/flowswiss/cli/v2/pkg/api/common"
 )
+
+type (
+	NetworkCreate = compute.NetworkCreateReq
+	NetworkGet    = compute.NetworkGetReq
+	NetworkList   = core.Cursor
+	NetworkUpdate = compute.NetworkUpdateReq
+	NetworkDelete = compute.NetworkDeleteReq
+)
+
+type GenericNetworkService = generic.CRUD[
+	compute.Network,
+	Network,
+	NetworkCreate,
+	NetworkGet,
+	NetworkList,
+	NetworkUpdate,
+	NetworkDelete,
+]
+
+func NetworkService() GenericNetworkService {
+	return generic.NewCRUD[
+		compute.Network,
+		Network,
+		NetworkCreate,
+		NetworkGet,
+		NetworkList,
+		NetworkUpdate,
+		NetworkDelete,
+	](commands.Client.Compute.Network, func(network compute.Network) Network {
+		return Network(network)
+	})
+}
 
 type Network compute.Network
 
@@ -20,8 +53,8 @@ func (n Network) Columns() []string {
 	return []string{"id", "name", "location", "cidr", "usage"}
 }
 
-func (n Network) Values() map[string]interface{} {
-	return map[string]interface{}{
+func (n Network) Values() map[string]any {
+	return map[string]any{
 		"id":       n.ID,
 		"name":     n.Name,
 		"location": common.Location(n.Location),
@@ -32,54 +65,4 @@ func (n Network) Values() map[string]interface{} {
 
 func (n Network) String() string {
 	return fmt.Sprintf("%s (%s)", n.Name, n.CIDR)
-}
-
-type NetworkService struct {
-	delegate compute.NetworkService
-}
-
-func NewNetworkService(client goclient.Client) NetworkService {
-	return NetworkService{
-		delegate: compute.NewNetworkService(client),
-	}
-}
-
-func (n NetworkService) List(ctx context.Context) ([]Network, error) {
-	res, err := n.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]Network, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = Network(item)
-	}
-
-	return items, nil
-}
-
-type NetworkCreate = compute.NetworkCreate
-
-func (n NetworkService) Create(ctx context.Context, data NetworkCreate) (Network, error) {
-	res, err := n.delegate.Create(ctx, data)
-	if err != nil {
-		return Network{}, err
-	}
-
-	return Network(res), nil
-}
-
-type NetworkUpdate = compute.NetworkUpdate
-
-func (n NetworkService) Update(ctx context.Context, id int, data NetworkUpdate) (Network, error) {
-	res, err := n.delegate.Update(ctx, id, data)
-	if err != nil {
-		return Network{}, err
-	}
-
-	return Network(res), nil
-}
-
-func (n NetworkService) Delete(ctx context.Context, id int) error {
-	return n.delegate.Delete(ctx, id)
 }

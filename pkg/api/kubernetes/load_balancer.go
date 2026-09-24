@@ -1,36 +1,30 @@
 package kubernetes
 
 import (
-	"context"
-
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/kubernetes"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/kubernetes"
 
 	"github.com/flowswiss/cli/v2/pkg/api/compute"
 )
 
-type LoadBalancer = compute.LoadBalancer
+type (
+	LoadBalancer = compute.LoadBalancer
 
-type LoadBalancerService struct {
-	delegate kubernetes.LoadBalancerService
+	LoadBalancerList = kubernetes.LoadBalancerListReq
+)
+
+type GenericLoadBalancerService struct {
+	generic.ListService[LoadBalancerList, kubernetes.LoadBalancer, LoadBalancer]
 }
 
-func NewLoadBalancerService(client goclient.Client, clusterID int) LoadBalancerService {
-	return LoadBalancerService{
-		delegate: kubernetes.NewLoadBalancerService(client, clusterID),
-	}
-}
-
-func (v LoadBalancerService) List(ctx context.Context) ([]LoadBalancer, error) {
-	res, err := v.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
+func LoadBalancerService() GenericLoadBalancerService {
+	client := commands.Client.Kubernetes.LoadBalancer
+	cast := func(loadBalancer kubernetes.LoadBalancer) LoadBalancer {
+		return LoadBalancer(loadBalancer)
 	}
 
-	items := make([]LoadBalancer, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = LoadBalancer(item)
+	return GenericLoadBalancerService{
+		generic.NewList[LoadBalancerList, kubernetes.LoadBalancer, LoadBalancer](client, cast),
 	}
-
-	return items, nil
 }

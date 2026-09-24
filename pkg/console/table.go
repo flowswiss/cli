@@ -8,7 +8,7 @@ import (
 
 type Displayable interface {
 	Columns() []string
-	Values() map[string]interface{}
+	Values() map[string]any
 }
 
 type Column struct {
@@ -45,7 +45,7 @@ func (t *Table) insertColumns(cols []string) {
 	}
 }
 
-func (t *Table) insertRow(data map[string]interface{}) {
+func (t *Table) insertRow(data map[string]any) {
 	row := make([]string, len(t.Columns))
 
 	for key, val := range data {
@@ -111,7 +111,7 @@ func (t *Table) insertMap(value reflect.Value) error {
 		t.insertColumns(cols)
 	}
 
-	row := make(map[string]interface{})
+	row := make(map[string]any)
 
 	iter := value.MapRange()
 	for iter.Next() {
@@ -161,6 +161,6 @@ func (t *Table) insertValue(value reflect.Value) error {
 	return fmt.Errorf("unable to serialize value of type %q (%q)", value.Type().String(), value.Kind().String())
 }
 
-func (t *Table) Insert(val interface{}) error {
+func (t *Table) Insert(val any) error {
 	return t.insertValue(reflect.ValueOf(val))
 }

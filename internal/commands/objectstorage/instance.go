@@ -5,6 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/flowswiss/goclient/v2/core"
+
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/common"
 	"github.com/flowswiss/cli/v2/pkg/api/objectstorage"
@@ -33,7 +35,7 @@ type instanceListCommand struct {
 }
 
 func (i *instanceListCommand) Run(cmd *cobra.Command, args []string) error {
-	items, err := objectstorage.NewInstanceService(commands.Config.Client).List(cmd.Context())
+	items, err := objectstorage.InstanceService().List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return fmt.Errorf("fetch object storage instances: %w", err)
 	}
@@ -64,7 +66,7 @@ type instanceCreateCommand struct {
 }
 
 func (i *instanceCreateCommand) Run(cmd *cobra.Command, args []string) error {
-	location, err := common.FindLocation(cmd.Context(), commands.Config.Client, i.location)
+	location, err := common.FindLocation(cmd.Context(), commands.Client, i.location)
 	if err != nil {
 		return err
 	}
@@ -73,7 +75,7 @@ func (i *instanceCreateCommand) Run(cmd *cobra.Command, args []string) error {
 		LocationID: location.ID,
 	}
 
-	instance, err := objectstorage.NewInstanceService(commands.Config.Client).Create(cmd.Context(), data)
+	instance, err := objectstorage.InstanceService().Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create object storage instance: %w", err)
 	}
@@ -102,9 +104,9 @@ type instanceDeleteCommand struct {
 }
 
 func (i *instanceDeleteCommand) Run(cmd *cobra.Command, args []string) error {
-	service := objectstorage.NewInstanceService(commands.Config.Client)
+	service := objectstorage.InstanceService()
 
-	instances, err := service.List(cmd.Context())
+	instances, err := service.List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return fmt.Errorf("fetch object storage instances: %w", err)
 	}
@@ -119,7 +121,9 @@ func (i *instanceDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err = service.Delete(cmd.Context(), instance.ID)
+	err = service.Delete(cmd.Context(), objectstorage.InstanceDelete{
+		ID: uint(instance.ID),
+	})
 	if err != nil {
 		return fmt.Errorf("delete instance: %w", err)
 	}
@@ -147,7 +151,7 @@ type credentialsCommand struct {
 }
 
 func (c *credentialsCommand) Run(cmd *cobra.Command, args []string) error {
-	credentials, err := objectstorage.NewCredentialService(commands.Config.Client).List(cmd.Context())
+	credentials, err := objectstorage.CredentialService().List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return err
 	}

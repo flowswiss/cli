@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/flowswiss/cli/v2/pkg/optional"
 	"github.com/spf13/cobra"
+
+	"github.com/flowswiss/goclient/v2/core"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/common"
@@ -42,7 +45,7 @@ type routerListCommand struct {
 }
 
 func (r *routerListCommand) Run(cmd *cobra.Command, args []string) error {
-	items, err := compute.NewRouterService(commands.Config.Client).List(cmd.Context())
+	items, err := compute.RouterService().List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return fmt.Errorf("fetch routers: %w", err)
 	}
@@ -54,7 +57,10 @@ func (r *routerListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
-func (r *routerListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (r *routerListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -75,25 +81,25 @@ func (r *routerListCommand) Build(app commands.Application) *cobra.Command {
 
 type routerCreateCommand struct {
 	name        string
-	description string
+	description optional.Optional[string]
 	location    string
 	private     bool
 }
 
 func (r *routerCreateCommand) Run(cmd *cobra.Command, args []string) error {
-	location, err := common.FindLocation(cmd.Context(), commands.Config.Client, r.location)
+	location, err := common.FindLocation(cmd.Context(), commands.Client, r.location)
 	if err != nil {
 		return err
 	}
 
 	data := compute.RouterCreate{
 		Name:        r.name,
-		Description: r.description,
+		Description: r.description.Value(),
 		LocationID:  location.ID,
 		Public:      !r.private,
 	}
 
-	item, err := compute.NewRouterService(commands.Config.Client).Create(cmd.Context(), data)
+	item, err := compute.RouterService().Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create router: %w", err)
 	}
@@ -101,7 +107,10 @@ func (r *routerCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(item)
 }
 
-func (r *routerCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (r *routerCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -115,7 +124,7 @@ func (r *routerCreateCommand) Build(app commands.Application) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&r.name, "name", "", "name of the router")
-	cmd.Flags().StringVar(&r.description, "description", "", "description of the router")
+	cmd.Flags().StringVar(r.description.Configure(cmd, "description", "description of the router"))
 	cmd.Flags().StringVar(&r.location, "location", "", "location of the router")
 	cmd.Flags().BoolVar(&r.private, "private", false, "create a private router")
 
@@ -126,8 +135,8 @@ func (r *routerCreateCommand) Build(app commands.Application) *cobra.Command {
 }
 
 type routerUpdateCommand struct {
-	name        string
-	description string
+	name        optional.Optional[string]
+	description optional.Optional[string]
 	makePrivate bool
 	makePublic  bool
 }
@@ -138,20 +147,20 @@ func (r *routerUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	data := compute.RouterUpdate{
-		Name:        r.name,
-		Description: r.description,
+	data := compute.RouterUpdate{ID: uint(router.ID),
+		Name:        r.name.Value(),
+		Description: r.description.Value(),
 	}
 
 	if r.makePrivate {
-		data.Public = false
+		data.Public = new(false)
 	}
 
 	if r.makePublic {
-		data.Public = true
+		data.Public = new(true)
 	}
 
-	router, err = compute.NewRouterService(commands.Config.Client).Update(cmd.Context(), router.ID, data)
+	router, err = compute.RouterService().Update(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("update router: %w", err)
 	}
@@ -159,7 +168,10 @@ func (r *routerUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(router)
 }
 
-func (r *routerUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (r *routerUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeRouter(cmd.Context(), toComplete)
 	}
@@ -177,8 +189,8 @@ func (r *routerUpdateCommand) Build(app commands.Application) *cobra.Command {
 		RunE:              r.Run,
 	}
 
-	cmd.Flags().StringVar(&r.name, "name", "", "name of the router")
-	cmd.Flags().StringVar(&r.description, "description", "", "description of the router")
+	cmd.Flags().StringVar(r.name.Configure(cmd, "name", "name of the router"))
+	cmd.Flags().StringVar(r.description.Configure(cmd, "description", "description of the router"))
 	cmd.Flags().BoolVar(&r.makePrivate, "private", false, "make router private")
 	cmd.Flags().BoolVar(&r.makePublic, "public", false, "make router public")
 
@@ -202,7 +214,7 @@ func (r *routerDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err = compute.NewRouterService(commands.Config.Client).Delete(cmd.Context(), router.ID)
+	err = compute.RouterService().Delete(cmd.Context(), compute.RouterDelete{ID: uint(router.ID)})
 	if err != nil {
 		return fmt.Errorf("delete router: %w", err)
 	}
@@ -210,7 +222,10 @@ func (r *routerDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (r *routerDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (r *routerDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeRouter(cmd.Context(), toComplete)
 	}
@@ -234,7 +249,7 @@ func (r *routerDeleteCommand) Build(app commands.Application) *cobra.Command {
 }
 
 func completeRouter(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
-	routers, err := compute.NewRouterService(commands.Config.Client).List(ctx)
+	routers, err := compute.RouterService().List(ctx, core.CursorAll)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -250,7 +265,7 @@ func completeRouter(ctx context.Context, term string) ([]string, cobra.ShellComp
 }
 
 func findRouter(ctx context.Context, term string) (compute.Router, error) {
-	routers, err := compute.NewRouterService(commands.Config.Client).List(ctx)
+	routers, err := compute.RouterService().List(ctx, core.CursorAll)
 	if err != nil {
 		return compute.Router{}, fmt.Errorf("fetch routers: %w", err)
 	}

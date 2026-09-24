@@ -7,6 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/flowswiss/goclient/v2/core"
+
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/compute"
 	"github.com/flowswiss/cli/v2/pkg/filter"
@@ -43,9 +45,9 @@ func (l *loadBalancerMemberListCommand) Run(cmd *cobra.Command, args []string) e
 		return err
 	}
 
-	service := compute.NewLoadBalancerMemberService(commands.Config.Client, loadBalancer.ID, pool.ID)
+	service := compute.LoadBalancerMemberService()
 
-	items, err := service.List(cmd.Context())
+	items, err := service.List(cmd.Context(), compute.LoadBalancerMemberList{LoadBalancerID: uint(loadBalancer.ID), LoadBalancerPoolID: uint(pool.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return fmt.Errorf("fetch loadBalancerMembers: %w", err)
 	}
@@ -57,7 +59,10 @@ func (l *loadBalancerMemberListCommand) Run(cmd *cobra.Command, args []string) e
 	return commands.PrintStdout(items)
 }
 
-func (l *loadBalancerMemberListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (l *loadBalancerMemberListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeLoadBalancer(cmd.Context(), toComplete)
 	}
@@ -107,9 +112,9 @@ func (l *loadBalancerMemberCreateCommand) Run(cmd *cobra.Command, args []string)
 		return err
 	}
 
-	service := compute.NewLoadBalancerMemberService(commands.Config.Client, loadBalancer.ID, pool.ID)
+	service := compute.LoadBalancerMemberService()
 
-	data := compute.LoadBalancerMemberCreate{
+	data := compute.LoadBalancerMemberCreate{LoadBalancerID: uint(loadBalancer.ID), LoadBalancerPoolID: uint(pool.ID),
 		Name:    l.name,
 		Address: l.address.String(),
 		Port:    l.port,
@@ -123,7 +128,10 @@ func (l *loadBalancerMemberCreateCommand) Run(cmd *cobra.Command, args []string)
 	return commands.PrintStdout(item)
 }
 
-func (l *loadBalancerMemberCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (l *loadBalancerMemberCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeLoadBalancer(cmd.Context(), toComplete)
 	}
@@ -176,9 +184,9 @@ func (l *loadBalancerMemberDeleteCommand) Run(cmd *cobra.Command, args []string)
 		return err
 	}
 
-	service := compute.NewLoadBalancerMemberService(commands.Config.Client, loadBalancer.ID, pool.ID)
+	service := compute.LoadBalancerMemberService()
 
-	members, err := service.List(cmd.Context())
+	members, err := service.List(cmd.Context(), compute.LoadBalancerMemberList{LoadBalancerID: uint(loadBalancer.ID), LoadBalancerPoolID: uint(pool.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return fmt.Errorf("fetch load balancer members: %w", err)
 	}
@@ -193,7 +201,7 @@ func (l *loadBalancerMemberDeleteCommand) Run(cmd *cobra.Command, args []string)
 		return nil
 	}
 
-	err = service.Delete(cmd.Context(), member.ID)
+	err = service.Delete(cmd.Context(), compute.LoadBalancerMemberDelete{LoadBalancerID: uint(loadBalancer.ID), LoadBalancerPoolID: uint(pool.ID), LoadBalancerMemberID: uint(member.ID)})
 	if err != nil {
 		return fmt.Errorf("delete load balancer member: %w", err)
 	}
@@ -201,7 +209,10 @@ func (l *loadBalancerMemberDeleteCommand) Run(cmd *cobra.Command, args []string)
 	return nil
 }
 
-func (l *loadBalancerMemberDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (l *loadBalancerMemberDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeLoadBalancer(cmd.Context(), toComplete)
 	}
@@ -247,8 +258,13 @@ func (l *loadBalancerMemberDeleteCommand) Build(app commands.Application) *cobra
 	return cmd
 }
 
-func completeLoadBalancerMember(ctx context.Context, loadBalancer compute.LoadBalancer, pool compute.LoadBalancerPool, term string) ([]string, cobra.ShellCompDirective) {
-	members, err := compute.NewLoadBalancerMemberService(commands.Config.Client, loadBalancer.ID, pool.ID).List(ctx)
+func completeLoadBalancerMember(
+	ctx context.Context,
+	loadBalancer compute.LoadBalancer,
+	pool compute.LoadBalancerPool,
+	term string,
+) ([]string, cobra.ShellCompDirective) {
+	members, err := compute.LoadBalancerMemberService().List(ctx, compute.LoadBalancerMemberList{LoadBalancerID: uint(loadBalancer.ID), LoadBalancerPoolID: uint(pool.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}

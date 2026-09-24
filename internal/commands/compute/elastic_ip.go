@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/flowswiss/goclient/v2/core"
 	"github.com/spf13/cobra"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
@@ -45,7 +46,7 @@ type elasticIPListCommand struct {
 }
 
 func (e *elasticIPListCommand) Run(cmd *cobra.Command, args []string) error {
-	items, err := compute.NewElasticIPService(commands.Config.Client).List(cmd.Context())
+	items, err := compute.ElasticIPService().List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return fmt.Errorf("fetch elastic ips: %w", err)
 	}
@@ -57,7 +58,10 @@ func (e *elasticIPListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
-func (e *elasticIPListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (e *elasticIPListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -81,7 +85,7 @@ type elasticIPCreateCommand struct {
 }
 
 func (e *elasticIPCreateCommand) Run(cmd *cobra.Command, args []string) error {
-	location, err := common.FindLocation(cmd.Context(), commands.Config.Client, e.location)
+	location, err := common.FindLocation(cmd.Context(), commands.Client, e.location)
 	if err != nil {
 		return err
 	}
@@ -90,7 +94,7 @@ func (e *elasticIPCreateCommand) Run(cmd *cobra.Command, args []string) error {
 		LocationID: location.ID,
 	}
 
-	item, err := compute.NewElasticIPService(commands.Config.Client).Create(cmd.Context(), data)
+	item, err := compute.ElasticIPService().Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create elastic ip: %w", err)
 	}
@@ -98,7 +102,10 @@ func (e *elasticIPCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(item)
 }
 
-func (e *elasticIPCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (e *elasticIPCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -123,9 +130,9 @@ type elasticIPDeleteCommand struct {
 }
 
 func (e *elasticIPDeleteCommand) Run(cmd *cobra.Command, args []string) error {
-	service := compute.NewElasticIPService(commands.Config.Client)
+	service := compute.ElasticIPService()
 
-	elasticIPs, err := service.List(cmd.Context())
+	elasticIPs, err := service.List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return fmt.Errorf("fetch elastic ips: %w", err)
 	}
@@ -145,13 +152,18 @@ func (e *elasticIPDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if elasticIP.Attachment.ID != 0 {
-		err = service.Detach(cmd.Context(), elasticIP.Attachment.ID, elasticIP.ID)
+		err = service.Detach(cmd.Context(), compute.ElasticIPDetach{
+			ServerID:    uint(elasticIP.Attachment.ID),
+			ElasticIPID: uint(elasticIP.ID),
+		})
 		if err != nil {
 			return fmt.Errorf("detach elastic ip: %w", err)
 		}
 	}
 
-	err = service.Delete(cmd.Context(), elasticIP.ID)
+	err = service.Delete(cmd.Context(), compute.ElasticIPDelete{
+		ID: elasticIP.ID,
+	})
 	if err != nil {
 		return fmt.Errorf("delete elastic ip: %w", err)
 	}
@@ -159,7 +171,10 @@ func (e *elasticIPDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (e *elasticIPDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (e *elasticIPDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeElasticIP(cmd.Context(), toComplete, nil)
 	}
@@ -210,6 +225,7 @@ func (e *elasticIPAttachCommand) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	data := compute.ElasticIPAttach{
+		ServerID:    uint(server.ID),
 		ElasticIPID: elasticIP.ID,
 	}
 
@@ -236,7 +252,7 @@ func (e *elasticIPAttachCommand) Run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	_, err = compute.NewElasticIPService(commands.Config.Client).Attach(cmd.Context(), server.ID, data)
+	_, err = compute.ElasticIPService().Attach(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("attach elastic ip: %w", err)
 	}
@@ -244,7 +260,10 @@ func (e *elasticIPAttachCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (e *elasticIPAttachCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (e *elasticIPAttachCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeElasticIP(cmd.Context(), toComplete, func(item compute.ElasticIP) bool {
 			return item.Attachment.ID == 0
@@ -295,7 +314,10 @@ func (e *elasticIPDetachCommand) Run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err = compute.NewElasticIPService(commands.Config.Client).Detach(cmd.Context(), server.ID, elasticIP.ID)
+	err = compute.ElasticIPService().Detach(cmd.Context(), compute.ElasticIPDetach{
+		ServerID:    uint(server.ID),
+		ElasticIPID: uint(elasticIP.ID),
+	})
 	if err != nil {
 		return fmt.Errorf("detach elastic ip: %w", err)
 	}
@@ -303,7 +325,10 @@ func (e *elasticIPDetachCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (e *elasticIPDetachCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (e *elasticIPDetachCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeElasticIP(cmd.Context(), toComplete, func(item compute.ElasticIP) bool {
 			return item.Attachment.ID != 0
@@ -337,8 +362,11 @@ func (e *elasticIPDetachCommand) Build(app commands.Application) *cobra.Command 
 	return cmd
 }
 
-func completeElasticIP(ctx context.Context, term string, itemFilter func(ip compute.ElasticIP) bool) ([]string, cobra.ShellCompDirective) {
-	elasticIPs, err := compute.NewElasticIPService(commands.Config.Client).List(ctx)
+func completeElasticIP(ctx context.Context, term string, itemFilter func(ip compute.ElasticIP) bool) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
+	elasticIPs, err := compute.ElasticIPService().List(ctx, core.CursorAll)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -354,7 +382,7 @@ func completeElasticIP(ctx context.Context, term string, itemFilter func(ip comp
 }
 
 func findElasticIP(ctx context.Context, term string) (compute.ElasticIP, error) {
-	elasticIPs, err := compute.NewElasticIPService(commands.Config.Client).List(ctx)
+	elasticIPs, err := compute.ElasticIPService().List(ctx, core.CursorAll)
 	if err != nil {
 		return compute.ElasticIP{}, fmt.Errorf("fetch elastic ips: %w", err)
 	}

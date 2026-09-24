@@ -1,13 +1,41 @@
 package compute
 
 import (
-	"context"
 	"fmt"
 	"net"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/compute"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/compute"
 )
+
+type (
+	SecurityGroupRuleCreate = compute.SecurityGroupRuleCreateReq
+	SecurityGroupRuleList   = compute.SecurityGroupRuleListReq
+	SecurityGroupRuleUpdate = compute.SecurityGroupRuleUpdateReq
+	SecurityGroupRuleDelete = compute.SecurityGroupRuleDeleteReq
+)
+
+type GenericSecurityGroupRuleService struct {
+	generic.CreateService[SecurityGroupRuleCreate, compute.SecurityGroupRule, SecurityGroupRule]
+	generic.FilterService[SecurityGroupRuleList, compute.SecurityGroupRule, SecurityGroupRule]
+	generic.UpdateService[SecurityGroupRuleUpdate, compute.SecurityGroupRule, SecurityGroupRule]
+	generic.DeleteService[SecurityGroupRuleDelete]
+}
+
+func SecurityGroupRuleService() GenericSecurityGroupRuleService {
+	client := commands.Client.Compute.SecurityGroupRule
+	cast := func(rule compute.SecurityGroupRule) SecurityGroupRule {
+		return SecurityGroupRule(rule)
+	}
+
+	return GenericSecurityGroupRuleService{
+		generic.NewCreate[SecurityGroupRuleCreate, compute.SecurityGroupRule, SecurityGroupRule](client, cast),
+		generic.NewFilter[SecurityGroupRuleList, compute.SecurityGroupRule, SecurityGroupRule](client, cast),
+		generic.NewUpdate[SecurityGroupRuleUpdate, compute.SecurityGroupRule, SecurityGroupRule](client, cast),
+		generic.NewDelete[SecurityGroupRuleDelete](client),
+	}
+}
 
 var IPRangeAny = net.IPNet{
 	IP:   net.IPv4zero,
@@ -58,13 +86,13 @@ func (s SecurityGroupRule) Columns() []string {
 	return []string{"id", "direction", "protocol", "from port", "to port", "icmp type", "icmp code", "ip range", "remote security group"}
 }
 
-func (s SecurityGroupRule) Values() map[string]interface{} {
+func (s SecurityGroupRule) Values() map[string]any {
 	protocolName := fmt.Sprintf("unknown (%d)", s.Protocol)
 	if name, ok := ProtocolNames[s.Protocol]; ok {
 		protocolName = name
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"id":                    s.ID,
 		"direction":             s.Direction,
 		"protocol":              protocolName,
@@ -75,54 +103,4 @@ func (s SecurityGroupRule) Values() map[string]interface{} {
 		"ip range":              s.IPRange,
 		"remote security group": SecurityGroup(s.RemoteSecurityGroup),
 	}
-}
-
-type SecurityGroupRuleService struct {
-	delegate compute.SecurityGroupRuleService
-}
-
-func NewSecurityGroupRuleService(client goclient.Client, securityGroupID int) SecurityGroupRuleService {
-	return SecurityGroupRuleService{
-		delegate: compute.NewSecurityGroupRuleService(client, securityGroupID),
-	}
-}
-
-func (s SecurityGroupRuleService) List(ctx context.Context) ([]SecurityGroupRule, error) {
-	res, err := s.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]SecurityGroupRule, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = SecurityGroupRule(item)
-	}
-
-	return items, nil
-}
-
-type SecurityGroupRuleCreate = compute.SecurityGroupRuleOptions
-
-func (s SecurityGroupRuleService) Create(ctx context.Context, data SecurityGroupRuleCreate) (SecurityGroupRule, error) {
-	res, err := s.delegate.Create(ctx, data)
-	if err != nil {
-		return SecurityGroupRule{}, err
-	}
-
-	return SecurityGroupRule(res), nil
-}
-
-type SecurityGroupRuleUpdate = compute.SecurityGroupRuleOptions
-
-func (s SecurityGroupRuleService) Update(ctx context.Context, id int, data SecurityGroupRuleUpdate) (SecurityGroupRule, error) {
-	res, err := s.delegate.Update(ctx, id, data)
-	if err != nil {
-		return SecurityGroupRule{}, err
-	}
-
-	return SecurityGroupRule(res), nil
-}
-
-func (s SecurityGroupRuleService) Delete(ctx context.Context, id int) error {
-	return s.delegate.Delete(ctx, id)
 }

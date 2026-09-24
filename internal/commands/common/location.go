@@ -24,7 +24,7 @@ type locationListCommand struct {
 }
 
 func (l *locationListCommand) Run(cmd *cobra.Command, args []string) (err error) {
-	items, err := common.Locations(cmd.Context(), commands.Config.Client)
+	items, err := common.Locations(cmd.Context(), commands.Client)
 	if err != nil {
 		return err
 	}
@@ -36,7 +36,10 @@ func (l *locationListCommand) Run(cmd *cobra.Command, args []string) (err error)
 	return commands.PrintStdout(items)
 }
 
-func (l *locationListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (l *locationListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 

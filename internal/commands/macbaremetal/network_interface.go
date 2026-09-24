@@ -6,6 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/flowswiss/goclient/v2/core"
+
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/macbaremetal"
 	"github.com/flowswiss/cli/v2/pkg/filter"
@@ -42,7 +44,7 @@ func (n *networkInterfaceListCommand) Run(cmd *cobra.Command, args []string) err
 		return err
 	}
 
-	interfaces, err := macbaremetal.NewNetworkInterfaceService(commands.Config.Client, device.ID).List(cmd.Context())
+	interfaces, err := macbaremetal.NetworkInterfaceService().List(cmd.Context(), macbaremetal.NetworkInterfaceList{DeviceID: uint(device.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return fmt.Errorf("fetch network interfaces: %w", err)
 	}
@@ -50,7 +52,10 @@ func (n *networkInterfaceListCommand) Run(cmd *cobra.Command, args []string) err
 	return commands.PrintStdout(interfaces)
 }
 
-func (n *networkInterfaceListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (n *networkInterfaceListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeDevice(cmd.Context(), toComplete)
 	}
@@ -80,7 +85,7 @@ func (n *networkInterfaceUpdateCommand) Run(cmd *cobra.Command, args []string) e
 		return err
 	}
 
-	interfaces, err := macbaremetal.NewNetworkInterfaceService(commands.Config.Client, device.ID).List(cmd.Context())
+	interfaces, err := macbaremetal.NetworkInterfaceService().List(cmd.Context(), macbaremetal.NetworkInterfaceList{DeviceID: uint(device.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return fmt.Errorf("fetch network interfaces: %w", err)
 	}
@@ -97,10 +102,10 @@ func (n *networkInterfaceUpdateCommand) Run(cmd *cobra.Command, args []string) e
 		}
 
 		update := macbaremetal.NetworkInterfaceSecurityGroupUpdate{
-			SecurityGroupID: securityGroup.ID,
+			DeviceID: uint(device.ID), NetworkInterfaceId: uint(iface.ID), SecurityGroupID: securityGroup.ID,
 		}
 
-		iface, err = macbaremetal.NewNetworkInterfaceService(commands.Config.Client, device.ID).UpdateSecurityGroup(cmd.Context(), iface.ID, update)
+		iface, err = macbaremetal.NetworkInterfaceService().UpdateSecurityGroup(cmd.Context(), update)
 		if err != nil {
 			return fmt.Errorf("update network interface security group: %w", err)
 		}
@@ -109,7 +114,10 @@ func (n *networkInterfaceUpdateCommand) Run(cmd *cobra.Command, args []string) e
 	return commands.PrintStdout(iface)
 }
 
-func (n *networkInterfaceUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (n *networkInterfaceUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeDevice(cmd.Context(), toComplete)
 	}
@@ -141,8 +149,11 @@ func (n *networkInterfaceUpdateCommand) Build(app commands.Application) *cobra.C
 	return cmd
 }
 
-func completeNetworkInterface(ctx context.Context, device macbaremetal.Device, term string) ([]string, cobra.ShellCompDirective) {
-	interfaces, err := macbaremetal.NewNetworkInterfaceService(commands.Config.Client, device.ID).List(ctx)
+func completeNetworkInterface(ctx context.Context, device macbaremetal.Device, term string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
+	interfaces, err := macbaremetal.NetworkInterfaceService().List(ctx, macbaremetal.NetworkInterfaceList{DeviceID: uint(device.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}

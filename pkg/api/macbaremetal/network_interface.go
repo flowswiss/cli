@@ -4,9 +4,45 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/macbaremetal"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/macbaremetal"
 )
+
+type (
+	NetworkInterfaceList                = macbaremetal.NetworkInterfaceListReq
+	NetworkInterfaceSecurityGroupUpdate = macbaremetal.NetworkInterfaceSecurityGroupUpdateReq
+)
+
+type GenericNetworkInterfaceService struct {
+	generic.ListService[NetworkInterfaceList, macbaremetal.NetworkInterface, NetworkInterface]
+
+	client *macbaremetal.NetworkInterfaceService
+}
+
+func (n GenericNetworkInterfaceService) UpdateSecurityGroup(
+	ctx context.Context,
+	update NetworkInterfaceSecurityGroupUpdate,
+) (NetworkInterface, error) {
+	item, err := n.client.UpdateSecurityGroup(ctx, update)
+	if err != nil {
+		return NetworkInterface{}, err
+	}
+
+	return NetworkInterface(item), err
+}
+
+func NetworkInterfaceService() GenericNetworkInterfaceService {
+	client := commands.Client.MacBareMetal.NetworkInterface
+	cast := func(networkInterface macbaremetal.NetworkInterface) NetworkInterface {
+		return NetworkInterface(networkInterface)
+	}
+
+	return GenericNetworkInterfaceService{
+		generic.NewList[NetworkInterfaceList, macbaremetal.NetworkInterface, NetworkInterface](client, cast),
+		client,
+	}
+}
 
 type NetworkInterface macbaremetal.NetworkInterface
 
@@ -24,8 +60,8 @@ func (n NetworkInterface) Columns() []string {
 	return []string{"id", "mac address", "private ip", "network", "security group", "attached elastic ip"}
 }
 
-func (n NetworkInterface) Values() map[string]interface{} {
-	return map[string]interface{}{
+func (n NetworkInterface) Values() map[string]any {
+	return map[string]any{
 		"id":                  n.ID,
 		"mac address":         n.MacAddress,
 		"private ip":          n.PrivateIP,
@@ -33,39 +69,4 @@ func (n NetworkInterface) Values() map[string]interface{} {
 		"security group":      n.SecurityGroup.Name,
 		"attached elastic ip": n.AttachedElasticIP.PublicIP,
 	}
-}
-
-type NetworkInterfaceService struct {
-	delegate macbaremetal.NetworkInterfaceService
-}
-
-func NewNetworkInterfaceService(client goclient.Client, deviceID int) NetworkInterfaceService {
-	return NetworkInterfaceService{
-		delegate: macbaremetal.NewNetworkInterfaceService(client, deviceID),
-	}
-}
-
-func (n NetworkInterfaceService) List(ctx context.Context) ([]NetworkInterface, error) {
-	res, err := n.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]NetworkInterface, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = NetworkInterface(item)
-	}
-
-	return items, nil
-}
-
-type NetworkInterfaceSecurityGroupUpdate = macbaremetal.NetworkInterfaceSecurityGroupUpdate
-
-func (n NetworkInterfaceService) UpdateSecurityGroup(ctx context.Context, id int, data NetworkInterfaceSecurityGroupUpdate) (NetworkInterface, error) {
-	res, err := n.delegate.UpdateSecurityGroup(ctx, id, data)
-	if err != nil {
-		return NetworkInterface{}, err
-	}
-
-	return NetworkInterface(res), nil
 }

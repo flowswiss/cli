@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/flowswiss/cli/v2/pkg/optional"
 	"github.com/spf13/cobra"
+
+	"github.com/flowswiss/goclient/v2/core"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/common"
@@ -41,7 +44,7 @@ type networkListCommand struct {
 }
 
 func (n *networkListCommand) Run(cmd *cobra.Command, args []string) error {
-	items, err := macbaremetal.NewNetworkService(commands.Config.Client).List(cmd.Context())
+	items, err := macbaremetal.NetworkService().List(cmd.Context(), macbaremetal.NetworkList{})
 	if err != nil {
 		return fmt.Errorf("fetch networks: %w", err)
 	}
@@ -53,7 +56,10 @@ func (n *networkListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
-func (n *networkListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (n *networkListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -74,23 +80,23 @@ func (n *networkListCommand) Build(app commands.Application) *cobra.Command {
 
 type networkCreateCommand struct {
 	name        string
-	description string
+	description optional.Optional[string]
 	location    string
 }
 
 func (n *networkCreateCommand) Run(cmd *cobra.Command, args []string) error {
-	location, err := common.FindLocation(cmd.Context(), commands.Config.Client, n.location)
+	location, err := common.FindLocation(cmd.Context(), commands.Client, n.location)
 	if err != nil {
 		return err
 	}
 
 	data := macbaremetal.NetworkCreate{
 		Name:        n.name,
-		Description: n.description,
+		Description: n.description.Value(),
 		LocationID:  location.ID,
 	}
 
-	item, err := macbaremetal.NewNetworkService(commands.Config.Client).Create(cmd.Context(), data)
+	item, err := macbaremetal.NetworkService().Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create network: %w", err)
 	}
@@ -98,7 +104,10 @@ func (n *networkCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(item)
 }
 
-func (n *networkCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (n *networkCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -113,7 +122,7 @@ func (n *networkCreateCommand) Build(app commands.Application) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&n.name, "name", "", "name to be applied to the network")
-	cmd.Flags().StringVar(&n.description, "description", "", "description to be applied to the network")
+	cmd.Flags().StringVar(n.description.Configure(cmd, "description", "description to be applied to the network"))
 	cmd.Flags().StringVar(&n.location, "location", "", "location where the network will be created")
 
 	_ = cmd.MarkFlagRequired("name")
@@ -123,16 +132,16 @@ func (n *networkCreateCommand) Build(app commands.Application) *cobra.Command {
 }
 
 type networkUpdateCommand struct {
-	name             string
-	description      string
-	domainName       string
+	name             optional.Optional[string]
+	description      optional.Optional[string]
+	domainName       optional.Optional[string]
 	domainNameServer []string
 }
 
 func (n *networkUpdateCommand) Run(cmd *cobra.Command, args []string) error {
-	service := macbaremetal.NewNetworkService(commands.Config.Client)
+	service := macbaremetal.NetworkService()
 
-	networks, err := service.List(cmd.Context())
+	networks, err := service.List(cmd.Context(), macbaremetal.NetworkList{})
 	if err != nil {
 		return fmt.Errorf("fetch networks: %w", err)
 	}
@@ -143,13 +152,14 @@ func (n *networkUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	update := macbaremetal.NetworkUpdate{
-		Name:              n.name,
-		Description:       n.description,
-		DomainName:        n.domainName,
+		ID:                uint(network.ID),
+		Name:              n.name.Value(),
+		Description:       n.description.Value(),
+		DomainName:        n.domainName.Value(),
 		DomainNameServers: n.domainNameServer,
 	}
 
-	network, err = service.Update(cmd.Context(), network.ID, update)
+	network, err = service.Update(cmd.Context(), update)
 	if err != nil {
 		return fmt.Errorf("update network: %w", err)
 	}
@@ -157,7 +167,10 @@ func (n *networkUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(network)
 }
 
-func (n *networkUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (n *networkUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeNetwork(cmd.Context(), toComplete)
 	}
@@ -175,9 +188,9 @@ func (n *networkUpdateCommand) Build(app commands.Application) *cobra.Command {
 		RunE:              n.Run,
 	}
 
-	cmd.Flags().StringVar(&n.name, "name", "", "name to be applied to the network")
-	cmd.Flags().StringVar(&n.description, "description", "", "description to be applied to the network")
-	cmd.Flags().StringVar(&n.domainName, "domain-name", "", "domain name to be applied to the network")
+	cmd.Flags().StringVar(n.name.Configure(cmd, "name", "name to be applied to the network"))
+	cmd.Flags().StringVar(n.description.Configure(cmd, "description", "description to be applied to the network"))
+	cmd.Flags().StringVar(n.domainName.Configure(cmd, "domain-name", "domain name to be applied to the network"))
 	cmd.Flags().StringSliceVar(&n.domainNameServer, "domain-name-server", nil, "domain name server to be applied to the network")
 
 	return cmd
@@ -188,9 +201,9 @@ type networkDeleteCommand struct {
 }
 
 func (n *networkDeleteCommand) Run(cmd *cobra.Command, args []string) error {
-	service := macbaremetal.NewNetworkService(commands.Config.Client)
+	service := macbaremetal.NetworkService()
 
-	networks, err := service.List(cmd.Context())
+	networks, err := service.List(cmd.Context(), macbaremetal.NetworkList{})
 	if err != nil {
 		return fmt.Errorf("fetch networks: %w", err)
 	}
@@ -205,7 +218,7 @@ func (n *networkDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err = service.Delete(cmd.Context(), network.ID)
+	err = service.Delete(cmd.Context(), macbaremetal.NetworkDelete{ID: uint(network.ID)})
 	if err != nil {
 		return fmt.Errorf("delete network: %w", err)
 	}
@@ -213,7 +226,10 @@ func (n *networkDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (n *networkDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (n *networkDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeNetwork(cmd.Context(), toComplete)
 	}
@@ -238,7 +254,7 @@ func (n *networkDeleteCommand) Build(app commands.Application) *cobra.Command {
 }
 
 func completeNetwork(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
-	networks, err := macbaremetal.NewNetworkService(commands.Config.Client).List(ctx)
+	networks, err := macbaremetal.NetworkService().List(ctx, core.CursorAll)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}

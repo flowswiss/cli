@@ -6,6 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/flowswiss/goclient/v2/core"
+
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/compute"
 	"github.com/flowswiss/cli/v2/pkg/filter"
@@ -33,7 +35,7 @@ type snapshotListCommand struct {
 }
 
 func (s *snapshotListCommand) Run(cmd *cobra.Command, args []string) error {
-	snapshots, err := compute.NewSnapshotService(commands.Config.Client).List(cmd.Context())
+	snapshots, err := compute.SnapshotService().List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return fmt.Errorf("fetch snapshots: %w", err)
 	}
@@ -45,7 +47,10 @@ func (s *snapshotListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(snapshots)
 }
 
-func (s *snapshotListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *snapshotListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -80,7 +85,7 @@ func (s *snapshotCreateCommand) Run(cmd *cobra.Command, args []string) error {
 		VolumeID: volume.ID,
 	}
 
-	snapshot, err := compute.NewSnapshotService(commands.Config.Client).Create(cmd.Context(), data)
+	snapshot, err := compute.SnapshotService().Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create snapshot: %w", err)
 	}
@@ -88,7 +93,10 @@ func (s *snapshotCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(snapshot)
 }
 
-func (s *snapshotCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *snapshotCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -121,11 +129,11 @@ func (s *snapshotUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	data := compute.SnapshotUpdate{
-		Name: s.name,
+	data := compute.SnapshotUpdate{ID: uint(snapshot.ID),
+		Name: &s.name,
 	}
 
-	snapshot, err = compute.NewSnapshotService(commands.Config.Client).Update(cmd.Context(), snapshot.ID, data)
+	snapshot, err = compute.SnapshotService().Update(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("update snapshot: %w", err)
 	}
@@ -133,7 +141,10 @@ func (s *snapshotUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(snapshot)
 }
 
-func (s *snapshotUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *snapshotUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeSnapshot(cmd.Context(), toComplete)
 	}
@@ -170,7 +181,7 @@ func (s *snapshotDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err = compute.NewSnapshotService(commands.Config.Client).Delete(cmd.Context(), snapshot.ID)
+	err = compute.SnapshotService().Delete(cmd.Context(), compute.SnapshotDelete{ID: uint(snapshot.ID)})
 	if err != nil {
 		return fmt.Errorf("delete snapshot: %w", err)
 	}
@@ -178,7 +189,10 @@ func (s *snapshotDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (s *snapshotDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *snapshotDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeSnapshot(cmd.Context(), toComplete)
 	}
@@ -202,7 +216,7 @@ func (s *snapshotDeleteCommand) Build(app commands.Application) *cobra.Command {
 }
 
 func completeSnapshot(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
-	snapshots, err := compute.NewSnapshotService(commands.Config.Client).List(ctx)
+	snapshots, err := compute.SnapshotService().List(ctx, core.CursorAll)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -218,7 +232,7 @@ func completeSnapshot(ctx context.Context, term string) ([]string, cobra.ShellCo
 }
 
 func findSnapshot(ctx context.Context, term string) (compute.Snapshot, error) {
-	snapshots, err := compute.NewSnapshotService(commands.Config.Client).List(ctx)
+	snapshots, err := compute.SnapshotService().List(ctx, core.CursorAll)
 	if err != nil {
 		return compute.Snapshot{}, fmt.Errorf("fetch snapshots: %w", err)
 	}

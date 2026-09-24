@@ -59,5 +59,5 @@ func WaitForOrder(ctx context.Context, action string, ordering common.Ordering) 
 
 	go progress.Display(Stderr)
 
-	return common.WaitForOrder(ctx, Config.Client, ordering)
+	return common.WaitForOrder(ctx, Client, ordering)
 }

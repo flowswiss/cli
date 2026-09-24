@@ -47,7 +47,10 @@ func (c *clusterActionListCommand) Run(cmd *cobra.Command, args []string) error 
 	return commands.PrintStdout(actions)
 }
 
-func (c *clusterActionListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (c *clusterActionListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeCluster(cmd.Context(), toComplete)
 	}
@@ -89,11 +92,12 @@ func (c *clusterActionRunCommand) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("find action: %w", err)
 	}
 
-	data := kubernetes.ClusterPerformAction{
+	data := kubernetes.ClusterRunAction{
+		ID:     uint(cluster.ID),
 		Action: action.Command,
 	}
 
-	cluster, err = kubernetes.NewClusterService(commands.Config.Client).PerformAction(cmd.Context(), cluster.ID, data)
+	cluster, err = kubernetes.ClusterService().Perform(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("run cluster action: %w", err)
 	}
@@ -101,7 +105,10 @@ func (c *clusterActionRunCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(cluster)
 }
 
-func (c *clusterActionRunCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (c *clusterActionRunCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeCluster(cmd.Context(), toComplete)
 	}

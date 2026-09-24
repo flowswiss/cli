@@ -3,6 +3,8 @@ package kubernetes
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/flowswiss/goclient/v2/core"
+
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/kubernetes"
 	"github.com/flowswiss/cli/v2/pkg/filter"
@@ -32,7 +34,7 @@ func (l *loadBalancerListCommand) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	items, err := kubernetes.NewLoadBalancerService(commands.Config.Client, cluster.ID).List(cmd.Context())
+	items, err := kubernetes.LoadBalancerService().List(cmd.Context(), kubernetes.LoadBalancerList{ClusterID: uint(cluster.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return err
 	}
@@ -44,7 +46,10 @@ func (l *loadBalancerListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
-func (l *loadBalancerListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (l *loadBalancerListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeCluster(cmd.Context(), toComplete)
 	}

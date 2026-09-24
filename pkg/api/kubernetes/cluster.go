@@ -4,12 +4,104 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/kubernetes"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/core"
+	"github.com/flowswiss/goclient/v2/kubernetes"
 
 	"github.com/flowswiss/cli/v2/pkg/api/common"
 	"github.com/flowswiss/cli/v2/pkg/api/compute"
 )
+
+type (
+	ClusterCreate    = kubernetes.ClusterCreateReq
+	ClusterGet       = kubernetes.ClusterGetReq
+	ClusterList      = core.Cursor
+	ClusterUpdate    = kubernetes.ClusterUpdateReq
+	ClusterRunAction = kubernetes.ClusterPerformActionReq
+	ClusterDelete    = kubernetes.ClusterDeleteReq
+
+	ClusterKubeConfigGet       = kubernetes.ClusterGetReq
+	ClusterConfigurationGet    = kubernetes.ClusterGetReq
+	ClusterConfigurationUpdate = kubernetes.ClusterConfigurationReq
+	ClusterFlavorUpdate        = kubernetes.ClusterUpdateFlavorReq
+
+	// Wrapped types to allow direct usage
+
+	ClusterWorkerCreate = kubernetes.ClusterWorkerCreateReq
+	ClusterWorkerUpdate = kubernetes.ClusterWorkerUpdateReq
+
+	KubeConfig    = kubernetes.ClusterKubeConfig
+	Configuration = kubernetes.ClusterConfiguration
+)
+
+type GenericClusterService struct {
+	generic.OrderedCreateService[ClusterCreate]
+	generic.Read[kubernetes.Cluster, Cluster, ClusterGet, ClusterList]
+	generic.UpdateService[ClusterUpdate, kubernetes.Cluster, Cluster]
+	generic.PerformActionService[ClusterRunAction, kubernetes.Cluster, Cluster]
+	generic.DeleteService[ClusterDelete]
+
+	client *kubernetes.ClusterService
+}
+
+func (c GenericClusterService) GetKubeConfig(ctx context.Context, get ClusterKubeConfigGet) (KubeConfig, error) {
+	config, err := c.client.GetKubeConfig(ctx, get)
+	if err != nil {
+		return KubeConfig{}, err
+	}
+
+	return config, nil
+}
+
+func (c GenericClusterService) GetConfiguration(
+	ctx context.Context,
+	get ClusterConfigurationGet,
+) (Configuration, error) {
+	configuration, err := c.client.GetConfiguration(ctx, get)
+	if err != nil {
+		return Configuration{}, err
+	}
+
+	return configuration, nil
+}
+
+func (c GenericClusterService) UpdateConfiguration(
+	ctx context.Context,
+	update ClusterConfigurationUpdate,
+) (Configuration, error) {
+	configuration, err := c.client.UpdateConfiguration(ctx, update)
+	if err != nil {
+		return Configuration{}, err
+	}
+
+	return configuration, nil
+}
+
+func (c GenericClusterService) UpdateFlavor(ctx context.Context, update ClusterFlavorUpdate) (Cluster, error) {
+	cluster, err := c.client.UpdateFlavor(ctx, update)
+	if err != nil {
+		return Cluster{}, err
+	}
+
+	return Cluster(cluster), nil
+}
+
+func ClusterService() GenericClusterService {
+	client := commands.Client.Kubernetes.Cluster
+	cast := func(cluster kubernetes.Cluster) Cluster {
+		return Cluster(cluster)
+	}
+
+	return GenericClusterService{
+		generic.NewOrderedCreate[ClusterCreate](client),
+		generic.NewRead[kubernetes.Cluster, Cluster, ClusterGet, ClusterList](client, cast),
+		generic.NewUpdate[ClusterUpdate, kubernetes.Cluster, Cluster](client, cast),
+		generic.NewPerformAction[ClusterRunAction, kubernetes.Cluster, Cluster](client, cast),
+		generic.NewDelete[ClusterDelete](client),
+		client,
+	}
+}
 
 type Cluster kubernetes.Cluster
 
@@ -25,8 +117,8 @@ func (c Cluster) Columns() []string {
 	return []string{"id", "name", "status", "product", "location", "network", "address", "control plane", "worker"}
 }
 
-func (c Cluster) Values() map[string]interface{} {
-	return map[string]interface{}{
+func (c Cluster) Values() map[string]any {
+	return map[string]any{
 		"id":            c.ID,
 		"name":          c.Name,
 		"status":        c.Status.Name,
@@ -49,100 +141,10 @@ func (c ClusterAction) Columns() []string {
 	return []string{"id", "name", "command"}
 }
 
-func (c ClusterAction) Values() map[string]interface{} {
-	return map[string]interface{}{
+func (c ClusterAction) Values() map[string]any {
+	return map[string]any{
 		"id":      c.ID,
 		"name":    c.Name,
 		"command": c.Command,
 	}
-}
-
-type ClusterService struct {
-	delegate kubernetes.ClusterService
-}
-
-func NewClusterService(client goclient.Client) ClusterService {
-	return ClusterService{
-		delegate: kubernetes.NewClusterService(client),
-	}
-}
-
-func (c ClusterService) List(ctx context.Context) ([]Cluster, error) {
-	res, err := c.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]Cluster, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = Cluster(item)
-	}
-
-	return items, nil
-}
-
-func (c ClusterService) Get(ctx context.Context, id int) (Cluster, error) {
-	cluster, err := c.delegate.Get(ctx, id)
-	return Cluster(cluster), err
-}
-
-type ClusterCreate = kubernetes.ClusterCreate
-type ClusterWorkerCreate = kubernetes.ClusterWorkerCreate
-
-func (c ClusterService) Create(ctx context.Context, data ClusterCreate) (common.Ordering, error) {
-	return c.delegate.Create(ctx, data)
-}
-
-type ClusterUpdate = kubernetes.ClusterUpdate
-
-func (c ClusterService) Update(ctx context.Context, id int, data ClusterUpdate) (Cluster, error) {
-	res, err := c.delegate.Update(ctx, id, data)
-	if err != nil {
-		return Cluster{}, err
-	}
-
-	return Cluster(res), nil
-}
-
-func (c ClusterService) Delete(ctx context.Context, id int) error {
-	return c.delegate.Delete(ctx, id)
-}
-
-type ClusterKubeConfig = kubernetes.ClusterKubeConfig
-
-func (c ClusterService) GetKubeConfig(ctx context.Context, id int) (ClusterKubeConfig, error) {
-	return c.delegate.GetKubeConfig(ctx, id)
-}
-
-type ClusterConfiguration = kubernetes.ClusterConfiguration
-
-func (c ClusterService) GetConfiguration(ctx context.Context, id int) (ClusterConfiguration, error) {
-	return c.delegate.GetConfiguration(ctx, id)
-}
-
-func (c ClusterService) UpdateConfiguration(ctx context.Context, id int, data ClusterConfiguration) (config ClusterConfiguration, err error) {
-	return c.delegate.UpdateConfiguration(ctx, id, data)
-}
-
-type ClusterUpdateFlavor = kubernetes.ClusterUpdateFlavor
-type ClusterWorkerUpdate = kubernetes.ClusterWorkerUpdate
-
-func (c ClusterService) UpdateFlavor(ctx context.Context, id int, data ClusterUpdateFlavor) (Cluster, error) {
-	cluster, err := c.delegate.UpdateFlavor(ctx, id, data)
-	if err != nil {
-		return Cluster{}, err
-	}
-
-	return Cluster(cluster), nil
-}
-
-type ClusterPerformAction = kubernetes.ClusterPerformAction
-
-func (c ClusterService) PerformAction(ctx context.Context, id int, data ClusterPerformAction) (Cluster, error) {
-	cluster, err := c.delegate.PerformAction(ctx, id, data)
-	if err != nil {
-		return Cluster{}, err
-	}
-
-	return Cluster(cluster), nil
 }

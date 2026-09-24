@@ -1,14 +1,35 @@
 package objectstorage
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/objectstorage"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/core"
+	"github.com/flowswiss/goclient/v2/objectstorage"
 
 	"github.com/flowswiss/cli/v2/pkg/api/common"
 )
+
+type (
+	InstanceCreate = objectstorage.InstanceCreateReq
+	InstanceList   = core.Cursor
+	InstanceDelete = objectstorage.InstanceDeleteReq
+)
+
+type GenericInstanceService = generic.CFD[objectstorage.Instance, Instance, InstanceCreate, InstanceList, InstanceDelete]
+
+func InstanceService() GenericInstanceService {
+	return generic.NewCFD[
+		objectstorage.Instance,
+		Instance,
+		InstanceCreate,
+		InstanceList,
+		InstanceDelete,
+	](commands.Client.ObjectStorage.Instance, func(instance objectstorage.Instance) Instance {
+		return Instance(instance)
+	})
+}
 
 type Instance objectstorage.Instance
 
@@ -26,49 +47,10 @@ func (i Instance) Columns() []string {
 	return []string{"id", "name", "location"}
 }
 
-func (i Instance) Values() map[string]interface{} {
-	return map[string]interface{}{
+func (i Instance) Values() map[string]any {
+	return map[string]any{
 		"id":       i.ID,
 		"name":     i.Name,
 		"location": common.Location(i.Location),
 	}
-}
-
-type InstanceService struct {
-	delegate objectstorage.InstanceService
-}
-
-func NewInstanceService(client goclient.Client) InstanceService {
-	return InstanceService{
-		delegate: objectstorage.NewInstanceService(client),
-	}
-}
-
-func (i InstanceService) List(ctx context.Context) ([]Instance, error) {
-	res, err := i.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]Instance, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = Instance(item)
-	}
-
-	return items, nil
-}
-
-type InstanceCreate = objectstorage.InstanceCreate
-
-func (i InstanceService) Create(ctx context.Context, data InstanceCreate) (Instance, error) {
-	res, err := i.delegate.Create(ctx, data)
-	if err != nil {
-		return Instance{}, err
-	}
-
-	return Instance(res), nil
-}
-
-func (i InstanceService) Delete(ctx context.Context, id int) error {
-	return i.delegate.Delete(ctx, id)
 }

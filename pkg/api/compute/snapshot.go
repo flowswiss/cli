@@ -1,12 +1,45 @@
 package compute
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/compute"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/compute"
+	"github.com/flowswiss/goclient/v2/core"
 )
+
+type (
+	SnapshotCreate = compute.SnapshotCreateReq
+	SnapshotGet    = compute.SnapshotGetReq
+	SnapshotList   = core.Cursor
+	SnapshotUpdate = compute.SnapshotUpdateReq
+	SnapshotDelete = compute.SnapshotDeleteReq
+)
+
+type GenericSnapshotService = generic.CRUD[
+	compute.Snapshot,
+	Snapshot,
+	SnapshotCreate,
+	SnapshotGet,
+	SnapshotList,
+	SnapshotUpdate,
+	SnapshotDelete,
+]
+
+func SnapshotService() GenericSnapshotService {
+	return generic.NewCRUD[
+		compute.Snapshot,
+		Snapshot,
+		SnapshotCreate,
+		SnapshotGet,
+		SnapshotList,
+		SnapshotUpdate,
+		SnapshotDelete,
+	](commands.Client.Compute.Snapshot, func(snapshot compute.Snapshot) Snapshot {
+		return Snapshot(snapshot)
+	})
+}
 
 type Snapshot compute.Snapshot
 
@@ -22,62 +55,12 @@ func (s Snapshot) Columns() []string {
 	return []string{"id", "name", "volume", "status", "size"}
 }
 
-func (s Snapshot) Values() map[string]interface{} {
-	return map[string]interface{}{
+func (s Snapshot) Values() map[string]any {
+	return map[string]any{
 		"id":     s.ID,
 		"name":   s.Name,
 		"volume": Volume(s.Volume),
 		"status": s.Status.Name,
 		"size":   fmt.Sprint(s.Size, " GiB"),
 	}
-}
-
-type SnapshotService struct {
-	delegate compute.SnapshotService
-}
-
-func NewSnapshotService(client goclient.Client) SnapshotService {
-	return SnapshotService{
-		delegate: compute.NewSnapshotService(client),
-	}
-}
-
-func (v SnapshotService) List(ctx context.Context) ([]Snapshot, error) {
-	res, err := v.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]Snapshot, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = Snapshot(item)
-	}
-
-	return items, nil
-}
-
-type SnapshotCreate = compute.SnapshotCreate
-
-func (v SnapshotService) Create(ctx context.Context, data SnapshotCreate) (Snapshot, error) {
-	volume, err := v.delegate.Create(ctx, data)
-	if err != nil {
-		return Snapshot{}, err
-	}
-
-	return Snapshot(volume), nil
-}
-
-type SnapshotUpdate = compute.SnapshotUpdate
-
-func (v SnapshotService) Update(ctx context.Context, volumeID int, data SnapshotUpdate) (Snapshot, error) {
-	volume, err := v.delegate.Update(ctx, volumeID, data)
-	if err != nil {
-		return Snapshot{}, err
-	}
-
-	return Snapshot(volume), nil
-}
-
-func (v SnapshotService) Delete(ctx context.Context, volumeID int) error {
-	return v.delegate.Delete(ctx, volumeID)
 }

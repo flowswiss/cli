@@ -5,11 +5,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/common"
-
 	"github.com/flowswiss/cli/v2/pkg/console"
 	"github.com/flowswiss/cli/v2/pkg/filter"
+	"github.com/flowswiss/goclient/v2"
+	"github.com/flowswiss/goclient/v2/common"
+	"github.com/flowswiss/goclient/v2/core"
 )
 
 var (
@@ -31,7 +31,7 @@ func (l Location) Columns() []string {
 	return []string{"id", "name", "city", "modules"}
 }
 
-func (l Location) Values() map[string]interface{} {
+func (l Location) Values() map[string]any {
 	buf := &bytes.Buffer{}
 	for idx, module := range l.Modules {
 		buf.WriteString(module.Name)
@@ -41,7 +41,7 @@ func (l Location) Values() map[string]interface{} {
 		}
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"id":      l.ID,
 		"name":    l.Name,
 		"city":    l.City,
@@ -49,8 +49,8 @@ func (l Location) Values() map[string]interface{} {
 	}
 }
 
-func Locations(ctx context.Context, client goclient.Client) ([]Location, error) {
-	res, err := common.NewLocationService(client).List(ctx, goclient.Cursor{NoFilter: 1})
+func Locations(ctx context.Context, client *goclient.Client) ([]Location, error) {
+	res, err := client.Common.Location.List(ctx, core.CursorAll)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func Locations(ctx context.Context, client goclient.Client) ([]Location, error) 
 	return items, nil
 }
 
-func FindLocation(ctx context.Context, client goclient.Client, term string) (Location, error) {
+func FindLocation(ctx context.Context, client *goclient.Client, term string) (Location, error) {
 	locations, err := Locations(ctx, client)
 	if err != nil {
 		return Location{}, fmt.Errorf("fetch locations: %w", err)

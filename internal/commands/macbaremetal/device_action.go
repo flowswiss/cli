@@ -49,7 +49,10 @@ func (d *deviceActionListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(availableActions)
 }
 
-func (d *deviceActionListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (d *deviceActionListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeDevice(cmd.Context(), toComplete)
 	}
@@ -76,7 +79,10 @@ func (d *deviceActionRunCommand) Run(cmd *cobra.Command, args []string) error {
 	return runAction(cmd.Context(), args[0], args[1])
 }
 
-func (d *deviceActionRunCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (d *deviceActionRunCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeDevice(cmd.Context(), toComplete)
 	}
@@ -122,7 +128,10 @@ func (d deviceActionRunCommandPreset) Run(cmd *cobra.Command, args []string) err
 	return runAction(cmd.Context(), args[0], string(d))
 }
 
-func (d *deviceActionRunCommandPreset) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (d *deviceActionRunCommandPreset) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeDevice(cmd.Context(), toComplete)
 	}
@@ -175,9 +184,7 @@ func (d *deviceWorkflowListCommand) Run(cmd *cobra.Command, args []string) error
 		return err
 	}
 
-	service := macbaremetal.NewDeviceWorkflowService(commands.Config.Client, device.ID)
-
-	workflows, err := service.List(cmd.Context())
+	workflows, err := macbaremetal.DeviceService().WorkflowList(cmd.Context(), macbaremetal.WorkflowList{DeviceID: uint(device.ID)})
 	if err != nil {
 		return fmt.Errorf("fetch workflows: %w", err)
 	}
@@ -185,7 +192,10 @@ func (d *deviceWorkflowListCommand) Run(cmd *cobra.Command, args []string) error
 	return commands.PrintStdout(workflows)
 }
 
-func (d *deviceWorkflowListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (d *deviceWorkflowListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeDevice(cmd.Context(), toComplete)
 	}
@@ -213,9 +223,7 @@ func (d *deviceWorkflowRunCommand) Run(cmd *cobra.Command, args []string) error 
 		return err
 	}
 
-	service := macbaremetal.NewDeviceWorkflowService(commands.Config.Client, device.ID)
-
-	workflows, err := service.List(cmd.Context())
+	workflows, err := macbaremetal.DeviceService().WorkflowList(cmd.Context(), macbaremetal.WorkflowList{DeviceID: uint(device.ID)})
 	if err != nil {
 		return fmt.Errorf("fetch workflows: %w", err)
 	}
@@ -225,11 +233,12 @@ func (d *deviceWorkflowRunCommand) Run(cmd *cobra.Command, args []string) error 
 		return fmt.Errorf("find workflow: %w", err)
 	}
 
-	body := macbaremetal.DeviceRunWorkflow{
+	body := macbaremetal.WorkflowRun{
+		DeviceID: uint(device.ID),
 		Workflow: workflow.Command,
 	}
 
-	device, err = service.Run(cmd.Context(), body)
+	device, err = macbaremetal.DeviceService().WorkflowRun(cmd.Context(), body)
 	if err != nil {
 		return fmt.Errorf("run workflow: %w", err)
 	}
@@ -237,7 +246,10 @@ func (d *deviceWorkflowRunCommand) Run(cmd *cobra.Command, args []string) error 
 	return commands.PrintStdout(device)
 }
 
-func (d *deviceWorkflowRunCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (d *deviceWorkflowRunCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeDevice(cmd.Context(), toComplete)
 	}
@@ -274,8 +286,11 @@ func completeAction(ctx context.Context, device macbaremetal.Device, term string
 	return actions, cobra.ShellCompDirectiveNoFileComp
 }
 
-func completeWorkflow(ctx context.Context, device macbaremetal.Device, term string) ([]string, cobra.ShellCompDirective) {
-	workflows, err := macbaremetal.NewDeviceWorkflowService(commands.Config.Client, device.ID).List(ctx)
+func completeWorkflow(ctx context.Context, device macbaremetal.Device, term string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
+	workflows, err := macbaremetal.DeviceService().WorkflowList(ctx, macbaremetal.WorkflowList{DeviceID: uint(device.ID)})
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -307,10 +322,11 @@ func runAction(ctx context.Context, deviceTerm, actionTerm string) error {
 	}
 
 	body := macbaremetal.DeviceRunAction{
-		Action: action.Command,
+		DeviceID: uint(device.ID),
+		Action:   action.Command,
 	}
 
-	device, err = macbaremetal.NewDeviceActionService(commands.Config.Client, device.ID).Run(ctx, body)
+	device, err = macbaremetal.DeviceService().Perform(ctx, body)
 	if err != nil {
 		return fmt.Errorf("run action: %w", err)
 	}

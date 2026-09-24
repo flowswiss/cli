@@ -6,6 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/flowswiss/goclient/v2/core"
+
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/kubernetes"
 	"github.com/flowswiss/cli/v2/pkg/filter"
@@ -36,7 +38,7 @@ func (v *volumeListCommand) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	items, err := kubernetes.NewVolumeService(commands.Config.Client, cluster.ID).List(cmd.Context())
+	items, err := kubernetes.VolumeService().List(cmd.Context(), kubernetes.VolumeList{ClusterID: uint(cluster.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return err
 	}
@@ -48,7 +50,10 @@ func (v *volumeListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
-func (v *volumeListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (v *volumeListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeCluster(cmd.Context(), toComplete)
 	}
@@ -92,7 +97,7 @@ func (v *volumeDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err = kubernetes.NewVolumeService(commands.Config.Client, cluster.ID).Delete(cmd.Context(), volume.ID)
+	err = kubernetes.VolumeService().Delete(cmd.Context(), kubernetes.VolumeDelete{VolumeID: uint(volume.ID)})
 	if err != nil {
 		return fmt.Errorf("delete volume: %w", err)
 	}
@@ -100,7 +105,10 @@ func (v *volumeDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (v *volumeDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (v *volumeDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeCluster(cmd.Context(), toComplete)
 	}
@@ -133,7 +141,7 @@ func (v *volumeDeleteCommand) Build(app commands.Application) *cobra.Command {
 }
 
 func completeVolume(ctx context.Context, cluster kubernetes.Cluster, term string) ([]string, cobra.ShellCompDirective) {
-	volumes, err := kubernetes.NewVolumeService(commands.Config.Client, cluster.ID).List(ctx)
+	volumes, err := kubernetes.VolumeService().List(ctx, kubernetes.VolumeList{ClusterID: uint(cluster.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -149,7 +157,7 @@ func completeVolume(ctx context.Context, cluster kubernetes.Cluster, term string
 }
 
 func findVolume(ctx context.Context, clusterID int, term string) (kubernetes.Volume, error) {
-	volumes, err := kubernetes.NewVolumeService(commands.Config.Client, clusterID).List(ctx)
+	volumes, err := kubernetes.VolumeService().List(ctx, kubernetes.VolumeList{ClusterID: uint(clusterID), Cursor: core.CursorAll})
 	if err != nil {
 		return kubernetes.Volume{}, fmt.Errorf("fetch volumes: %w", err)
 	}

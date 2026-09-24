@@ -7,6 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/flowswiss/goclient/v2/core"
+
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/common"
 	"github.com/flowswiss/cli/v2/pkg/api/compute"
@@ -35,6 +37,7 @@ func ClusterCommand(app commands.Application) *cobra.Command {
 		LoadBalancerCommand(app),
 		NodeCommand(app),
 		VolumeCommand(app),
+		SnapshotCommand(app),
 	)
 
 	return cmd
@@ -45,7 +48,7 @@ type clusterListCommand struct {
 }
 
 func (c *clusterListCommand) Run(cmd *cobra.Command, args []string) error {
-	items, err := kubernetes.NewClusterService(commands.Config.Client).List(cmd.Context())
+	items, err := kubernetes.ClusterService().List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return err
 	}
@@ -57,7 +60,10 @@ func (c *clusterListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
-func (c *clusterListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (c *clusterListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -86,12 +92,12 @@ type clusterCreateCommand struct {
 }
 
 func (c *clusterCreateCommand) Run(cmd *cobra.Command, args []string) error {
-	location, err := common.FindLocation(cmd.Context(), commands.Config.Client, c.location)
+	location, err := common.FindLocation(cmd.Context(), commands.Client, c.location)
 	if err != nil {
 		return err
 	}
 
-	products, err := common.ProductsByType(cmd.Context(), commands.Config.Client, common.ProductTypeKubernetesNode)
+	products, err := common.ProductsByType(cmd.Context(), commands.Client, common.ProductTypeKubernetesNode)
 	if err != nil {
 		return fmt.Errorf("fetch products: %w", err)
 	}
@@ -103,7 +109,7 @@ func (c *clusterCreateCommand) Run(cmd *cobra.Command, args []string) error {
 
 	networkID := 0
 	if c.network != "" {
-		networks, err := compute.NewNetworkService(commands.Config.Client).List(cmd.Context())
+		networks, err := compute.NetworkService().List(cmd.Context(), core.CursorAll)
 		if err != nil {
 			return fmt.Errorf("fetch networks: %w", err)
 		}
@@ -131,7 +137,7 @@ func (c *clusterCreateCommand) Run(cmd *cobra.Command, args []string) error {
 		AttachExternalIP: c.attachExternalIP,
 	}
 
-	service := kubernetes.NewClusterService(commands.Config.Client)
+	service := kubernetes.ClusterService()
 
 	ordering, err := service.Create(cmd.Context(), data)
 	if err != nil {
@@ -143,7 +149,7 @@ func (c *clusterCreateCommand) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("wait for order: %w", err)
 	}
 
-	cluster, err := service.Get(cmd.Context(), order.Product.ID)
+	cluster, err := service.Get(cmd.Context(), kubernetes.ClusterGet{ID: uint(order.Product.ID)})
 	if err != nil {
 		return fmt.Errorf("fetch cluster: %w", err)
 	}
@@ -151,7 +157,10 @@ func (c *clusterCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(cluster)
 }
 
-func (c *clusterCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (c *clusterCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -192,11 +201,11 @@ func (c *clusterUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	data := kubernetes.ClusterUpdate{
-		Name: c.name,
+	data := kubernetes.ClusterUpdate{ID: uint(cluster.ID),
+		Name: &c.name,
 	}
 
-	cluster, err = kubernetes.NewClusterService(commands.Config.Client).Update(cmd.Context(), cluster.ID, data)
+	cluster, err = kubernetes.ClusterService().Update(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("update cluster: %w", err)
 	}
@@ -204,7 +213,10 @@ func (c *clusterUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(cluster)
 }
 
-func (c *clusterUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (c *clusterUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeCluster(cmd.Context(), toComplete)
 	}
@@ -242,7 +254,7 @@ func (c *clusterDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err = kubernetes.NewClusterService(commands.Config.Client).Delete(cmd.Context(), cluster.ID)
+	err = kubernetes.ClusterService().Delete(cmd.Context(), kubernetes.ClusterDelete{ID: uint(cluster.ID)})
 	if err != nil {
 		return fmt.Errorf("delete cluster: %w", err)
 	}
@@ -250,7 +262,10 @@ func (c *clusterDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (c *clusterDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (c *clusterDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeCluster(cmd.Context(), toComplete)
 	}
@@ -284,7 +299,7 @@ func (c *clusterUpgradeCommand) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	products, err := common.ProductsByType(cmd.Context(), commands.Config.Client, common.ProductTypeKubernetesNode)
+	products, err := common.ProductsByType(cmd.Context(), commands.Client, common.ProductTypeKubernetesNode)
 	if err != nil {
 		return fmt.Errorf("fetch products: %w", err)
 	}
@@ -294,14 +309,14 @@ func (c *clusterUpgradeCommand) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("find product: %w", err)
 	}
 
-	data := kubernetes.ClusterUpdateFlavor{
+	data := kubernetes.ClusterFlavorUpdate{ID: uint(cluster.ID),
 		Worker: kubernetes.ClusterWorkerUpdate{
 			ProductID: workerProduct.ID,
 			Count:     c.workerCount,
 		},
 	}
 
-	cluster, err = kubernetes.NewClusterService(commands.Config.Client).UpdateFlavor(cmd.Context(), cluster.ID, data)
+	cluster, err = kubernetes.ClusterService().UpdateFlavor(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("upgrade cluster: %w", err)
 	}
@@ -309,7 +324,10 @@ func (c *clusterUpgradeCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(cluster)
 }
 
-func (c *clusterUpgradeCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (c *clusterUpgradeCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeCluster(cmd.Context(), toComplete)
 	}
@@ -345,7 +363,7 @@ func (c *clusterKubeConfigCommand) Run(cmd *cobra.Command, args []string) error 
 		return err
 	}
 
-	kubeConfig, err := kubernetes.NewClusterService(commands.Config.Client).GetKubeConfig(cmd.Context(), cluster.ID)
+	kubeConfig, err := kubernetes.ClusterService().GetKubeConfig(cmd.Context(), kubernetes.ClusterKubeConfigGet{ID: uint(cluster.ID)})
 	if err != nil {
 		return fmt.Errorf("fetch kube config: %w", err)
 	}
@@ -359,7 +377,10 @@ func (c *clusterKubeConfigCommand) Run(cmd *cobra.Command, args []string) error 
 	return nil
 }
 
-func (c *clusterKubeConfigCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (c *clusterKubeConfigCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeCluster(cmd.Context(), toComplete)
 	}
@@ -381,7 +402,7 @@ func (c *clusterKubeConfigCommand) Build(app commands.Application) *cobra.Comman
 }
 
 func completeCluster(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
-	clusters, err := kubernetes.NewClusterService(commands.Config.Client).List(ctx)
+	clusters, err := kubernetes.ClusterService().List(ctx, core.CursorAll)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -397,7 +418,7 @@ func completeCluster(ctx context.Context, term string) ([]string, cobra.ShellCom
 }
 
 func findCluster(ctx context.Context, term string) (kubernetes.Cluster, error) {
-	clusters, err := kubernetes.NewClusterService(commands.Config.Client).List(ctx)
+	clusters, err := kubernetes.ClusterService().List(ctx, core.CursorAll)
 	if err != nil {
 		return kubernetes.Cluster{}, fmt.Errorf("fetch clusters: %w", err)
 	}

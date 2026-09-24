@@ -5,11 +5,58 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/compute"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/compute"
+	"github.com/flowswiss/goclient/v2/core"
 
 	"github.com/flowswiss/cli/v2/pkg/api/common"
 )
+
+type (
+	ServerCreate    = compute.ServerCreateReq
+	ServerGet       = compute.ServerGetReq
+	ServerList      = core.Cursor
+	ServerUpdate    = compute.ServerUpdateReq
+	ServerUpgrade   = compute.ServerUpgradeReq
+	ServerRunAction = compute.ServerPerformReq
+	ServerDelete    = compute.ServerDeleteReq
+)
+
+type GenericServerService struct {
+	generic.OrderedCreateService[ServerCreate]
+	generic.Read[compute.Server, Server, ServerGet, ServerList]
+	generic.UpdateService[ServerUpdate, compute.Server, Server]
+	generic.PerformActionService[ServerRunAction, compute.Server, Server]
+	generic.DeleteService[ServerDelete]
+
+	client *compute.ServerService
+}
+
+func (s GenericServerService) Upgrade(ctx context.Context, upgrade ServerUpgrade) (common.Ordering, error) {
+	order, err := s.client.Upgrade(ctx, upgrade)
+	if err != nil {
+		return common.Ordering{}, err
+	}
+
+	return order, err
+}
+
+func ServerService() GenericServerService {
+	client := commands.Client.Compute.Server
+	cast := func(server compute.Server) Server {
+		return Server(server)
+	}
+
+	return GenericServerService{
+		generic.NewOrderedCreate[ServerCreate](client),
+		generic.NewRead[compute.Server, Server, ServerGet, ServerList](client, cast),
+		generic.NewUpdate[ServerUpdate, compute.Server, Server](client, cast),
+		generic.NewPerformAction[ServerRunAction, compute.Server, Server](client, cast),
+		generic.NewDelete[ServerDelete](client),
+		client,
+	}
+}
 
 type Server compute.Server
 
@@ -33,7 +80,7 @@ func (s Server) Columns() []string {
 	return []string{"id", "name", "status", "product", "operating system", "location", "public ip", "network"}
 }
 
-func (s Server) Values() map[string]interface{} {
+func (s Server) Values() map[string]any {
 	networkBuffer := &strings.Builder{}
 	publicIPBuffer := &strings.Builder{}
 
@@ -62,7 +109,7 @@ func (s Server) Values() map[string]interface{} {
 		publicIP = publicIP[:len(publicIP)-2]
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"id":               s.ID,
 		"name":             s.Name,
 		"status":           s.Status.Name,
@@ -72,62 +119,4 @@ func (s Server) Values() map[string]interface{} {
 		"public ip":        publicIP,
 		"network":          networkBuffer.String(),
 	}
-}
-
-type ServerService struct {
-	client   goclient.Client
-	delegate compute.ServerService
-}
-
-func NewServerService(client goclient.Client) ServerService {
-	return ServerService{
-		client:   client,
-		delegate: compute.NewServerService(client),
-	}
-}
-
-func (s ServerService) List(ctx context.Context) ([]Server, error) {
-	res, err := s.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]Server, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = Server(item)
-	}
-
-	return items, nil
-}
-
-func (s ServerService) Get(ctx context.Context, id int) (Server, error) {
-	server, err := s.delegate.Get(ctx, id)
-	return Server(server), err
-}
-
-type ServerCreate = compute.ServerCreate
-
-func (s ServerService) Create(ctx context.Context, data ServerCreate) (common.Ordering, error) {
-	return s.delegate.Create(ctx, data)
-}
-
-type ServerUpdate = compute.ServerUpdate
-
-func (s ServerService) Update(ctx context.Context, id int, data ServerUpdate) (Server, error) {
-	res, err := s.delegate.Update(ctx, id, data)
-	if err != nil {
-		return Server{}, err
-	}
-
-	return Server(res), nil
-}
-
-type ServerUpgrade = compute.ServerUpgrade
-
-func (s ServerService) Upgrade(ctx context.Context, id int, data ServerUpgrade) (common.Ordering, error) {
-	return s.delegate.Upgrade(ctx, id, data)
-}
-
-func (s ServerService) Delete(ctx context.Context, id int, deleteElasticIPs bool) error {
-	return s.delegate.Delete(ctx, id, deleteElasticIPs)
 }

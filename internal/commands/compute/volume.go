@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/flowswiss/cli/v2/pkg/optional"
 	"github.com/spf13/cobra"
+
+	"github.com/flowswiss/goclient/v2/core"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/common"
@@ -37,7 +40,7 @@ type volumeListCommand struct {
 }
 
 func (v *volumeListCommand) Run(cmd *cobra.Command, args []string) error {
-	volumes, err := compute.NewVolumeService(commands.Config.Client).List(cmd.Context())
+	volumes, err := compute.VolumeService().List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return fmt.Errorf("fetch volumes: %w", err)
 	}
@@ -49,7 +52,10 @@ func (v *volumeListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(volumes)
 }
 
-func (v *volumeListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (v *volumeListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -72,8 +78,8 @@ type volumeCreateCommand struct {
 	name     string
 	size     int
 	location string
-	server   string
-	snapshot string
+	server   optional.Optional[string]
+	snapshot optional.Optional[string]
 }
 
 func (v *volumeCreateCommand) Run(cmd *cobra.Command, args []string) error {
@@ -83,7 +89,7 @@ func (v *volumeCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(v.location) != 0 {
-		location, err := common.FindLocation(cmd.Context(), commands.Config.Client, v.location)
+		location, err := common.FindLocation(cmd.Context(), commands.Client, v.location)
 		if err != nil {
 			return err
 		}
@@ -91,26 +97,26 @@ func (v *volumeCreateCommand) Run(cmd *cobra.Command, args []string) error {
 		data.LocationID = location.ID
 	}
 
-	if len(v.server) != 0 {
-		server, err := findServer(cmd.Context(), v.server)
+	if srv := v.server.Value(); srv != nil {
+		server, err := findServer(cmd.Context(), *srv)
 		if err != nil {
 			return err
 		}
 
-		data.InstanceID = server.ID
+		data.InstanceID = &server.ID
 
 		if data.LocationID == 0 {
 			data.LocationID = server.Location.ID
 		}
 	}
 
-	if len(v.snapshot) != 0 {
-		snapshot, err := findSnapshot(cmd.Context(), v.snapshot)
+	if snap := v.snapshot.Value(); snap != nil {
+		snapshot, err := findSnapshot(cmd.Context(), *snap)
 		if err != nil {
 			return err
 		}
 
-		data.SnapshotID = snapshot.ID
+		data.SnapshotID = &snapshot.ID
 
 		if data.Size == 0 {
 			data.Size = snapshot.Size
@@ -125,7 +131,7 @@ func (v *volumeCreateCommand) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unable to determine location for the volume")
 	}
 
-	volume, err := compute.NewVolumeService(commands.Config.Client).Create(cmd.Context(), data)
+	volume, err := compute.VolumeService().Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create volume: %w", err)
 	}
@@ -133,7 +139,10 @@ func (v *volumeCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(volume)
 }
 
-func (v *volumeCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (v *volumeCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -150,8 +159,8 @@ func (v *volumeCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd.Flags().StringVar(&v.name, "name", "", "name of the volume")
 	cmd.Flags().IntVar(&v.size, "size", 0, "size of the volume in GiB")
 	cmd.Flags().StringVar(&v.location, "location", "", "location of the volume")
-	cmd.Flags().StringVar(&v.server, "attach-to", "", "server to attach the volume to")
-	cmd.Flags().StringVar(&v.snapshot, "restore-from", "", "snapshot to create the volume from")
+	cmd.Flags().StringVar(v.server.Configure(cmd, "attach-to", "server to attach the volume to"))
+	cmd.Flags().StringVar(v.snapshot.Configure(cmd, "restore-from", "snapshot to create the volume from"))
 
 	_ = cmd.MarkFlagRequired("name")
 
@@ -173,10 +182,12 @@ func (v *volumeAttachCommand) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	data := compute.VolumeAttach{
+		VolumeID:   uint(volume.ID),
 		InstanceID: server.ID,
 	}
 
-	volume, err = compute.NewVolumeService(commands.Config.Client).Attach(cmd.Context(), volume.ID, data)
+	volume, err = compute.VolumeService().Attach(cmd.Context(), data)
+
 	if err != nil {
 		return fmt.Errorf("attach volume: %w", err)
 	}
@@ -184,7 +195,10 @@ func (v *volumeAttachCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(volume)
 }
 
-func (v *volumeAttachCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (v *volumeAttachCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeVolume(cmd.Context(), toComplete, func(volume compute.Volume) bool {
 			return volume.AttachedTo.ID == 0
@@ -235,7 +249,7 @@ func (v *volumeDetachCommand) Run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err = compute.NewVolumeService(commands.Config.Client).Detach(cmd.Context(), volume.ID, server.ID)
+	err = compute.VolumeService().Detach(cmd.Context(), compute.VolumeDetach{VolumeID: uint(volume.ID), InstanceID: uint(server.ID)})
 	if err != nil {
 		return fmt.Errorf("detach volume: %w", err)
 	}
@@ -243,7 +257,10 @@ func (v *volumeDetachCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (v *volumeDetachCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (v *volumeDetachCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeVolume(cmd.Context(), toComplete, func(volume compute.Volume) bool {
 			return volume.AttachedTo.ID != 0
@@ -291,11 +308,11 @@ func (v *volumeRevertCommand) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	data := compute.VolumeRevert{
+	data := compute.VolumeRevert{VolumeID: uint(volume.ID),
 		SnapshotID: snapshot.ID,
 	}
 
-	volume, err = compute.NewVolumeService(commands.Config.Client).Revert(cmd.Context(), volume.ID, data)
+	volume, err = compute.VolumeService().Revert(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("revert volume: %w", err)
 	}
@@ -303,7 +320,10 @@ func (v *volumeRevertCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(volume)
 }
 
-func (v *volumeRevertCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (v *volumeRevertCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeVolume(cmd.Context(), toComplete, nil)
 	}
@@ -343,11 +363,11 @@ func (v *volumeExpandCommand) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	data := compute.VolumeExpand{
+	data := compute.VolumeExpand{VolumeID: uint(volume.ID),
 		Size: v.size,
 	}
 
-	volume, err = compute.NewVolumeService(commands.Config.Client).Expand(cmd.Context(), volume.ID, data)
+	volume, err = compute.VolumeService().Expand(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("expand volume: %w", err)
 	}
@@ -355,7 +375,10 @@ func (v *volumeExpandCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(volume)
 }
 
-func (v *volumeExpandCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (v *volumeExpandCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeVolume(cmd.Context(), toComplete, nil)
 	}
@@ -395,7 +418,7 @@ func (v *volumeDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err = compute.NewVolumeService(commands.Config.Client).Delete(cmd.Context(), volume.ID)
+	err = compute.VolumeService().Delete(cmd.Context(), compute.VolumeDelete{ID: uint(volume.ID)})
 	if err != nil {
 		return fmt.Errorf("delete volume: %w", err)
 	}
@@ -403,7 +426,10 @@ func (v *volumeDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (v *volumeDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (v *volumeDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeVolume(cmd.Context(), toComplete, nil)
 	}
@@ -426,8 +452,11 @@ func (v *volumeDeleteCommand) Build(app commands.Application) *cobra.Command {
 	return cmd
 }
 
-func completeVolume(ctx context.Context, term string, itemFilter func(volume compute.Volume) bool) ([]string, cobra.ShellCompDirective) {
-	volumes, err := compute.NewVolumeService(commands.Config.Client).List(ctx)
+func completeVolume(ctx context.Context, term string, itemFilter func(volume compute.Volume) bool) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
+	volumes, err := compute.VolumeService().List(ctx, core.CursorAll)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -442,8 +471,11 @@ func completeVolume(ctx context.Context, term string, itemFilter func(volume com
 	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
-func completeVolumeSnapshot(ctx context.Context, volume compute.Volume, term string) ([]string, cobra.ShellCompDirective) {
-	snapshots, err := compute.NewSnapshotService(commands.Config.Client).List(ctx)
+func completeVolumeSnapshot(ctx context.Context, volume compute.Volume, term string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
+	snapshots, err := compute.SnapshotService().List(ctx, core.CursorAll)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -461,7 +493,7 @@ func completeVolumeSnapshot(ctx context.Context, volume compute.Volume, term str
 }
 
 func findVolume(ctx context.Context, term string) (compute.Volume, error) {
-	volumes, err := compute.NewVolumeService(commands.Config.Client).List(ctx)
+	volumes, err := compute.VolumeService().List(ctx, core.CursorAll)
 	if err != nil {
 		return compute.Volume{}, fmt.Errorf("fetch volumes: %w", err)
 	}

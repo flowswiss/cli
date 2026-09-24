@@ -4,9 +4,56 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/macbaremetal"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/core"
+	"github.com/flowswiss/goclient/v2/macbaremetal"
 )
+
+type (
+	ElasticIPCreate = macbaremetal.ElasticIPCreateReq
+	ElasticIPList   = core.Cursor
+	ElasticIPDelete = macbaremetal.ElasticIPDeleteReq
+	ElasticIPAttach = macbaremetal.ElasticIPAttachmentCreateReq
+	ElasticIPDetach = macbaremetal.ElasticIPAttachmentDeleteReq
+)
+
+type GenericElasticIPService struct {
+	generic.CFD[macbaremetal.ElasticIP, ElasticIP, ElasticIPCreate, ElasticIPList, ElasticIPDelete]
+
+	client *macbaremetal.ElasticIPAttachmentService
+}
+
+func (e GenericElasticIPService) Attach(ctx context.Context, req ElasticIPAttach) (ElasticIP, error) {
+	elasticIP, err := e.client.Create(ctx, req)
+	if err != nil {
+		return ElasticIP{}, err
+	}
+
+	return ElasticIP(elasticIP), nil
+}
+
+func (e GenericElasticIPService) Detach(ctx context.Context, req ElasticIPDetach) error {
+	return e.client.Delete(ctx, req)
+}
+
+func ElasticIPService() GenericElasticIPService {
+	client := commands.Client.MacBareMetal.ElasticIP
+	cast := func(elasticIP macbaremetal.ElasticIP) ElasticIP {
+		return ElasticIP(elasticIP)
+	}
+
+	return GenericElasticIPService{
+		generic.NewCFD[
+			macbaremetal.ElasticIP,
+			ElasticIP,
+			ElasticIPCreate,
+			ElasticIPList,
+			ElasticIPDelete,
+		](client, cast),
+		commands.Client.MacBareMetal.ElasticIPAttachment,
+	}
+}
 
 type ElasticIP macbaremetal.ElasticIP
 
@@ -22,72 +69,16 @@ func (e ElasticIP) Columns() []string {
 	return []string{"id", "location", "public ip", "attachment"}
 }
 
-func (e ElasticIP) Values() map[string]interface{} {
+func (e ElasticIP) Values() map[string]any {
 	attachment := ""
 	if e.Attachment.ID != 0 {
 		attachment = fmt.Sprintf("%s (%s)", e.Attachment.Name, e.PrivateIP)
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"id":         e.ID,
 		"location":   e.Location.Name,
 		"public ip":  e.PublicIP,
 		"attachment": attachment,
 	}
-}
-
-type ElasticIPService struct {
-	client   goclient.Client
-	delegate macbaremetal.ElasticIPService
-}
-
-func NewElasticIPService(client goclient.Client) ElasticIPService {
-	return ElasticIPService{
-		client:   client,
-		delegate: macbaremetal.NewElasticIPService(client),
-	}
-}
-
-func (e ElasticIPService) List(ctx context.Context) ([]ElasticIP, error) {
-	res, err := e.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]ElasticIP, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = ElasticIP(item)
-	}
-
-	return items, nil
-}
-
-type ElasticIPCreate = macbaremetal.ElasticIPCreate
-
-func (e ElasticIPService) Create(ctx context.Context, data ElasticIPCreate) (ElasticIP, error) {
-	res, err := e.delegate.Create(ctx, data)
-	if err != nil {
-		return ElasticIP{}, err
-	}
-
-	return ElasticIP(res), nil
-}
-
-type ElasticIPAttach = macbaremetal.ElasticIPAttach
-
-func (e ElasticIPService) Attach(ctx context.Context, deviceID int, data ElasticIPAttach) (ElasticIP, error) {
-	elasticIP, err := macbaremetal.NewAttachedElasticIPService(e.client, deviceID).Attach(ctx, data)
-	if err != nil {
-		return ElasticIP{}, err
-	}
-
-	return ElasticIP(elasticIP), nil
-}
-
-func (e ElasticIPService) Detach(ctx context.Context, deviceID, elasticIPID int) error {
-	return macbaremetal.NewAttachedElasticIPService(e.client, deviceID).Detach(ctx, elasticIPID)
-}
-
-func (e ElasticIPService) Delete(ctx context.Context, id int) error {
-	return e.delegate.Delete(ctx, id)
 }

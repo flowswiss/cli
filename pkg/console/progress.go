@@ -34,16 +34,16 @@ func (p *Progress) displayAnsi(out Writer) {
 	chars := []rune{'|', '/', '-', '\\'}
 	idx := 0
 
-	out.Print("\u001B[s") // save current cursor position
 	for {
-		out.Print("\u001B[u\u001B[0K") // restore cursor position and clear line
-		out.Printf("[%s] %s\n", string(chars[idx]), p.message)
+		// return to line start, clear it, print frame
+		out.Printf("\r\u001B[0K[%s] %s", string(chars[idx]), p.message)
 		idx = (idx + 1) % len(chars)
 
 		select {
 		case <-ticker.C:
 		case <-p.done:
-			out.Print("\u001B[u\u001B[0K") // restore cursor position and clear line
+			// return to line start and clear it
+			out.Print("\r\u001B[0K")
 			return
 		}
 	}

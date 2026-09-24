@@ -1,12 +1,36 @@
 package macbaremetal
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/macbaremetal"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/core"
+	"github.com/flowswiss/goclient/v2/macbaremetal"
 )
+
+type (
+	RouterGet    = macbaremetal.RouterGetReq
+	RouterList   = core.Cursor
+	RouterUpdate = macbaremetal.RouterUpdateReq
+)
+
+type GenericRouterService struct {
+	generic.Read[macbaremetal.Router, Router, RouterGet, RouterList]
+	generic.UpdateService[RouterUpdate, macbaremetal.Router, Router]
+}
+
+func RouterService() GenericRouterService {
+	client := commands.Client.MacBareMetal.Router
+	cast := func(router macbaremetal.Router) Router {
+		return Router(router)
+	}
+
+	return GenericRouterService{
+		generic.NewRead[macbaremetal.Router, Router, RouterGet, RouterList](client, cast),
+		generic.NewUpdate[RouterUpdate, macbaremetal.Router, Router](client, cast),
+	}
+}
 
 type Router macbaremetal.Router
 
@@ -18,46 +42,11 @@ func (r Router) Columns() []string {
 	return []string{"id", "name", "location", "public ip"}
 }
 
-func (r Router) Values() map[string]interface{} {
-	return map[string]interface{}{
+func (r Router) Values() map[string]any {
+	return map[string]any{
 		"id":        r.ID,
 		"name":      r.Name,
 		"location":  r.Location.Name,
 		"public ip": r.PublicIP,
 	}
-}
-
-type RouterService struct {
-	delegate macbaremetal.RouterService
-}
-
-func NewRouterService(client goclient.Client) RouterService {
-	return RouterService{
-		delegate: macbaremetal.NewRouterService(client),
-	}
-}
-
-func (r RouterService) List(ctx context.Context) ([]Router, error) {
-	res, err := r.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]Router, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = Router(item)
-	}
-
-	return items, nil
-}
-
-type RouterUpdate = macbaremetal.RouterUpdate
-
-func (r RouterService) Update(ctx context.Context, id int, data RouterUpdate) (Router, error) {
-	res, err := r.delegate.Update(ctx, id, data)
-	if err != nil {
-		return Router{}, err
-	}
-
-	return Router(res), nil
 }

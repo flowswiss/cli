@@ -5,11 +5,46 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/compute"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2"
+	"github.com/flowswiss/goclient/v2/compute"
+	"github.com/flowswiss/goclient/v2/core"
 
 	"github.com/flowswiss/cli/v2/pkg/api/common"
 )
+
+type (
+	LoadBalancerCreate    = compute.LoadBalancerCreateReq
+	LoadBalancerGet       = compute.LoadBalancerGetReq
+	LoadBalancerList      = core.Cursor
+	LoadBalancerUpdate    = compute.LoadBalancerUpdateReq
+	LoadBalancerRunAction = compute.LoadBalancerPerformReq
+	LoadBalancerDelete    = compute.LoadBalancerDeleteReq
+)
+
+type GenericLoadBalancerService struct {
+	generic.OrderedCreateService[LoadBalancerCreate]
+	generic.Read[compute.LoadBalancer, LoadBalancer, LoadBalancerGet, LoadBalancerList]
+	generic.UpdateService[LoadBalancerUpdate, compute.LoadBalancer, LoadBalancer]
+	generic.PerformActionService[LoadBalancerRunAction, compute.LoadBalancer, LoadBalancer]
+	generic.DeleteService[LoadBalancerDelete]
+}
+
+func LoadBalancerService() GenericLoadBalancerService {
+	client := commands.Client.Compute.LoadBalancer
+	cast := func(loadBalancer compute.LoadBalancer) LoadBalancer {
+		return LoadBalancer(loadBalancer)
+	}
+
+	return GenericLoadBalancerService{
+		generic.NewOrderedCreate[LoadBalancerCreate](client),
+		generic.NewRead[compute.LoadBalancer, LoadBalancer, LoadBalancerGet, LoadBalancerList](client, cast),
+		generic.NewUpdate[LoadBalancerUpdate, compute.LoadBalancer, LoadBalancer](client, cast),
+		generic.NewPerformAction[LoadBalancerRunAction, compute.LoadBalancer, LoadBalancer](client, cast),
+		generic.NewDelete[LoadBalancerDelete](client),
+	}
+}
 
 type LoadBalancer compute.LoadBalancer
 
@@ -25,7 +60,7 @@ func (l LoadBalancer) Columns() []string {
 	return []string{"id", "name", "location", "product", "status", "public ip", "network"}
 }
 
-func (l LoadBalancer) Values() map[string]interface{} {
+func (l LoadBalancer) Values() map[string]any {
 	networkBuffer := &strings.Builder{}
 	publicIPBuffer := &strings.Builder{}
 
@@ -54,7 +89,7 @@ func (l LoadBalancer) Values() map[string]interface{} {
 		publicIP = publicIP[:len(publicIP)-2]
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"id":        l.ID,
 		"name":      l.Name,
 		"location":  common.Location(l.Location),
@@ -63,61 +98,6 @@ func (l LoadBalancer) Values() map[string]interface{} {
 		"public ip": publicIP,
 		"network":   networkBuffer.String(),
 	}
-}
-
-type LoadBalancerService struct {
-	delegate compute.LoadBalancerService
-}
-
-func NewLoadBalancerService(client goclient.Client) LoadBalancerService {
-	return LoadBalancerService{
-		delegate: compute.NewLoadBalancerService(client),
-	}
-}
-
-func (l LoadBalancerService) List(ctx context.Context) ([]LoadBalancer, error) {
-	res, err := l.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]LoadBalancer, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = LoadBalancer(item)
-	}
-
-	return items, nil
-}
-
-func (l LoadBalancerService) Get(ctx context.Context, id int) (LoadBalancer, error) {
-	loadBalancer, err := l.delegate.Get(ctx, id)
-	return LoadBalancer(loadBalancer), err
-}
-
-type LoadBalancerCreate = compute.LoadBalancerCreate
-
-func (l LoadBalancerService) Create(ctx context.Context, data LoadBalancerCreate) (common.Ordering, error) {
-	res, err := l.delegate.Create(ctx, data)
-	if err != nil {
-		return common.Ordering{}, err
-	}
-
-	return res, nil
-}
-
-type LoadBalancerUpdate = compute.LoadBalancerUpdate
-
-func (l LoadBalancerService) Update(ctx context.Context, id int, data LoadBalancerUpdate) (LoadBalancer, error) {
-	res, err := l.delegate.Update(ctx, id, data)
-	if err != nil {
-		return LoadBalancer{}, err
-	}
-
-	return LoadBalancer(res), nil
-}
-
-func (l LoadBalancerService) Delete(ctx context.Context, id int) error {
-	return l.delegate.Delete(ctx, id)
 }
 
 type LoadBalancerProtocol compute.LoadBalancerProtocol
@@ -134,16 +114,16 @@ func (l LoadBalancerProtocol) Columns() []string {
 	return []string{"id", "key", "name"}
 }
 
-func (l LoadBalancerProtocol) Values() map[string]interface{} {
-	return map[string]interface{}{
+func (l LoadBalancerProtocol) Values() map[string]any {
+	return map[string]any{
 		"id":   l.ID,
 		"key":  l.Key,
 		"name": l.Name,
 	}
 }
 
-func LoadBalancerProtocols(ctx context.Context, client goclient.Client) ([]LoadBalancerProtocol, error) {
-	res, err := compute.NewLoadBalancerEntityService(client).ListProtocols(ctx, goclient.Cursor{NoFilter: 1})
+func LoadBalancerProtocols(ctx context.Context, client *goclient.Client) ([]LoadBalancerProtocol, error) {
+	res, err := client.Compute.LoadBalancerEntity.ListProtocols(ctx, core.Cursor{NoFilter: 1})
 	if err != nil {
 		return nil, err
 	}
@@ -170,16 +150,16 @@ func (l LoadBalancerAlgorithm) Columns() []string {
 	return []string{"id", "key", "name"}
 }
 
-func (l LoadBalancerAlgorithm) Values() map[string]interface{} {
-	return map[string]interface{}{
+func (l LoadBalancerAlgorithm) Values() map[string]any {
+	return map[string]any{
 		"id":   l.ID,
 		"key":  l.Key,
 		"name": l.Name,
 	}
 }
 
-func LoadBalancerAlgorithms(ctx context.Context, client goclient.Client) ([]LoadBalancerAlgorithm, error) {
-	res, err := compute.NewLoadBalancerEntityService(client).ListAlgorithms(ctx, goclient.Cursor{NoFilter: 1})
+func LoadBalancerAlgorithms(ctx context.Context, client *goclient.Client) ([]LoadBalancerAlgorithm, error) {
+	res, err := client.Compute.LoadBalancerEntity.ListAlgorithms(ctx, core.Cursor{NoFilter: 1})
 	if err != nil {
 		return nil, err
 	}
@@ -206,16 +186,16 @@ func (l LoadBalancerHealthCheckType) Columns() []string {
 	return []string{"id", "key", "name"}
 }
 
-func (l LoadBalancerHealthCheckType) Values() map[string]interface{} {
-	return map[string]interface{}{
+func (l LoadBalancerHealthCheckType) Values() map[string]any {
+	return map[string]any{
 		"id":   l.ID,
 		"key":  l.Key,
 		"name": l.Name,
 	}
 }
 
-func LoadBalancerHealthCheckTypes(ctx context.Context, client goclient.Client) ([]LoadBalancerHealthCheckType, error) {
-	res, err := compute.NewLoadBalancerEntityService(client).ListHealthCheckTypes(ctx, goclient.Cursor{NoFilter: 1})
+func LoadBalancerHealthCheckTypes(ctx context.Context, client *goclient.Client) ([]LoadBalancerHealthCheckType, error) {
+	res, err := client.Compute.LoadBalancerEntity.ListHealthCheckTypes(ctx, core.Cursor{NoFilter: 1})
 	if err != nil {
 		return nil, err
 	}

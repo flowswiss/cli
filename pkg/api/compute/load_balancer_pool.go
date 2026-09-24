@@ -1,12 +1,46 @@
 package compute
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/compute"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/compute"
 )
+
+type (
+	LoadBalancerPoolCreate = compute.LoadBalancerPoolCreateReq
+	LoadBalancerPoolGet    = compute.LoadBalancerPoolGetReq
+	LoadBalancerPoolList   = compute.LoadBalancerPoolListReq
+	LoadBalancerPoolUpdate = compute.LoadBalancerPoolUpdateReq
+	LoadBalancerPoolDelete = compute.LoadBalancerPoolDeleteReq
+
+	LoadBalancerHealthCheckOptions = compute.LoadBalancerHealthCheckOptions
+)
+
+type GenericLoadBalancerPoolService = generic.CRUD[
+	compute.LoadBalancerPool,
+	LoadBalancerPool,
+	LoadBalancerPoolCreate,
+	LoadBalancerPoolGet,
+	LoadBalancerPoolList,
+	LoadBalancerPoolUpdate,
+	LoadBalancerPoolDelete,
+]
+
+func LoadBalancerPoolService() GenericLoadBalancerPoolService {
+	return generic.NewCRUD[
+		compute.LoadBalancerPool,
+		LoadBalancerPool,
+		LoadBalancerPoolCreate,
+		LoadBalancerPoolGet,
+		LoadBalancerPoolList,
+		LoadBalancerPoolUpdate,
+		LoadBalancerPoolDelete,
+	](commands.Client.Compute.LoadBalancerPool, func(pool compute.LoadBalancerPool) LoadBalancerPool {
+		return LoadBalancerPool(pool)
+	})
+}
 
 type LoadBalancerPool compute.LoadBalancerPool
 
@@ -32,8 +66,8 @@ func (l LoadBalancerPool) Columns() []string {
 	return []string{"id", "name", "status", "entry protocol", "entry port", "target protocol", "algorithm", "sticky session"}
 }
 
-func (l LoadBalancerPool) Values() map[string]interface{} {
-	return map[string]interface{}{
+func (l LoadBalancerPool) Values() map[string]any {
+	return map[string]any{
 		"id":              l.ID,
 		"name":            l.Name,
 		"status":          l.Status.Name,
@@ -43,55 +77,4 @@ func (l LoadBalancerPool) Values() map[string]interface{} {
 		"algorithm":       l.Algorithm.Name,
 		"sticky session":  l.StickySession,
 	}
-}
-
-type LoadBalancerPoolService struct {
-	delegate compute.LoadBalancerPoolService
-}
-
-func NewLoadBalancerPoolService(client goclient.Client, loadBalancerID int) LoadBalancerPoolService {
-	return LoadBalancerPoolService{
-		delegate: compute.NewLoadBalancerPoolService(client, loadBalancerID),
-	}
-}
-
-func (l LoadBalancerPoolService) List(ctx context.Context) ([]LoadBalancerPool, error) {
-	res, err := l.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]LoadBalancerPool, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = LoadBalancerPool(item)
-	}
-
-	return items, nil
-}
-
-type LoadBalancerHealthCheckOptions = compute.LoadBalancerHealthCheckOptions
-type LoadBalancerPoolCreate = compute.LoadBalancerPoolCreate
-
-func (l LoadBalancerPoolService) Create(ctx context.Context, data LoadBalancerPoolCreate) (LoadBalancerPool, error) {
-	res, err := l.delegate.Create(ctx, data)
-	if err != nil {
-		return LoadBalancerPool{}, err
-	}
-
-	return LoadBalancerPool(res), nil
-}
-
-type LoadBalancerPoolUpdate = compute.LoadBalancerPoolUpdate
-
-func (l LoadBalancerPoolService) Update(ctx context.Context, id int, data LoadBalancerPoolUpdate) (LoadBalancerPool, error) {
-	res, err := l.delegate.Update(ctx, id, data)
-	if err != nil {
-		return LoadBalancerPool{}, err
-	}
-
-	return LoadBalancerPool(res), nil
-}
-
-func (l LoadBalancerPoolService) Delete(ctx context.Context, id int) error {
-	return l.delegate.Delete(ctx, id)
 }

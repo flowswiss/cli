@@ -1,40 +1,33 @@
 package kubernetes
 
 import (
-	"context"
-
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/kubernetes"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/kubernetes"
 
 	"github.com/flowswiss/cli/v2/pkg/api/compute"
 )
 
-type Volume = compute.Volume
+type (
+	Volume = compute.Volume
 
-type VolumeService struct {
-	delegate kubernetes.VolumeService
+	VolumeList   = kubernetes.VolumeListReq
+	VolumeDelete = kubernetes.VolumeDeleteReq
+)
+
+type GenericVolumeService struct {
+	generic.ListService[VolumeList, kubernetes.Volume, Volume]
+	generic.DeleteService[VolumeDelete]
 }
 
-func NewVolumeService(client goclient.Client, clusterID int) VolumeService {
-	return VolumeService{
-		delegate: kubernetes.NewVolumeService(client, clusterID),
-	}
-}
-
-func (v VolumeService) List(ctx context.Context) ([]Volume, error) {
-	res, err := v.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
+func VolumeService() GenericVolumeService {
+	client := commands.Client.Kubernetes.Volume
+	cast := func(volume kubernetes.Volume) Volume {
+		return Volume(volume)
 	}
 
-	items := make([]Volume, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = Volume(item)
+	return GenericVolumeService{
+		generic.NewList[VolumeList, kubernetes.Volume, Volume](client, cast),
+		generic.NewDelete[VolumeDelete](client),
 	}
-
-	return items, nil
-}
-
-func (v VolumeService) Delete(ctx context.Context, id int) error {
-	return v.delegate.Delete(ctx, id)
 }

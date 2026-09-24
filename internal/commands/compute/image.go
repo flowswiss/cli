@@ -32,7 +32,7 @@ type imageListCommand struct {
 }
 
 func (i *imageListCommand) Run(cmd *cobra.Command, args []string) error {
-	items, err := compute.Images(cmd.Context(), commands.Config.Client)
+	items, err := compute.Images(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("fetch images: %w", err)
 	}
@@ -48,7 +48,10 @@ func (i *imageListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
-func (i *imageListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (i *imageListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 

@@ -9,7 +9,10 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/flowswiss/cli/v2/pkg/optional"
 	"github.com/spf13/cobra"
+
+	"github.com/flowswiss/goclient/v2/core"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/common"
@@ -59,7 +62,7 @@ type serverListCommand struct {
 }
 
 func (s *serverListCommand) Run(cmd *cobra.Command, args []string) error {
-	items, err := compute.NewServerService(commands.Config.Client).List(cmd.Context())
+	items, err := compute.ServerService().List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return err
 	}
@@ -71,7 +74,10 @@ func (s *serverListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(items)
 }
 
-func (s *serverListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *serverListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -96,20 +102,20 @@ type serverCreateCommand struct {
 	image            string
 	product          string
 	network          string
-	privateIP        net.IP
+	privateIP        optional.Optional[net.IP]
 	keyPair          string
-	password         string
-	cloudInitFile    string
+	password         optional.Optional[string]
+	cloudInitFile    optional.Optional[string]
 	attachExternalIP bool
 }
 
 func (s *serverCreateCommand) Run(cmd *cobra.Command, args []string) error {
-	location, err := common.FindLocation(cmd.Context(), commands.Config.Client, s.location)
+	location, err := common.FindLocation(cmd.Context(), commands.Client, s.location)
 	if err != nil {
 		return err
 	}
 
-	images, err := compute.Images(cmd.Context(), commands.Config.Client)
+	images, err := compute.Images(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("fetch images: %w", err)
 	}
@@ -123,7 +129,7 @@ func (s *serverCreateCommand) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("image %s is not available in location %s", image, location.Name)
 	}
 
-	products, err := common.ProductsByType(cmd.Context(), commands.Config.Client, common.ProductTypeComputeServer)
+	products, err := common.ProductsByType(cmd.Context(), commands.Client, common.ProductTypeComputeServer)
 	if err != nil {
 		return fmt.Errorf("fetch products: %w", err)
 	}
@@ -135,7 +141,7 @@ func (s *serverCreateCommand) Run(cmd *cobra.Command, args []string) error {
 
 	networkID := 0
 	if s.network != "" {
-		networks, err := compute.NewNetworkService(commands.Config.Client).List(cmd.Context())
+		networks, err := compute.NetworkService().List(cmd.Context(), core.CursorAll)
 		if err != nil {
 			return fmt.Errorf("fetch networks: %w", err)
 		}
@@ -154,21 +160,23 @@ func (s *serverCreateCommand) Run(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("parse network cidr: %w", err)
 		}
 
-		if !cidr.Contains(s.privateIP) {
-			return fmt.Errorf("private ip %s is not in network %s", s.privateIP, network.CIDR)
+		if pIP := s.privateIP.Value(); pIP != nil {
+			if !cidr.Contains(*pIP) {
+				return fmt.Errorf("private ip %s is not in network %s", *pIP, network.CIDR)
+			}
 		}
 
 		networkID = network.ID
 	}
 
-	privateIP := ""
-	if len(s.privateIP) != 0 {
-		privateIP = s.privateIP.String()
+	var privateIP *string
+	if pIP := s.privateIP.Value(); pIP != nil {
+		privateIP = new(pIP.String())
 	}
 
-	keyPairID := 0
+	var keyPairID *int
 	if s.keyPair != "" {
-		keyPairs, err := compute.NewKeyPairService(commands.Config.Client).List(cmd.Context())
+		keyPairs, err := compute.KeyPairService().List(cmd.Context(), core.CursorAll)
 		if err != nil {
 			return fmt.Errorf("fetch key pairs: %w", err)
 		}
@@ -178,35 +186,38 @@ func (s *serverCreateCommand) Run(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("find key pair: %w", err)
 		}
 
-		keyPairID = keyPair.ID
+		keyPairID = &keyPair.ID
 	}
 
-	if !image.IsWindows() && keyPairID == 0 {
+	if !image.IsWindows() && keyPairID == nil {
 		return fmt.Errorf("key pair is required for non-windows images")
 	}
 
-	password := s.password
+	var password *string
 	if image.IsWindows() {
-		if len(password) == 0 {
-			password, err = console.Password(commands.Stderr, "Windows User Password", checkWindowsPassword)
+		pw := s.password.Value()
+		if pw == nil || len(*pw) == 0 {
+			enteredPW, err := console.Password(commands.Stderr, "Windows User Password", checkWindowsPassword)
 			if err != nil {
 				return fmt.Errorf("read user password: %w", err)
 			}
+
+			pw = &enteredPW
 		}
 
-		if err = checkWindowsPassword(password); err != nil {
+		if err = checkWindowsPassword(*pw); err != nil {
 			return fmt.Errorf("check user password: %w", err)
 		}
 	}
 
-	cloudInit := ""
-	if len(s.cloudInitFile) != 0 {
-		data, err := os.ReadFile(s.cloudInitFile)
+	var cloudInit *string
+	if ci := s.cloudInitFile.Value(); ci != nil {
+		data, err := os.ReadFile(*ci)
 		if err != nil {
 			return fmt.Errorf("read cloud init file: %w", err)
 		}
 
-		cloudInit = base64.StdEncoding.EncodeToString(data)
+		cloudInit = new(base64.StdEncoding.EncodeToString(data))
 	}
 
 	data := compute.ServerCreate{
@@ -222,7 +233,7 @@ func (s *serverCreateCommand) Run(cmd *cobra.Command, args []string) error {
 		CloudInit:        cloudInit,
 	}
 
-	service := compute.NewServerService(commands.Config.Client)
+	service := compute.ServerService()
 
 	ordering, err := service.Create(cmd.Context(), data)
 	if err != nil {
@@ -234,7 +245,7 @@ func (s *serverCreateCommand) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("wait for order: %w", err)
 	}
 
-	server, err := service.Get(cmd.Context(), order.Product.ID)
+	server, err := service.Get(cmd.Context(), compute.ServerGet{ID: uint(order.Product.ID)})
 	if err != nil {
 		return fmt.Errorf("fetch server: %w", err)
 	}
@@ -242,7 +253,10 @@ func (s *serverCreateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(server)
 }
 
-func (s *serverCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *serverCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -267,10 +281,10 @@ func (s *serverCreateCommand) Build(app commands.Application) *cobra.Command {
 	cmd.Flags().StringVarP(&s.image, "image", "i", "", "operating system image to use for the new server (required)")
 	cmd.Flags().StringVarP(&s.product, "product", "p", "", "product to use for the new server (required)")
 	cmd.Flags().StringVar(&s.network, "network", "", "network in which the first network interface should be created")
-	cmd.Flags().IPVar(&s.privateIP, "private-ip", nil, "ip address of the server in the selected network")
+	cmd.Flags().IPVar(s.privateIP.Configure(cmd, "private-ip", "ip address of the server in the selected network"))
 	cmd.Flags().StringVar(&s.keyPair, "key-pair", "", "ssh key-pair for connecting to the server (required if image is linux)")
-	cmd.Flags().StringVar(&s.password, "windows-password", "", "password for the windows admin user  (required if image is windows)")
-	cmd.Flags().StringVar(&s.cloudInitFile, "cloud-init", "", "cloud init script to customize creation of the server")
+	cmd.Flags().StringVar(s.password.Configure(cmd, "windows-password", "password for the windows admin user  (required if image is windows)"))
+	cmd.Flags().StringVar(s.cloudInitFile.Configure(cmd, "cloud-init", "cloud init script to customize creation of the server"))
 	cmd.Flags().BoolVar(&s.attachExternalIP, "attach-external-ip", true, "whether to attach an elastic ip to the server")
 
 	_ = cmd.MarkFlagRequired("name")
@@ -292,11 +306,11 @@ func (s *serverUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	data := compute.ServerUpdate{
+	data := compute.ServerUpdate{ID: uint(server.ID),
 		Name: s.name,
 	}
 
-	server, err = compute.NewServerService(commands.Config.Client).Update(cmd.Context(), server.ID, data)
+	server, err = compute.ServerService().Update(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("update server: %w", err)
 	}
@@ -304,7 +318,10 @@ func (s *serverUpdateCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(server)
 }
 
-func (s *serverUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *serverUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeServer(cmd.Context(), toComplete)
 	}
@@ -337,7 +354,7 @@ func (s *serverUpgradeCommand) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	products, err := common.ProductsByType(cmd.Context(), commands.Config.Client, common.ProductTypeComputeServer)
+	products, err := common.ProductsByType(cmd.Context(), commands.Client, common.ProductTypeComputeServer)
 	if err != nil {
 		return fmt.Errorf("fetch products: %w", err)
 	}
@@ -347,13 +364,13 @@ func (s *serverUpgradeCommand) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("find product: %w", err)
 	}
 
-	data := compute.ServerUpgrade{
+	data := compute.ServerUpgrade{ID: uint(server.ID),
 		ProductID: product.ID,
 	}
 
-	service := compute.NewServerService(commands.Config.Client)
+	service := compute.ServerService()
 
-	ordering, err := service.Upgrade(cmd.Context(), server.ID, data)
+	ordering, err := service.Upgrade(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("upgrade server: %w", err)
 	}
@@ -363,7 +380,7 @@ func (s *serverUpgradeCommand) Run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("wait for order: %w", err)
 	}
 
-	server, err = service.Get(cmd.Context(), order.Product.ID)
+	server, err = service.Get(cmd.Context(), compute.ServerGet{ID: uint(order.Product.ID)})
 	if err != nil {
 		return fmt.Errorf("fetch server: %w", err)
 	}
@@ -371,7 +388,10 @@ func (s *serverUpgradeCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(server)
 }
 
-func (s *serverUpgradeCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *serverUpgradeCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeServer(cmd.Context(), toComplete)
 	}
@@ -412,7 +432,7 @@ func (s *serverDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err = compute.NewServerService(commands.Config.Client).Delete(cmd.Context(), server.ID, !s.detachOnly)
+	err = compute.ServerService().Delete(cmd.Context(), compute.ServerDelete{ID: uint(server.ID), DeleteElasticIP: !s.detachOnly})
 	if err != nil {
 		return fmt.Errorf("delete server: %w", err)
 	}
@@ -420,7 +440,10 @@ func (s *serverDeleteCommand) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (s *serverDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *serverDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeServer(cmd.Context(), toComplete)
 	}
@@ -452,7 +475,7 @@ func (s *serverDeleteCommand) Build(app commands.Application) *cobra.Command {
 }
 
 func completeServer(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
-	servers, err := compute.NewServerService(commands.Config.Client).List(ctx)
+	servers, err := compute.ServerService().List(ctx, core.CursorAll)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
@@ -468,7 +491,7 @@ func completeServer(ctx context.Context, term string) ([]string, cobra.ShellComp
 }
 
 func findServer(ctx context.Context, term string) (compute.Server, error) {
-	servers, err := compute.NewServerService(commands.Config.Client).List(ctx)
+	servers, err := compute.ServerService().List(ctx, core.CursorAll)
 	if err != nil {
 		return compute.Server{}, fmt.Errorf("fetch servers: %w", err)
 	}

@@ -6,7 +6,10 @@ import (
 	"net"
 	"strings"
 
+	"github.com/flowswiss/cli/v2/pkg/optional"
 	"github.com/spf13/cobra"
+
+	"github.com/flowswiss/goclient/v2/core"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/compute"
@@ -47,9 +50,9 @@ func (s *securityGroupRuleListCommand) Run(cmd *cobra.Command, args []string) er
 		return err
 	}
 
-	service := compute.NewSecurityGroupRuleService(commands.Config.Client, securityGroup.ID)
+	service := compute.SecurityGroupRuleService()
 
-	items, err := service.List(cmd.Context())
+	items, err := service.List(cmd.Context(), compute.SecurityGroupRuleList{SecurityGroupID: uint(securityGroup.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return fmt.Errorf("fetch security group rules: %w", err)
 	}
@@ -61,7 +64,10 @@ func (s *securityGroupRuleListCommand) Run(cmd *cobra.Command, args []string) er
 	return commands.PrintStdout(items)
 }
 
-func (s *securityGroupRuleListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *securityGroupRuleListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeSecurityGroup(cmd.Context(), toComplete)
 	}
@@ -88,12 +94,12 @@ func (s *securityGroupRuleListCommand) Build(app commands.Application) *cobra.Co
 type securityGroupRuleCreateCommand struct {
 	direction           string
 	protocol            string
-	fromPort            int
-	toPort              int
-	icmpType            int
-	icmpCode            int
+	fromPort            optional.Optional[int]
+	toPort              optional.Optional[int]
+	icmpType            optional.Optional[int]
+	icmpCode            optional.Optional[int]
 	ipRange             net.IPNet
-	remoteSecurityGroup string
+	remoteSecurityGroup optional.Optional[string]
 }
 
 func (s *securityGroupRuleCreateCommand) Run(cmd *cobra.Command, args []string) error {
@@ -102,33 +108,33 @@ func (s *securityGroupRuleCreateCommand) Run(cmd *cobra.Command, args []string) 
 		return err
 	}
 
-	service := compute.NewSecurityGroupRuleService(commands.Config.Client, securityGroup.ID)
+	service := compute.SecurityGroupRuleService()
 
 	protocol, found := compute.ProtocolIDs[strings.ToLower(s.protocol)]
 	if !found {
 		return fmt.Errorf("invalid protocol: %s", s.protocol)
 	}
 
-	data := compute.SecurityGroupRuleCreate{
+	data := compute.SecurityGroupRuleCreate{SecurityGroupID: uint(securityGroup.ID),
 		Direction: s.direction,
 		Protocol:  protocol,
-		FromPort:  s.fromPort,
-		ToPort:    s.toPort,
-		ICMPType:  s.icmpType,
-		ICMPCode:  s.icmpCode,
+		FromPort:  s.fromPort.Value(),
+		ToPort:    s.toPort.Value(),
+		ICMPType:  s.icmpType.Value(),
+		ICMPCode:  s.icmpCode.Value(),
 	}
 
 	if s.ipRange.String() != compute.IPRangeAny.String() {
-		data.IPRange = s.ipRange.String()
+		data.IPRange = new(s.ipRange.String())
 	}
 
-	if s.remoteSecurityGroup != "" {
-		remoteSecurityGroup, err := findSecurityGroup(cmd.Context(), s.remoteSecurityGroup)
+	if secGroup := s.remoteSecurityGroup.Value(); secGroup != nil {
+		remoteSecurityGroup, err := findSecurityGroup(cmd.Context(), *secGroup)
 		if err != nil {
 			return err
 		}
 
-		data.RemoteSecurityGroupID = remoteSecurityGroup.ID
+		data.RemoteSecurityGroupID = &remoteSecurityGroup.ID
 	}
 
 	item, err := service.Create(cmd.Context(), data)
@@ -139,7 +145,10 @@ func (s *securityGroupRuleCreateCommand) Run(cmd *cobra.Command, args []string) 
 	return commands.PrintStdout(item)
 }
 
-func (s *securityGroupRuleCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *securityGroupRuleCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeSecurityGroup(cmd.Context(), toComplete)
 	}
@@ -167,12 +176,12 @@ func (s *securityGroupRuleCreateCommand) Build(app commands.Application) *cobra.
 
 	cmd.Flags().StringVar(&s.direction, "direction", "", "direction of the rule")
 	cmd.Flags().StringVar(&s.protocol, "protocol", "", "protocol of the rule")
-	cmd.Flags().IntVar(&s.fromPort, "from-port", 0, "from port of the rule (only for TCP and UDP)")
-	cmd.Flags().IntVar(&s.toPort, "to-port", 0, "to port of the rule (only for TCP and UDP)")
-	cmd.Flags().IntVar(&s.icmpType, "icmp-type", 0, "icmp type of the rule (only for ICMP)")
-	cmd.Flags().IntVar(&s.icmpCode, "icmp-code", 0, "icmp code of the rule (only for ICMP)")
+	cmd.Flags().IntVar(s.fromPort.Configure(cmd, "from-port", "from port of the rule (only for TCP and UDP)"))
+	cmd.Flags().IntVar(s.toPort.Configure(cmd, "to-port", "to port of the rule (only for TCP and UDP)"))
+	cmd.Flags().IntVar(s.icmpType.Configure(cmd, "icmp-type", "icmp type of the rule (only for ICMP)"))
+	cmd.Flags().IntVar(s.icmpCode.Configure(cmd, "icmp-code", "icmp code of the rule (only for ICMP)"))
 	cmd.Flags().IPNetVar(&s.ipRange, "ip-range", compute.IPRangeAny, "ip range of the rule")
-	cmd.Flags().StringVar(&s.remoteSecurityGroup, "remote-security-group", "", "remote security group of the rule")
+	cmd.Flags().StringVar(s.remoteSecurityGroup.Configure(cmd, "remote-security-group", "remote security group of the rule"))
 
 	_ = cmd.MarkFlagRequired("direction")
 	_ = cmd.MarkFlagRequired("protocol")
@@ -186,10 +195,10 @@ func (s *securityGroupRuleCreateCommand) Build(app commands.Application) *cobra.
 type securityGroupRuleUpdateCommand struct {
 	direction           string
 	protocol            string
-	fromPort            int
-	toPort              int
-	icmpType            int
-	icmpCode            int
+	fromPort            optional.Optional[int]
+	toPort              optional.Optional[int]
+	icmpType            optional.Optional[int]
+	icmpCode            optional.Optional[int]
 	ipRange             net.IPNet
 	remoteSecurityGroup string
 }
@@ -200,9 +209,9 @@ func (s *securityGroupRuleUpdateCommand) Run(cmd *cobra.Command, args []string) 
 		return err
 	}
 
-	service := compute.NewSecurityGroupRuleService(commands.Config.Client, securityGroup.ID)
+	service := compute.SecurityGroupRuleService()
 
-	rules, err := service.List(cmd.Context())
+	rules, err := service.List(cmd.Context(), compute.SecurityGroupRuleList{SecurityGroupID: uint(securityGroup.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return fmt.Errorf("fetch security group rules: %w", err)
 	}
@@ -217,14 +226,14 @@ func (s *securityGroupRuleUpdateCommand) Run(cmd *cobra.Command, args []string) 
 		return fmt.Errorf("invalid protocol: %s", s.protocol)
 	}
 
-	data := compute.SecurityGroupRuleCreate{
-		Direction: s.direction,
-		Protocol:  protocol,
-		FromPort:  s.fromPort,
-		ToPort:    s.toPort,
-		ICMPType:  s.icmpType,
-		ICMPCode:  s.icmpCode,
-		IPRange:   s.ipRange.String(),
+	data := compute.SecurityGroupRuleUpdate{SecurityGroupID: uint(securityGroup.ID), SecurityGroupRuleID: uint(rule.ID),
+		Direction: &s.direction,
+		Protocol:  &protocol,
+		FromPort:  s.fromPort.Value(),
+		ToPort:    s.toPort.Value(),
+		ICMPType:  s.icmpType.Value(),
+		ICMPCode:  s.icmpCode.Value(),
+		IPRange:   new(s.ipRange.String()),
 	}
 
 	if s.remoteSecurityGroup != "" {
@@ -233,10 +242,10 @@ func (s *securityGroupRuleUpdateCommand) Run(cmd *cobra.Command, args []string) 
 			return err
 		}
 
-		data.RemoteSecurityGroupID = remoteSecurityGroup.ID
+		data.RemoteSecurityGroupID = &remoteSecurityGroup.ID
 	}
 
-	item, err := service.Update(cmd.Context(), rule.ID, data)
+	item, err := service.Update(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create security group rule: %w", err)
 	}
@@ -244,7 +253,10 @@ func (s *securityGroupRuleUpdateCommand) Run(cmd *cobra.Command, args []string) 
 	return commands.PrintStdout(item)
 }
 
-func (s *securityGroupRuleUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *securityGroupRuleUpdateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeSecurityGroup(cmd.Context(), toComplete)
 	}
@@ -277,10 +289,10 @@ func (s *securityGroupRuleUpdateCommand) Build(app commands.Application) *cobra.
 
 	cmd.Flags().StringVar(&s.direction, "direction", "", "direction of the rule")
 	cmd.Flags().StringVar(&s.protocol, "protocol", "", "protocol of the rule")
-	cmd.Flags().IntVar(&s.fromPort, "from-port", 0, "from port of the rule (only for TCP and UDP)")
-	cmd.Flags().IntVar(&s.toPort, "to-port", 0, "to port of the rule (only for TCP and UDP)")
-	cmd.Flags().IntVar(&s.icmpType, "icmp-type", 0, "icmp type of the rule (only for ICMP)")
-	cmd.Flags().IntVar(&s.icmpCode, "icmp-code", 0, "icmp code of the rule (only for ICMP)")
+	cmd.Flags().IntVar(s.fromPort.Configure(cmd, "from-port", "from port of the rule (only for TCP and UDP)"))
+	cmd.Flags().IntVar(s.toPort.Configure(cmd, "to-port", "to port of the rule (only for TCP and UDP)"))
+	cmd.Flags().IntVar(s.icmpType.Configure(cmd, "icmp-type", "icmp type of the rule (only for ICMP)"))
+	cmd.Flags().IntVar(s.icmpCode.Configure(cmd, "icmp-code", "icmp code of the rule (only for ICMP)"))
 	cmd.Flags().IPNetVar(&s.ipRange, "ip-range", compute.IPRangeAny, "ip range of the rule")
 	cmd.Flags().StringVar(&s.remoteSecurityGroup, "remote-security-group", "", "remote security group of the rule")
 
@@ -303,9 +315,9 @@ func (s *securityGroupRuleDeleteCommand) Run(cmd *cobra.Command, args []string) 
 		return err
 	}
 
-	service := compute.NewSecurityGroupRuleService(commands.Config.Client, securityGroup.ID)
+	service := compute.SecurityGroupRuleService()
 
-	rules, err := service.List(cmd.Context())
+	rules, err := service.List(cmd.Context(), compute.SecurityGroupRuleList{SecurityGroupID: uint(securityGroup.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return fmt.Errorf("fetch security group rules: %w", err)
 	}
@@ -320,7 +332,7 @@ func (s *securityGroupRuleDeleteCommand) Run(cmd *cobra.Command, args []string) 
 		return nil
 	}
 
-	err = service.Delete(cmd.Context(), rule.ID)
+	err = service.Delete(cmd.Context(), compute.SecurityGroupRuleDelete{SecurityGroupID: uint(securityGroup.ID), SecurityGroupRuleID: uint(rule.ID)})
 	if err != nil {
 		return fmt.Errorf("delete security group rule: %w", err)
 	}
@@ -328,7 +340,10 @@ func (s *securityGroupRuleDeleteCommand) Run(cmd *cobra.Command, args []string) 
 	return nil
 }
 
-func (s *securityGroupRuleDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *securityGroupRuleDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeSecurityGroup(cmd.Context(), toComplete)
 	}
@@ -359,8 +374,11 @@ func (s *securityGroupRuleDeleteCommand) Build(app commands.Application) *cobra.
 	return cmd
 }
 
-func completeSecurityGroupRule(ctx context.Context, securityGroup compute.SecurityGroup, term string) ([]string, cobra.ShellCompDirective) {
-	rules, err := compute.NewSecurityGroupRuleService(commands.Config.Client, securityGroup.ID).List(ctx)
+func completeSecurityGroupRule(ctx context.Context, securityGroup compute.SecurityGroup, term string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
+	rules, err := compute.SecurityGroupRuleService().List(ctx, compute.SecurityGroupRuleList{SecurityGroupID: uint(securityGroup.ID), Cursor: core.CursorAll})
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}

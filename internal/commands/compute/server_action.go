@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	compute2 "github.com/flowswiss/goclient/v2/compute"
 	"github.com/spf13/cobra"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
@@ -47,7 +48,10 @@ func (s *serverActionListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(availableActions)
 }
 
-func (s *serverActionListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *serverActionListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeServer(cmd.Context(), toComplete)
 	}
@@ -74,7 +78,10 @@ func (s *serverActionRunCommand) Run(cmd *cobra.Command, args []string) error {
 	return runAction(cmd.Context(), args[0], args[1])
 }
 
-func (s *serverActionRunCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *serverActionRunCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeServer(cmd.Context(), toComplete)
 	}
@@ -120,7 +127,10 @@ func (s serverActionRunCommandPreset) Run(cmd *cobra.Command, args []string) err
 	return runAction(cmd.Context(), args[0], string(s))
 }
 
-func (s *serverActionRunCommandPreset) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *serverActionRunCommandPreset) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeServer(cmd.Context(), toComplete)
 	}
@@ -143,7 +153,10 @@ func (s serverActionRunCommandPreset) Build(app commands.Application) *cobra.Com
 	}
 }
 
-func completeServerAction(ctx context.Context, server compute.Server, term string) ([]string, cobra.ShellCompDirective) {
+func completeServerAction(ctx context.Context, server compute.Server, term string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	actions := make([]compute.ServerAction, len(server.Status.Actions))
 	for i, action := range server.Status.Actions {
 		actions[i] = compute.ServerAction(action)
@@ -175,14 +188,24 @@ func runAction(ctx context.Context, serverTerm, actionTerm string) error {
 		return fmt.Errorf("the selected action does not exist or is currently not possible")
 	}
 
-	body := compute.ServerRunAction{
+	server, err = caster{}.Cast(commands.Client.Compute.Server.Perform(ctx, compute.ServerRunAction{
+		ID:     uint(server.ID),
 		Action: action.Command,
-	}
-
-	server, err = compute.NewServerActionService(commands.Config.Client).Run(ctx, server.ID, body)
+	}))
 	if err != nil {
 		return fmt.Errorf("run action: %w", err)
 	}
 
 	return commands.PrintStdout(server)
+}
+
+type caster struct {
+}
+
+func (caster) Cast(server compute2.Server, err error) (compute.Server, error) {
+	if err != nil {
+		return compute.Server{}, err
+	}
+
+	return compute.Server(server), nil
 }

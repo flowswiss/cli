@@ -3,7 +3,10 @@ package compute
 import (
 	"fmt"
 
+	"github.com/flowswiss/cli/v2/pkg/optional"
 	"github.com/spf13/cobra"
+
+	"github.com/flowswiss/goclient/v2/core"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/compute"
@@ -38,7 +41,7 @@ func (s *serverVolumeListCommand) Run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	items, err := compute.NewVolumeService(commands.Config.Client).List(cmd.Context())
+	items, err := compute.VolumeService().List(cmd.Context(), core.CursorAll)
 	if err != nil {
 		return fmt.Errorf("fetch volumes: %w", err)
 	}
@@ -57,7 +60,10 @@ func (s *serverVolumeListCommand) Run(cmd *cobra.Command, args []string) error {
 	return commands.PrintStdout(volumes)
 }
 
-func (s *serverVolumeListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *serverVolumeListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeServer(cmd.Context(), toComplete)
 	}
@@ -84,7 +90,7 @@ func (s *serverVolumeListCommand) Build(app commands.Application) *cobra.Command
 type serverVolumeCreateCommand struct {
 	name     string
 	size     int
-	snapshot string
+	snapshot optional.Optional[string]
 }
 
 func (s *serverVolumeCreateCommand) Run(cmd *cobra.Command, args []string) error {
@@ -97,23 +103,23 @@ func (s *serverVolumeCreateCommand) Run(cmd *cobra.Command, args []string) error
 		Name:       s.name,
 		Size:       s.size,
 		LocationID: server.Location.ID,
-		InstanceID: server.ID,
+		InstanceID: &server.ID,
 	}
 
-	if len(s.snapshot) != 0 {
-		snapshot, err := findSnapshot(cmd.Context(), s.snapshot)
+	if snap := s.snapshot.Value(); snap != nil {
+		snapshot, err := findSnapshot(cmd.Context(), *snap)
 		if err != nil {
 			return err
 		}
 
-		data.SnapshotID = snapshot.ID
+		data.SnapshotID = &snapshot.ID
 
 		if data.Size == 0 {
 			data.Size = snapshot.Size
 		}
 	}
 
-	volume, err := compute.NewVolumeService(commands.Config.Client).Create(cmd.Context(), data)
+	volume, err := compute.VolumeService().Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create volume: %w", err)
 	}
@@ -121,7 +127,10 @@ func (s *serverVolumeCreateCommand) Run(cmd *cobra.Command, args []string) error
 	return commands.PrintStdout(volume)
 }
 
-func (s *serverVolumeCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *serverVolumeCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeServer(cmd.Context(), toComplete)
 	}
@@ -142,7 +151,7 @@ func (s *serverVolumeCreateCommand) Build(app commands.Application) *cobra.Comma
 
 	cmd.Flags().StringVar(&s.name, "name", "", "name of the volume")
 	cmd.Flags().IntVar(&s.size, "size", 0, "size of the volume in GiB")
-	cmd.Flags().StringVar(&s.snapshot, "restore-from", "", "snapshot to create the volume from")
+	cmd.Flags().StringVar(s.snapshot.Configure(cmd, "restore-from", "snapshot to create the volume from"))
 
 	_ = cmd.MarkFlagRequired("name")
 
@@ -173,10 +182,12 @@ func (s *serverVolumeAttachCommand) Run(cmd *cobra.Command, args []string) error
 	}
 
 	data := compute.VolumeAttach{
+		VolumeID:   uint(volume.ID),
 		InstanceID: server.ID,
 	}
 
-	volume, err = compute.NewVolumeService(commands.Config.Client).Attach(cmd.Context(), volume.ID, data)
+	volume, err = compute.VolumeService().Attach(cmd.Context(), data)
+
 	if err != nil {
 		return fmt.Errorf("attach volume: %w", err)
 	}
@@ -184,7 +195,10 @@ func (s *serverVolumeAttachCommand) Run(cmd *cobra.Command, args []string) error
 	return commands.PrintStdout(volume)
 }
 
-func (s *serverVolumeAttachCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *serverVolumeAttachCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeServer(cmd.Context(), toComplete)
 	}
@@ -235,7 +249,7 @@ func (s *serverVolumeDetachCommand) Run(cmd *cobra.Command, args []string) error
 		return nil
 	}
 
-	err = compute.NewVolumeService(commands.Config.Client).Detach(cmd.Context(), volume.ID, server.ID)
+	err = compute.VolumeService().Detach(cmd.Context(), compute.VolumeDetach{VolumeID: uint(volume.ID), InstanceID: uint(server.ID)})
 	if err != nil {
 		return fmt.Errorf("detach volume: %w", err)
 	}
@@ -243,7 +257,10 @@ func (s *serverVolumeDetachCommand) Run(cmd *cobra.Command, args []string) error
 	return nil
 }
 
-func (s *serverVolumeDetachCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *serverVolumeDetachCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeServer(cmd.Context(), toComplete)
 	}
@@ -301,14 +318,14 @@ func (s *serverVolumeDeleteCommand) Run(cmd *cobra.Command, args []string) error
 		return nil
 	}
 
-	service := compute.NewVolumeService(commands.Config.Client)
+	service := compute.VolumeService()
 
-	err = service.Detach(cmd.Context(), volume.ID, server.ID)
+	err = service.Detach(cmd.Context(), compute.VolumeDetach{VolumeID: uint(volume.ID), InstanceID: uint(server.ID)})
 	if err != nil {
 		return fmt.Errorf("detach volume: %w", err)
 	}
 
-	err = service.Delete(cmd.Context(), volume.ID)
+	err = service.Delete(cmd.Context(), compute.VolumeDelete{ID: uint(volume.ID)})
 	if err != nil {
 		return fmt.Errorf("delete volume: %w", err)
 	}
@@ -316,7 +333,10 @@ func (s *serverVolumeDeleteCommand) Run(cmd *cobra.Command, args []string) error
 	return nil
 }
 
-func (s *serverVolumeDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (s *serverVolumeDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeServer(cmd.Context(), toComplete)
 	}

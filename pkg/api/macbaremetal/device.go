@@ -5,11 +5,80 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/flowswiss/goclient"
-	"github.com/flowswiss/goclient/macbaremetal"
+	"github.com/flowswiss/cli/v2/internal/commands"
+	"github.com/flowswiss/cli/v2/pkg/api/generic"
+	"github.com/flowswiss/goclient/v2/core"
+	"github.com/flowswiss/goclient/v2/macbaremetal"
 
-	"github.com/flowswiss/cli/v2/pkg/api/common"
+	commonclt "github.com/flowswiss/cli/v2/pkg/api/common"
 )
+
+type (
+	DeviceCreate    = macbaremetal.DeviceCreateReq
+	DeviceGet       = macbaremetal.DeviceGetReq
+	DeviceList      = core.Cursor
+	DeviceUpdate    = macbaremetal.DeviceUpdateReq
+	DeviceRunAction = macbaremetal.DevicePerformReq
+	DeviceDelete    = macbaremetal.DeviceDeleteReq
+
+	DeviceVNC     = macbaremetal.DeviceGetReq
+	VNCConnection = macbaremetal.DeviceVNCConnection
+	WorkflowList  = macbaremetal.DeviceWorkflowListReq
+	WorkflowRun   = macbaremetal.DeviceWorkflowRunReq
+)
+
+type GenericDeviceService struct {
+	generic.OrderedCreateService[DeviceCreate]
+	generic.Read[macbaremetal.Device, Device, DeviceGet, DeviceList]
+	generic.UpdateService[DeviceUpdate, macbaremetal.Device, Device]
+	generic.PerformActionService[DeviceRunAction, macbaremetal.Device, Device]
+	generic.DeleteService[DeviceDelete]
+
+	client *macbaremetal.DeviceService
+}
+
+func (d GenericDeviceService) GetVNC(ctx context.Context, vnc DeviceVNC) (VNCConnection, error) {
+	return d.client.GetVNC(ctx, vnc)
+}
+
+func (d GenericDeviceService) WorkflowList(ctx context.Context, req WorkflowList) ([]DeviceWorkflow, error) {
+	listOutput, err := d.client.WorkflowList(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]DeviceWorkflow, len(listOutput.Items))
+	for idx, item := range listOutput.Items {
+		items[idx] = DeviceWorkflow(item)
+	}
+
+	return items, nil
+}
+
+func (d GenericDeviceService) WorkflowRun(ctx context.Context, req WorkflowRun) (Device, error) {
+	device, err := d.client.WorkflowRun(ctx, req)
+	if err != nil {
+		return Device{}, err
+	}
+
+	return Device(device), err
+}
+
+func DeviceService() GenericDeviceService {
+	client := commands.Client.MacBareMetal.Device
+	cast := func(device macbaremetal.Device) Device {
+		return Device(device)
+	}
+
+	return GenericDeviceService{
+		generic.NewOrderedCreate[DeviceCreate](client),
+		generic.NewRead[macbaremetal.Device, Device, DeviceGet, DeviceList](client, cast),
+		generic.NewUpdate[DeviceUpdate, macbaremetal.Device, Device](client, cast),
+		generic.NewPerformAction[DeviceRunAction, macbaremetal.Device, Device](client, cast),
+		generic.NewDelete[DeviceDelete](client),
+		client,
+	}
+}
 
 type Device macbaremetal.Device
 
@@ -25,7 +94,7 @@ func (d Device) Columns() []string {
 	return []string{"id", "name", "location", "product", "operating system", "public ip", "network", "hostname", "status"}
 }
 
-func (d Device) Values() map[string]interface{} {
+func (d Device) Values() map[string]any {
 	networkBuffer := &bytes.Buffer{}
 	publicIPBuffer := &bytes.Buffer{}
 
@@ -48,11 +117,11 @@ func (d Device) Values() map[string]interface{} {
 		publicIP = publicIP[:len(publicIP)-2]
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"id":               d.ID,
 		"name":             d.Name,
 		"location":         d.Location.Name,
-		"product":          common.Product(d.Product),
+		"product":          commonclt.Product(d.Product),
 		"operating system": fmt.Sprintf("%s %s", d.OperatingSystem.Name, d.OperatingSystem.Version),
 		"public ip":        publicIP,
 		"network":          networkBuffer.String(),
@@ -61,63 +130,38 @@ func (d Device) Values() map[string]interface{} {
 	}
 }
 
-type DeviceService struct {
-	delegate macbaremetal.DeviceService
+type DeviceAction macbaremetal.DeviceAction
+
+func (d DeviceAction) Keys() []string {
+	return []string{fmt.Sprint(d.ID), d.Name, d.Command}
 }
 
-func NewDeviceService(client goclient.Client) DeviceService {
-	return DeviceService{
-		delegate: macbaremetal.NewDeviceService(client),
+func (d DeviceAction) Columns() []string {
+	return []string{"id", "name", "command"}
+}
+
+func (d DeviceAction) Values() map[string]any {
+	return map[string]any{
+		"id":      d.ID,
+		"name":    d.Name,
+		"command": d.Command,
 	}
 }
 
-func (d DeviceService) List(ctx context.Context) ([]Device, error) {
-	res, err := d.delegate.List(ctx, goclient.Cursor{NoFilter: 1})
-	if err != nil {
-		return nil, err
+type DeviceWorkflow macbaremetal.DeviceWorkflow
+
+func (d DeviceWorkflow) Keys() []string {
+	return []string{fmt.Sprint(d.ID), d.Name, d.Command}
+}
+
+func (d DeviceWorkflow) Columns() []string {
+	return []string{"id", "name", "command"}
+}
+
+func (d DeviceWorkflow) Values() map[string]any {
+	return map[string]any{
+		"id":      d.ID,
+		"name":    d.Name,
+		"command": d.Command,
 	}
-
-	items := make([]Device, len(res.Items))
-	for idx, item := range res.Items {
-		items[idx] = Device(item)
-	}
-
-	return items, nil
-}
-
-func (d DeviceService) Get(ctx context.Context, id int) (Device, error) {
-	device, err := d.delegate.Get(ctx, id)
-	return Device(device), err
-}
-
-type DeviceVNCConnection = macbaremetal.DeviceVNCConnection
-
-func (d DeviceService) GetVNC(ctx context.Context, id int) (DeviceVNCConnection, error) {
-	return d.delegate.GetVNC(ctx, id)
-}
-
-type DeviceCreate = macbaremetal.DeviceCreate
-
-func (d DeviceService) Create(ctx context.Context, data DeviceCreate) (common.Ordering, error) {
-	res, err := d.delegate.Create(ctx, data)
-	if err != nil {
-		return common.Ordering{}, err
-	}
-
-	return res, nil
-}
-
-type DeviceUpdate = macbaremetal.DeviceUpdate
-
-func (d DeviceService) Update(ctx context.Context, id int, data DeviceUpdate) (Device, error) {
-	res, err := d.delegate.Update(ctx, id, data)
-	if err != nil {
-		return Device{}, err
-	}
-
-	return Device(res), nil
-}
-
-func (d DeviceService) Delete(ctx context.Context, id int) error {
-	return d.delegate.Delete(ctx, id)
 }

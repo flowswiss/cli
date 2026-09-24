@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/flowswiss/goclient/v2/core"
 	"github.com/spf13/cobra"
 
 	"github.com/flowswiss/cli/v2/internal/commands"
 	"github.com/flowswiss/cli/v2/pkg/api/common"
 	"github.com/flowswiss/cli/v2/pkg/api/compute"
-	"github.com/flowswiss/cli/v2/pkg/filter"
 )
 
 func CertificateCommand(app commands.Application) *cobra.Command {
@@ -34,19 +34,18 @@ type certificateListCommand struct {
 }
 
 func (c *certificateListCommand) Run(cmd *cobra.Command, args []string) error {
-	items, err := compute.NewCertificateService(commands.Config.Client).List(cmd.Context())
+	items, err := compute.CertificateService().Filter(cmd.Context(), core.CursorAll, c.filter)
 	if err != nil {
 		return fmt.Errorf("fetch certificates: %w", err)
-	}
-
-	if len(c.filter) != 0 {
-		items = filter.Find(items, c.filter)
 	}
 
 	return commands.PrintStdout(items)
 }
 
-func (c *certificateListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (c *certificateListCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -73,7 +72,7 @@ type certificateCreateCommand struct {
 }
 
 func (c *certificateCreateCommand) Run(cmd *cobra.Command, args []string) error {
-	location, err := common.FindLocation(cmd.Context(), commands.Config.Client, c.location)
+	location, err := common.FindLocation(cmd.Context(), commands.Client, c.location)
 	if err != nil {
 		return err
 	}
@@ -95,7 +94,7 @@ func (c *certificateCreateCommand) Run(cmd *cobra.Command, args []string) error 
 		PrivateKey:  base64.StdEncoding.EncodeToString(privateKey),
 	}
 
-	item, err := compute.NewCertificateService(commands.Config.Client).Create(cmd.Context(), data)
+	item, err := compute.CertificateService().Create(cmd.Context(), data)
 	if err != nil {
 		return fmt.Errorf("create certificate: %w", err)
 	}
@@ -103,7 +102,10 @@ func (c *certificateCreateCommand) Run(cmd *cobra.Command, args []string) error 
 	return commands.PrintStdout(item)
 }
 
-func (c *certificateCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (c *certificateCreateCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	return nil, cobra.ShellCompDirectiveNoFileComp
 }
 
@@ -147,7 +149,9 @@ func (c *certificateDeleteCommand) Run(cmd *cobra.Command, args []string) error 
 		return nil
 	}
 
-	err = compute.NewCertificateService(commands.Config.Client).Delete(cmd.Context(), certificate.ID)
+	err = compute.CertificateService().Delete(cmd.Context(), compute.CertificateDelete{
+		ID: uint(certificate.ID),
+	})
 	if err != nil {
 		return fmt.Errorf("delete certificate: %w", err)
 	}
@@ -155,7 +159,10 @@ func (c *certificateDeleteCommand) Run(cmd *cobra.Command, args []string) error 
 	return nil
 }
 
-func (c *certificateDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func (c *certificateDeleteCommand) CompleteArg(cmd *cobra.Command, args []string, toComplete string) (
+	[]string,
+	cobra.ShellCompDirective,
+) {
 	if len(args) == 0 {
 		return completeCertificate(cmd.Context(), toComplete)
 	}
@@ -179,15 +186,13 @@ func (c *certificateDeleteCommand) Build(app commands.Application) *cobra.Comman
 }
 
 func completeCertificate(ctx context.Context, term string) ([]string, cobra.ShellCompDirective) {
-	certificates, err := compute.NewCertificateService(commands.Config.Client).List(ctx)
+	certificates, err := compute.CertificateService().Filter(ctx, core.CursorAll, term)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
 
-	filtered := filter.Find(certificates, term)
-
-	names := make([]string, len(filtered))
-	for i, item := range filtered {
+	names := make([]string, len(certificates))
+	for i, item := range certificates {
 		names[i] = item.Name
 	}
 
@@ -195,14 +200,9 @@ func completeCertificate(ctx context.Context, term string) ([]string, cobra.Shel
 }
 
 func findCertificate(ctx context.Context, term string) (compute.Certificate, error) {
-	certificates, err := compute.NewCertificateService(commands.Config.Client).List(ctx)
+	certificate, err := compute.CertificateService().FindOne(ctx, core.CursorAll, term)
 	if err != nil {
 		return compute.Certificate{}, fmt.Errorf("fetch certificates: %w", err)
-	}
-
-	certificate, err := filter.FindOne(certificates, term)
-	if err != nil {
-		return compute.Certificate{}, fmt.Errorf("find certificate: %w", err)
 	}
 
 	return certificate, nil
