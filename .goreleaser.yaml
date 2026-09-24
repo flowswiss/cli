@@ -1,3 +1,5 @@
+version: 2
+
 before:
   hooks:
     - go mod tidy
@@ -22,15 +24,16 @@ universal_binaries:
 
 archives:
   - id: flow
-    builds:
+    ids:
       - flow
-    name_template: flow-{{.Version}}-{{.Os}}-{{.Arch}}
-    replacements:
-      all: universal
-      386: i386
+    name_template: >-
+      flow-{{ .Version }}-{{ .Os }}-
+      {{- if eq .Arch "all" }}universal
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
     format_overrides:
       - goos: windows
-        format: zip
+        formats: ["zip"]
 
 checksum:
   name_template: 'checksums.txt'
@@ -49,4 +52,4 @@ release:
   draft: true
 
 snapshot:
-  name_template: "{{ incpatch .Version }}-dev"
+  version_template: "{{ incpatch .Version }}-dev"

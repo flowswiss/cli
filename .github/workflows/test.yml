@@ -10,19 +10,19 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.18.x]
+        go-version: [1.26.x]
         platform: [ubuntu-latest]
 
     name: run tests
     runs-on: ${{ matrix.platform }}
     steps:
       - name: set up go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
 
       - name: checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: run tests
         run: go test -v ./...
